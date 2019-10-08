@@ -712,6 +712,11 @@ More details is `here <https://kubernetes.io/docs/setup/independent/install-kube
 
 -  Switch to root user
 
+Why change to root user?
+Use the root user install Kubernetes benefit is simple and convenient.
+Avoid changing not an admin user. Of course, you can use the admin user
+and add the "sudo" keyword to execute install the Kubernetes shell script.
+
 .. code-block:: console
 
    $ su root

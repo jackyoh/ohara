@@ -15,6 +15,16 @@
 # limitations under the License.
 #
 
+username=$(whoami)
+if [ "${username}" = "root" ]
+then
+  echo "Why use the root user?"
+  echo "Use the root user install Kubernetes benefit is simple and convenient."
+  echo "Avoid changing not an admin user. Of course, you can use the admin user "
+  echo "and add the "sudo" keyword to execute install the Kubernetes shell script."
+fi
+
+
 yum install -y yum-utils device-mapper-persistent-data lvm2
 
 # Is it exist docker command
