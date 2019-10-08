@@ -218,6 +218,9 @@ encounter the permission error. Noted that you have tell Ohara
 Configurator to save data in the folder referencing to the outside
 folder. Otherwise, Ohara Configurator flush all data to a random folder.
 
+How to solve the start configurator container permission denied issue?
+#. You must confirm your host username is the ohara and UID is 1000. Please refer to issue `#2573 <https://github.com/oharastream/ohara/issues/2573>`__
+#. Please confirm the /tmp/configurator path own is ohara user and have to write permission.
 
 Execute Manager
 ^^^^^^^^^^^^^^^
