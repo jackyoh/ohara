@@ -17,7 +17,6 @@ import org.scalatest.Matchers
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.collection.JavaConverters._
-//import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers {
   private[this] val db = Database.local()
@@ -86,7 +85,6 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers
     try {
       val record1 = consumer.poll(java.time.Duration.ofSeconds(30), 6).asScala
       record1.size shouldBe 6
-      //Await.result(workerClient.delete(connectorKey1.connectorNameOnKafka()), 10 seconds)
 
       Await.result(
         workerClient
@@ -103,22 +101,35 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers
       consumer.seekToBeginning()
       val record2 = consumer.poll(java.time.Duration.ofSeconds(30), 12).asScala
       record2.size shouldBe 12
-      println("================================")
-      record2
-        .map(x => {
-          x.key.get.cells().asScala
-        })
-        .map(x => {
-          x.map(y => {
-              y.value()
-            })
-            .mkString(",")
-        })
-        .foreach(x => {
-          println(x)
-        })
 
-      println("================================")
+      val statement: Statement = db.connection.createStatement()
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2018-09-02 00:00:05', 'a81', 'a82', 8)")
+
+      consumer.seekToBeginning()
+      val record3 = consumer.poll(java.time.Duration.ofSeconds(30), 14).asScala
+      record3.size shouldBe 14
+
+      val expectResult: Seq[String] = Seq(
+        "2018-09-01 00:00:00.0,a11,a12,1",
+        "2018-09-01 00:00:01.0,a21,a22,2",
+        "2018-09-01 00:00:02.0,a31,a32,3",
+        "2018-09-01 00:00:03.123456,a61,a62,6",
+        "2018-09-01 00:00:04.123,a71,a72,7",
+        "2018-09-01 00:00:05.0,null,null,0",
+        "2018-09-01 00:00:00.0,a11,a12,1",
+        "2018-09-01 00:00:01.0,a21,a22,2",
+        "2018-09-01 00:00:02.0,a31,a32,3",
+        "2018-09-01 00:00:03.123456,a61,a62,6",
+        "2018-09-01 00:00:04.123,a71,a72,7",
+        "2018-09-01 00:00:05.0,null,null,0",
+        "2018-09-02 00:00:05.0,a81,a82,8",
+        "2018-09-02 00:00:05.0,a81,a82,8"
+      )
+      val result: Seq[String] = record3.map(x => x.key.get).map(x => x.cells().asScala.map(_.value).mkString(","))
+
+      (0 to expectResult.size - 1).foreach(i => result(i) shouldBe expectResult(i))
+
     } finally consumer.close()
   }
 

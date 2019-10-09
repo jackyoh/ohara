@@ -27,14 +27,12 @@ import scala.collection.JavaConverters._
 class JDBCSourceTask extends RowSourceTask {
 
   private[this] lazy val logger = Logger(getClass.getName)
-
   private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
   private[this] var dbTableDataProvider: DBTableDataProvider = _
   private[this] var schema: Seq[Column] = _
   private[this] var topics: Seq[String] = _
   private[this] var inMemoryOffsets: Offsets = _
   private[this] var topicOffsets: Offsets = _
-  private[this] var recoveryFlag: Boolean = _
 
   /**
     * Start the Task. This should handle any configuration parsing and one-time setup from the task.
@@ -52,7 +50,6 @@ class JDBCSourceTask extends RowSourceTask {
     val tableName = jdbcSourceConnectorConfig.dbTableName
     inMemoryOffsets = new Offsets(rowContext, tableName)
     topicOffsets = new Offsets(rowContext, tableName)
-    recoveryFlag = true
   }
 
   /**
@@ -71,12 +68,10 @@ class JDBCSourceTask extends RowSourceTask {
         .executeQuery(tableName, timestampColumnName, Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
 
     var recoveryQueryRecordCount = 0
-    if (recoveryFlag) { // For JDBC Source Connector start to running recovery
-      recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
-      // Running empty loop for recovery
-      resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
-    }
-    recoveryFlag = false
+    recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
+
+    // Running empty loop for recovery
+    resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
 
     val rowSourceRecords: Iterator[RowSourceRecord] = resultSet
       .slice(0, flushDataSize)
