@@ -218,9 +218,9 @@ encounter the permission error. Noted that you have tell Ohara
 Configurator to save data in the folder referencing to the outside
 folder. Otherwise, Ohara Configurator flush all data to a random folder.
 
-How to solve the start configurator container permission denied issue?
-#. You must confirm your host username is the ohara and UID is 1000. Please refer to issue `#2573 <https://github.com/oharastream/ohara/issues/2573>`__
-#. Please confirm the /tmp/configurator host path owner is ohara user and have to write permission.
+**How to solve the start configurator container permission denied issue?**
+1. You must confirm your host username is the ohara and UID is 1000. Please refer to issue `#2573 <https://github.com/oharastream/ohara/issues/2573>`__
+2. Please confirm the /tmp/configurator host path owner is ohara user and have to write permission.
 
 Execute Manager
 ^^^^^^^^^^^^^^^
@@ -715,7 +715,7 @@ More details is `here <https://kubernetes.io/docs/setup/independent/install-kube
 
 -  Switch to root user
 
-Why change to root user?
+**Why change to root user?**
 Use the root user to install Kubernetes is simple and convenient.
 Avoid changing not an admin user. Of course, you can use the admin user
 and add the "sudo" keyword to execute install the Kubernetes shell script.
