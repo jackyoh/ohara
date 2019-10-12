@@ -23,13 +23,14 @@ import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.client.kafka.WorkerClient
 import com.island.ohara.common.data.Serializer
 import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
-import com.island.ohara.common.util.CommonUtils
+import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.kafka.Consumer
 import com.island.ohara.kafka.connector.TaskSetting
 import com.island.ohara.testing.With3Brokers3Workers
 import com.island.ohara.testing.service.Database
-import org.junit.{Before, Test}
+import org.junit.{After, Before, Test}
 import org.scalatest.Matchers
+
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.collection.JavaConverters._
@@ -147,6 +148,12 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers
       (0 to expectResult.size - 1).foreach(i => result(i) shouldBe expectResult(i))
 
     } finally consumer.close()
+  }
+
+  @After
+  def tearDown(): Unit = {
+    Releasable.close(client)
+    Releasable.close(db)
   }
 
   private[this] val props = JDBCSourceConnectorConfig(

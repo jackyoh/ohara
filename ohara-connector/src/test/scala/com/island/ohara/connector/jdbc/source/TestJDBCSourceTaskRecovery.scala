@@ -22,11 +22,12 @@ import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.data.{Column, DataType}
 import com.island.ohara.common.rule.OharaTest
+import com.island.ohara.common.util.Releasable
 import com.island.ohara.kafka.connector.{RowSourceRecord, TaskSetting}
 import com.island.ohara.testing.service.Database
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
-import org.junit.{Before, Test}
+import org.junit.{After, Before, Test}
 import org.mockito.Mockito.when
 import org.scalatest.Matchers
 import org.scalatest.mockito.MockitoSugar
@@ -205,5 +206,11 @@ class TestJDBCSourceTaskRecovery extends OharaTest with Matchers with MockitoSug
 
     rows.last.row.cell(1).name shouldBe "COLUMN2"
     rows.last.row.cell(1).value shouldBe "a81"
+  }
+
+  @After
+  def tearDown(): Unit = {
+    Releasable.close(client)
+    Releasable.close(db)
   }
 }
