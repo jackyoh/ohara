@@ -35,7 +35,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.util.Try
-
+//Test jenkins environment
 class TestK8SSimpleCollie extends IntegrationTest with Matchers {
   private[this] val nodes: Seq[Node] = EnvTestingUtils.k8sNodes()
   private[this] val nodeNames: Set[String] = nodes.map(_.hostname).toSet
