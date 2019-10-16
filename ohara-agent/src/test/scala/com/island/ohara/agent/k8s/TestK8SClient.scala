@@ -265,6 +265,182 @@ class TestK8SClient extends OharaTest with Matchers {
     } finally s.close()
   }
 
+  @Test
+  def testInspectConfig(): Unit = {
+    val configName = "configMap1"
+    val s = configMap(configName)
+    try {
+      val k8sClient = K8SClient(s.url)
+      val result: Map[String, String] = Await.result(k8sClient.inspectConfig(configName), 5 seconds)
+      result.size shouldBe 3
+      (1 to 3).foreach(i => result(s"key${i}") shouldBe s"value${i}")
+    } finally s.close()
+  }
+
+  @Test
+  def testInspectConfigFailed(): Unit = {
+    val configName = "configmap3"
+    val s = configMapFailed(configName)
+    try {
+      val k8sClient = K8SClient(s.url)
+      intercept[IllegalArgumentException] {
+        Await.result(k8sClient.inspectConfig(configName), 5 seconds)
+      }.getMessage() shouldBe s"configmaps ${configName} not found"
+    } finally s.close()
+  }
+
+  @Test
+  def testAddConfig(): Unit = {
+    val configName = "configMap2"
+    val s = addConfig(configName)
+    try {
+      val k8sClient = K8SClient(s.url)
+      val result: String =
+        Await.result(k8sClient.addConfig(configName, Map("key4" -> "value4", "key5" -> "value5")), 5 seconds)
+      result shouldBe configName
+    } finally s.close()
+  }
+
+  @Test
+  def testRemoveConfig(): Unit = {
+    val configName = "configmap1"
+    val s = deleteConfig(configName)
+    try {
+      val k8sClient = K8SClient(s.url)
+      val result: Boolean = Await.result(k8sClient.removeConfig(configName), 5 seconds)
+      result shouldBe true
+    } finally s.close()
+  }
+
+  private[this] def deleteConfig(configName: String): SimpleServer = {
+    val response: String = s"""
+                              |{
+                              |  "kind": "Status",
+                              |  "apiVersion": "v1",
+                              |  "metadata": {
+                              |
+                              |  },
+                              |  "status": "Success",
+                              |  "details": {
+                              |    "name": "${configName}",
+                              |    "kind": "configmaps",
+                              |    "uid": "8ee6258d-efb9-11e9-8f70-8ae0e3c47d1e"
+                              |  }
+                              |}
+       """.stripMargin
+
+    toServer {
+      path("namespaces" / "default" / "configmaps" / configName) {
+        delete {
+          complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, response)))
+        }
+      }
+    }
+  }
+
+  private[this] def addConfig(configName: String): SimpleServer = {
+    val response = s"""
+                       |{
+                       |  "kind": "ConfigMap",
+                       |  "apiVersion": "v1",
+                       |  "metadata": {
+                       |    "name": "${configName}",
+                       |    "namespace": "default",
+                       |    "selfLink": "/api/v1/namespaces/default/configmaps/configmap2",
+                       |    "uid": "8ee6258d-efb9-11e9-8f70-8ae0e3c47d1e",
+                       |    "resourceVersion": "5134262",
+                       |    "creationTimestamp": "2019-10-16T02:06:25Z"
+                       |  },
+                       |  "data": {
+                       |    "key4": "value4",
+                       |    "key5": "value5"
+                       |  }
+                       |}
+       """.stripMargin
+
+    toServer {
+      path("namespaces" / "default" / "configmaps") {
+        post {
+          entity(as[ConfigMap]) { requestConfigMap =>
+            {
+              requestConfigMap.data("key4") shouldBe "value4"
+              requestConfigMap.data("key5") shouldBe "value5"
+              complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, response)))
+            }
+          }
+        }
+      }
+    }
+
+  }
+
+  private[this] def configMapFailed(configMapName: String): SimpleServer = {
+    val response = s"""
+                      |{
+                      |  "kind": "Status",
+                      |  "apiVersion": "v1",
+                      |  "metadata": {
+                      |
+                      |  },
+                      |  "status": "Failure",
+                      |  "message": "configmaps ${configMapName} not found",
+                      |  "reason": "NotFound",
+                      |  "details": {
+                      |    "name": "${configMapName}",
+                      |    "kind": "configmaps"
+                      |  },
+                      |  "code": 404
+                      |}
+       """.stripMargin
+    toServer {
+      path("namespaces" / "default" / "configmaps" / configMapName) {
+        get {
+          complete(
+            HttpResponse(status = StatusCodes.BadRequest,
+                         entity = HttpEntity(ContentTypes.`application/json`, response)))
+        }
+      }
+    }
+  }
+
+  private[this] def configMap(configMapName: String): SimpleServer = {
+    val response = s"""
+                      |{
+                      |  "kind": "ConfigMap",
+                      |  "apiVersion": "v1",
+                      |  "metadata": {
+                      |    "name": "${configMapName}",
+                      |    "namespace": "default",
+                      |    "selfLink": "/api/v1/namespaces/default/configmaps/myconfigyaml",
+                      |    "uid": "21afbca4-ef22-11e9-8f70-8ae0e3c47d1e",
+                      |    "resourceVersion": "5035864",
+                      |    "creationTimestamp": "2019-10-15T08:02:28Z",
+                      |    "annotations": {
+                      |      "kubectl.kubernetes.io/last-applied-configuration": {\"apiVersion\":\"v1\",\"data\":{\"key1\":\"value1\",\"key2\":\"value2\",\"key3\":\"value3\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"myconfigyaml\",\"namespace\":\"default\"}}
+                      |    }
+                      |  },
+                      |  "data": {
+                      |    "key1": "value1",
+                      |    "key2": "value2",
+                      |    "key3": "value3"
+                      |  }
+                      |}
+           """.stripMargin
+
+    val configMap: ConfigMap = CONFIGMAP_FORMAT.read(response.parseJson)
+    configMap.data.size shouldBe 3
+    configMap.data("key2") shouldBe "value2"
+    configMap.metadata.name shouldBe configMapName
+
+    toServer {
+      path("namespaces" / "default" / "configmaps" / configMapName) {
+        get {
+          complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, response)))
+        }
+      }
+    }
+  }
+
   private[this] def imagePolicyURL(nodeName: String,
                                    podName: String,
                                    expectImagePullPolicy: ImagePullPolicy): SimpleServer = {
