@@ -30,4 +30,5 @@ package object source {
   val JDBC_FETCHDATA_SIZE_DEFAULT: Int = 1000
   val JDBC_FLUSHDATA_SIZE_DEFAULT: Int = 1000
   val TIMESTAMP_COLUMN_NAME: String = "source.timestamp.column.name"
+  val ORACLE_DB_NAME = "oracle"
 }

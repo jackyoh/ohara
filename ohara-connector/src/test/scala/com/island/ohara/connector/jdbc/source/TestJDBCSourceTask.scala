@@ -236,5 +236,8 @@ class TestJDBCSourceTask extends OharaTest with Matchers with MockitoSugar {
   }
 
   @After
-  def afterTest(): Unit = Releasable.close(client)
+  def afterTest(): Unit = {
+    Releasable.close(client)
+    Releasable.close(db)
+  }
 }
