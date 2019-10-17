@@ -16,18 +16,23 @@
 
 package com.island.ohara.connector.jdbc.source
 
+import com.island.ohara.common.rule.OharaTest
+import org.scalatest.Matchers
+import org.scalatest.mockito.MockitoSugar
 import java.sql.{ResultSet, Time, Timestamp}
 
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
-import com.island.ohara.common.rule.OharaTest
-import com.island.ohara.connector.jdbc.datatype.RDBDataTypeConverter
+import com.island.ohara.connector.jdbc.datatype.{PostgresqlDataTypeConverter, RDBDataTypeConverter}
 import com.island.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import org.junit.Test
 import org.mockito.Mockito._
-import org.scalatest.Matchers
-import org.scalatest.mockito.MockitoSugar
 
 class TestResultSetDataConverter extends OharaTest with Matchers with MockitoSugar {
+  private[this] val VARCHAR: String = "VARCHAR"
+  private[this] val TIMESTAMP: String = "TIMESTAMP"
+  private[this] val INT: String = "INT"
+  private[this] val DATE: String = "DATE"
+  private[this] val TIME: String = "TIME"
 
   @Test
   def testConverterRecord(): Unit = {
@@ -37,22 +42,22 @@ class TestResultSetDataConverter extends OharaTest with Matchers with MockitoSug
     when(resultSet.getInt("column3")).thenReturn(10)
 
     val columnList = Seq(
-      RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_TIMESTAMP, true),
-      RdbColumn("column2", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column3", RDBDataTypeConverter.RDB_TYPE_INTEGER, false)
+      RdbColumn("column1", TIMESTAMP, true),
+      RdbColumn("column2", VARCHAR, false),
+      RdbColumn("column3", INT, false)
     )
-
-    val result: Seq[ColumnInfo[_]] = ResultSetDataConverter.converterRecord(resultSet, columnList)
+    val dataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
+    val result: Seq[ColumnInfo[_]] = ResultSetDataConverter.converterRecord(dataTypeConverter, resultSet, columnList)
     result.head.columnName shouldBe "column1"
-    result.head.columnType shouldBe RDBDataTypeConverter.RDB_TYPE_TIMESTAMP
+    result.head.columnType shouldBe TIMESTAMP
     result.head.value.toString shouldBe "1970-01-01 08:00:00.0"
 
     result(1).columnName shouldBe "column2"
-    result(1).columnType shouldBe RDBDataTypeConverter.RDB_TYPE_VARCHAR
+    result(1).columnType shouldBe VARCHAR
     result(1).value shouldBe "aaa"
 
     result(2).columnName shouldBe "column3"
-    result(2).columnType shouldBe RDBDataTypeConverter.RDB_TYPE_INTEGER
+    result(2).columnType shouldBe INT
     result(2).value shouldBe 10
   }
 
@@ -65,23 +70,23 @@ class TestResultSetDataConverter extends OharaTest with Matchers with MockitoSug
     when(resultSet.getTime("column4")).thenReturn(null)
 
     val columnList = Seq(
-      RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_TIMESTAMP, true),
-      RdbColumn("column2", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column3", RDBDataTypeConverter.RDB_TYPE_DATE, false),
-      RdbColumn("column4", RDBDataTypeConverter.RDB_TYPE_TIME, false)
+      RdbColumn("column1", TIMESTAMP, true),
+      RdbColumn("column2", VARCHAR, false),
+      RdbColumn("column3", DATE, false),
+      RdbColumn("column4", TIME, false)
     )
-
-    val result: Seq[ColumnInfo[_]] = ResultSetDataConverter.converterRecord(resultSet, columnList)
+    val dataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
+    val result: Seq[ColumnInfo[_]] = ResultSetDataConverter.converterRecord(dataTypeConverter, resultSet, columnList)
     result(1).columnName shouldBe "column2"
-    result(1).columnType shouldBe RDBDataTypeConverter.RDB_TYPE_VARCHAR
+    result(1).columnType shouldBe VARCHAR
     result(1).value shouldBe "null"
 
     result(2).columnName shouldBe "column3"
-    result(2).columnType shouldBe RDBDataTypeConverter.RDB_TYPE_DATE
+    result(2).columnType shouldBe DATE
     result(2).value.toString shouldBe "1970-01-01"
 
     result(3).columnName shouldBe "column4"
-    result(3).columnType shouldBe RDBDataTypeConverter.RDB_TYPE_TIME
+    result(3).columnType shouldBe TIME
     result(3).value.toString shouldBe new Time(0).toString
   }
 }

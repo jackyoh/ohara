@@ -15,19 +15,14 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
+import java.sql.ResultSet
 
-object RDBDataTypeConverterFactory {
+import com.island.ohara.client.configurator.v0.QueryApi
 
-  def dataTypeConverter(productName: String): RDBDataTypeConverter = {
-    productName.toLowerCase match {
-      case "postgresql" =>
-        new PostgresqlDataTypeConverter()
-      case "mysql" =>
-        new PostgresqlDataTypeConverter()
-      case "oracle" =>
-        new PostgresqlDataTypeConverter()
-      case _ =>
-        new CommonDataTypeConverter()
-    }
+class CommonDataTypeConverter extends RDBDataTypeConverter {
+
+  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
+    None //TODO
   }
+
 }

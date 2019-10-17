@@ -22,6 +22,7 @@ import java.util.Calendar
 import com.island.ohara.client.configurator.v0.QueryApi.{RdbColumn, RdbTable}
 import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.util.{Releasable, ReleaseOnce}
+import com.island.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 /**
@@ -35,6 +36,9 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     .user(jdbcSourceConnectorConfig.dbUserName)
     .password(jdbcSourceConnectorConfig.dbPassword)
     .build
+
+  private[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
+
   private[this] var queryFlag: Boolean = true
 
   private[this] var resultSet: ResultSet = _
@@ -57,7 +61,8 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
       resultSet = preparedStatement.executeQuery()
       queryFlag = false
     }
-    new QueryResultIterator(resultSet, columns(tableName))
+    val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
+    new QueryResultIterator(rdbDataTypeConverter, resultSet, columns(tableName))
   }
 
   def releaseResultSet(queryFlag: Boolean): Unit = {
@@ -79,7 +84,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
   def isTableExists(tableName: String): Boolean = client.tableQuery.tableName(tableName).execute().nonEmpty
 
   def dbCurrentTime(cal: Calendar): Timestamp = {
-    val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
+
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _              => "SELECT CURRENT_TIMESTAMP;"

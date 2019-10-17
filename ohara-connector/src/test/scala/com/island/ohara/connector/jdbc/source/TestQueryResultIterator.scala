@@ -27,6 +27,7 @@ import org.scalatest.Matchers
 import org.scalatest.mockito.MockitoSugar
 
 class TestQueryResultIterator extends OharaTest with Matchers with MockitoSugar {
+  private[this] val VARCHAR: String = "VARCHAR"
 
   @Test
   def testOnlyNext(): Unit = {
@@ -35,12 +36,13 @@ class TestQueryResultIterator extends OharaTest with Matchers with MockitoSugar 
     when(preparedStatement.executeQuery()).thenReturn(resultSet)
 
     val columnList = Seq(
-      RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column2", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column3", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false)
+      RdbColumn("column1", VARCHAR, false),
+      RdbColumn("column2", VARCHAR, false),
+      RdbColumn("column3", VARCHAR, false)
     )
 
-    val it: Iterator[Seq[Object]] = new QueryResultIterator(resultSet, columnList)
+    val dataTypeConverter: RDBDataTypeConverter = mock[RDBDataTypeConverter]
+    val it: Iterator[Seq[Object]] = new QueryResultIterator(dataTypeConverter, resultSet, columnList)
     intercept[NoSuchElementException] {
       it.next()
     }.getMessage shouldBe "Cache no data"
@@ -57,12 +59,13 @@ class TestQueryResultIterator extends OharaTest with Matchers with MockitoSugar 
     when(resultSet.getString("column3")).thenReturn("value1-3")
 
     val columnList = Seq(
-      RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column2", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column3", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false)
+      RdbColumn("column1", VARCHAR, false),
+      RdbColumn("column2", VARCHAR, false),
+      RdbColumn("column3", VARCHAR, false)
     )
 
-    val it: Iterator[Seq[Object]] = new QueryResultIterator(resultSet, columnList)
+    val dataTypeConverter: RDBDataTypeConverter = mock[RDBDataTypeConverter]
+    val it: Iterator[Seq[Object]] = new QueryResultIterator(dataTypeConverter, resultSet, columnList)
     var count: Int = 0
     while (it.hasNext) {
       it.next()
@@ -82,12 +85,13 @@ class TestQueryResultIterator extends OharaTest with Matchers with MockitoSugar 
     when(resultSet.getString("column3")).thenReturn("value1-3").thenReturn("value2-3").thenReturn("value3-3")
 
     val columnList = Seq(
-      RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column2", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column3", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false)
+      RdbColumn("column1", VARCHAR, false),
+      RdbColumn("column2", VARCHAR, false),
+      RdbColumn("column3", VARCHAR, false)
     )
 
-    val it: Iterator[Seq[Object]] = new QueryResultIterator(resultSet, columnList)
+    val dataTypeConverter: RDBDataTypeConverter = mock[RDBDataTypeConverter]
+    val it: Iterator[Seq[Object]] = new QueryResultIterator(dataTypeConverter, resultSet, columnList)
     var count: Int = 0
     while (it.hasNext) {
       it.next()
@@ -104,12 +108,13 @@ class TestQueryResultIterator extends OharaTest with Matchers with MockitoSugar 
     when(resultSet.next()).thenReturn(false)
 
     val columnList = Seq(
-      RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column2", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false),
-      RdbColumn("column3", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false)
+      RdbColumn("column1", VARCHAR, false),
+      RdbColumn("column2", VARCHAR, false),
+      RdbColumn("column3", VARCHAR, false)
     )
 
-    val it: Iterator[Seq[Object]] = new QueryResultIterator(resultSet, columnList)
+    val dataTypeConverter: RDBDataTypeConverter = mock[RDBDataTypeConverter]
+    val it: Iterator[Seq[Object]] = new QueryResultIterator(dataTypeConverter, resultSet, columnList)
     var count: Int = 0
     while (it.hasNext) {
       it.next()

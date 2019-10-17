@@ -19,9 +19,11 @@ package com.island.ohara.connector.jdbc.source
 import java.sql.ResultSet
 
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
+import com.island.ohara.connector.jdbc.datatype.RDBDataTypeConverter
 import com.island.ohara.connector.jdbc.util.ColumnInfo
 
-class QueryResultIterator(var resultSet: ResultSet, columns: Seq[RdbColumn]) extends Iterator[Seq[ColumnInfo[_]]] {
+class QueryResultIterator(rdbDataTypeConverter: RDBDataTypeConverter, var resultSet: ResultSet, columns: Seq[RdbColumn])
+    extends Iterator[Seq[ColumnInfo[_]]] {
   private[this] var cache: Seq[ColumnInfo[_]] = _
 
   /**
@@ -30,7 +32,8 @@ class QueryResultIterator(var resultSet: ResultSet, columns: Seq[RdbColumn]) ext
     * @return true if there are some data. otherwise false
     */
   override def hasNext: Boolean = {
-    if (cache == null && resultSet.next()) cache = ResultSetDataConverter.converterRecord(resultSet, columns)
+    if (cache == null && resultSet.next())
+      cache = ResultSetDataConverter.converterRecord(rdbDataTypeConverter, resultSet, columns)
     cache != null
   }
 

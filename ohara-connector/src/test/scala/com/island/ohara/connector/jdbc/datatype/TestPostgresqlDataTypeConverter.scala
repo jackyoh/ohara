@@ -16,25 +16,31 @@
 
 package com.island.ohara.connector.jdbc.datatype
 
+import com.island.ohara.common.rule.OharaTest
+import org.scalatest.Matchers
+import org.scalatest.mockito.MockitoSugar
 import java.sql.{ResultSet, Timestamp}
 
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
-import com.island.ohara.common.rule.OharaTest
 import com.island.ohara.connector.jdbc.util.DateTimeUtils
 import org.junit.Test
 import org.mockito.Mockito.when
-import org.scalatest.Matchers
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.mockito.MockitoSugar
 
-class TestRDBDataTypeConverter extends OharaTest with Matchers with MockitoSugar {
+class TestPostgresqlDataTypeConverter extends OharaTest with Matchers with MockitoSugar {
+  private[this] val BOOLEAN: String = "BOOLEAN"
+  private[this] val BIT: String = "BIT"
+  private[this] val INT: String = "INT"
+  private[this] val CHAR: String = "CHAR"
+  private[this] val VARCHAR: String = "VARCHAR"
+  private[this] val TIMESTAMP: String = "TIMESTAMP"
 
   @Test
   def testConverterBooleanValue(): Unit = {
     val resultSet: ResultSet = mock[ResultSet]
     when(resultSet.getBoolean("column1")).thenReturn(true)
-    val column = RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_BOOLEAN, false)
-    val rdbDataTypeConverter: RDBDataTypeConverter = new RDBDataTypeConverter()
+    val column = RdbColumn("column1", BOOLEAN, false)
+    val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rdbDataTypeConverter.converterValue(resultSet, column)
     result shouldBe true
   }
@@ -44,8 +50,8 @@ class TestRDBDataTypeConverter extends OharaTest with Matchers with MockitoSugar
     val resultSet: ResultSet = mock[ResultSet]
     val value: Byte = 5
     when(resultSet.getByte("column1")).thenReturn(value)
-    val column = RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_BIT, false)
-    val rDBDataTypeConverter: RDBDataTypeConverter = new RDBDataTypeConverter()
+    val column = RdbColumn("column1", BIT, false)
+    val rDBDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rDBDataTypeConverter.converterValue(resultSet, column)
     result.isInstanceOf[Byte] shouldBe true
     result.isInstanceOf[Object] shouldBe true
@@ -59,8 +65,8 @@ class TestRDBDataTypeConverter extends OharaTest with Matchers with MockitoSugar
   def testConverterIntegerValue(): Unit = {
     val resultSet: ResultSet = mock[ResultSet]
     when(resultSet.getInt("column1")).thenReturn(100)
-    val column = RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_INTEGER, false)
-    val rdbDataTypeConverter: RDBDataTypeConverter = new RDBDataTypeConverter()
+    val column = RdbColumn("column1", INT, false)
+    val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rdbDataTypeConverter.converterValue(resultSet, column)
     result shouldBe 100
   }
@@ -69,8 +75,8 @@ class TestRDBDataTypeConverter extends OharaTest with Matchers with MockitoSugar
   def testConverterChar(): Unit = {
     val resultSet: ResultSet = mock[ResultSet]
     when(resultSet.getString("column1")).thenReturn("h")
-    val column = RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_CHAR, false)
-    val rdbDataTypeConverter: RDBDataTypeConverter = new RDBDataTypeConverter()
+    val column = RdbColumn("column1", CHAR, false)
+    val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rdbDataTypeConverter.converterValue(resultSet, column)
     result shouldBe "h"
   }
@@ -79,8 +85,8 @@ class TestRDBDataTypeConverter extends OharaTest with Matchers with MockitoSugar
   def testConveterTimestamp(): Unit = {
     val resultSet: ResultSet = mock[ResultSet]
     when(resultSet.getTimestamp("column1", DateTimeUtils.CALENDAR)).thenReturn(new Timestamp(0L))
-    val column = RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_TIMESTAMP, false)
-    val rdbDataTypeConverter: RDBDataTypeConverter = new RDBDataTypeConverter()
+    val column = RdbColumn("column1", TIMESTAMP, false)
+    val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rdbDataTypeConverter.converterValue(resultSet, column)
     result.isInstanceOf[Timestamp] shouldBe true
     result.isInstanceOf[Object] shouldBe true
@@ -91,8 +97,8 @@ class TestRDBDataTypeConverter extends OharaTest with Matchers with MockitoSugar
   def testConverterVarchar(): Unit = {
     val resultSet: ResultSet = mock[ResultSet]
     when(resultSet.getString("column1")).thenReturn("hello")
-    val column = RdbColumn("column1", RDBDataTypeConverter.RDB_TYPE_VARCHAR, false)
-    val rdbDataTypeConverter: RDBDataTypeConverter = new RDBDataTypeConverter()
+    val column = RdbColumn("column1", VARCHAR, false)
+    val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rdbDataTypeConverter.converterValue(resultSet, column)
     result shouldBe "hello"
   }
