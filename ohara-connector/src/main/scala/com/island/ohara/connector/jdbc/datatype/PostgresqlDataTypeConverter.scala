@@ -61,7 +61,7 @@ class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
         java.lang.Double.valueOf(resultSet.getDouble(columnName))
 
       case TYPE_NAME_NUMERIC =>
-        resultSet.getBigDecimal(columnName)
+        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
 
       case TYPE_NAME_BPCHAR | TYPE_NAME_VARCHAR =>
         Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
@@ -75,7 +75,7 @@ class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
           .orElseGet(() => new Timestamp(0))
 
       case TYPE_NAME_BYTEA =>
-        resultSet.getBytes(columnName)
+        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
 
       case TYPE_NAME_BOOL =>
         java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))

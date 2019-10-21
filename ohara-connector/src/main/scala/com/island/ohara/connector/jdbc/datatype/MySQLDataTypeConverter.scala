@@ -80,7 +80,7 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
         java.lang.Double.valueOf(resultSet.getDouble(columnName))
 
       case TYPE_NAME_DECIMAL =>
-        resultSet.getBigDecimal(columnName)
+        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
 
       case TYPE_NAME_DATE =>
         Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
@@ -99,7 +99,7 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
 
       case TYPE_NAME_BINARY | TYPE_NAME_VARBINARY | TYPE_NAME_TINYBLOB | TYPE_NAME_BLOB | TYPE_NAME_MEDIUMBLOB |
           TYPE_NAME_LONGBLOB =>
-        resultSet.getBytes(columnName)
+        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
 
       case _ =>
         s"MySQL implement not support ${typeName} data type in ${columnName} column."
