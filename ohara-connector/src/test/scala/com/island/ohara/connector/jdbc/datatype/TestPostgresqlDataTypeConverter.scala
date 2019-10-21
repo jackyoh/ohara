@@ -28,10 +28,10 @@ import org.mockito.Mockito.when
 import org.scalatest.exceptions.TestFailedException
 
 class TestPostgresqlDataTypeConverter extends OharaTest with Matchers with MockitoSugar {
-  private[this] val BOOLEAN: String = "BOOLEAN"
+  private[this] val BOOLEAN: String = "BOOL"
   private[this] val BIT: String = "BIT"
-  private[this] val INT: String = "INT"
-  private[this] val CHAR: String = "CHAR"
+  private[this] val INT: String = "INT4"
+  private[this] val CHAR: String = "BPCHAR"
   private[this] val VARCHAR: String = "VARCHAR"
   private[this] val TIMESTAMP: String = "TIMESTAMP"
 
@@ -48,12 +48,12 @@ class TestPostgresqlDataTypeConverter extends OharaTest with Matchers with Mocki
   @Test
   def testConverterBitValue(): Unit = {
     val resultSet: ResultSet = mock[ResultSet]
-    val value: Byte = 5
+    val value: Byte = 1
     when(resultSet.getByte("column1")).thenReturn(value)
     val column = RdbColumn("column1", BIT, false)
     val rDBDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Object = rDBDataTypeConverter.converterValue(resultSet, column)
-    result.isInstanceOf[Byte] shouldBe true
+    result.isInstanceOf[Boolean] shouldBe true
     result.isInstanceOf[Object] shouldBe true
 
     intercept[TestFailedException] {

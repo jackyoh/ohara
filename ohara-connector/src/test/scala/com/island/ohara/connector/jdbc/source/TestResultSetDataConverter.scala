@@ -22,7 +22,7 @@ import org.scalatest.mockito.MockitoSugar
 import java.sql.{ResultSet, Time, Timestamp}
 
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
-import com.island.ohara.connector.jdbc.datatype.{PostgresqlDataTypeConverter, RDBDataTypeConverter}
+import com.island.ohara.connector.jdbc.datatype.{MySQLDataTypeConverter, RDBDataTypeConverter}
 import com.island.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import org.junit.Test
 import org.mockito.Mockito._
@@ -46,7 +46,7 @@ class TestResultSetDataConverter extends OharaTest with Matchers with MockitoSug
       RdbColumn("column2", VARCHAR, false),
       RdbColumn("column3", INT, false)
     )
-    val dataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
+    val dataTypeConverter: RDBDataTypeConverter = new MySQLDataTypeConverter()
     val result: Seq[ColumnInfo[_]] = ResultSetDataConverter.converterRecord(dataTypeConverter, resultSet, columnList)
     result.head.columnName shouldBe "column1"
     result.head.columnType shouldBe TIMESTAMP
@@ -75,7 +75,7 @@ class TestResultSetDataConverter extends OharaTest with Matchers with MockitoSug
       RdbColumn("column3", DATE, false),
       RdbColumn("column4", TIME, false)
     )
-    val dataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
+    val dataTypeConverter: RDBDataTypeConverter = new MySQLDataTypeConverter()
     val result: Seq[ColumnInfo[_]] = ResultSetDataConverter.converterRecord(dataTypeConverter, resultSet, columnList)
     result(1).columnName shouldBe "column2"
     result(1).columnType shouldBe VARCHAR

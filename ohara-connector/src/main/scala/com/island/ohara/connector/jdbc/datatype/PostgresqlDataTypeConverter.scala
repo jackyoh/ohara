@@ -15,7 +15,7 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
-import java.sql.{ResultSet, Date, Time, Timestamp}
+import java.sql.{ResultSet, Date, Timestamp}
 
 import com.island.ohara.client.configurator.v0.QueryApi
 import java.util.Optional
@@ -23,59 +23,66 @@ import java.util.Optional
 import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
-  private[this] val RDB_TYPE_BOOLEAN = "BOOLEAN"
-  private[this] val RDB_TYPE_BIT: String = "BIT"
-  private[this] val RDB_TYPE_INTEGER: String = "INT"
-  private[this] val RDB_TYPE_INTEGER_2: String = "INT4"
-  private[this] val RDB_TYPE_BIGINT: String = "BIGINT"
-  private[this] val RDB_TYPE_FLOAT: String = "FLOAT"
-  private[this] val RDB_TYPE_FLOAT_2: String = "FLOAT8"
-  private[this] val RDB_TYPE_DOUBLE: String = "DOUBLE"
-  private[this] val RDB_TYPE_CHAR: String = "CHAR"
-  private[this] val RDB_TYPE_VARCHAR: String = "VARCHAR"
-  private[this] val RDB_TYPE_LONGVARCHAR: String = "LONGVARCHAR"
-  private[this] val RDB_TYPE_TIMESTAMP: String = "TIMESTAMP"
-  private[this] val RDB_TYPE_DATE: String = "DATE"
-  private[this] val RDB_TYPE_TIME: String = "TIME"
+  private[this] val TYPE_NAME_INT2 = "INT2"
+  private[this] val TYPE_NAME_INT4 = "INT4"
+  private[this] val TYPE_NAME_INT8 = "INT8"
+  private[this] val TYPE_NAME_BIT = "BIT"
+  private[this] val TYPE_NAME_FLOAT4 = "FLOAT4"
+  private[this] val TYPE_NAME_FLOAT8 = "FLOAT8"
+  private[this] val TYPE_NAME_NUMERIC = "NUMERIC"
+  private[this] val TYPE_NAME_BPCHAR = "BPCHAR"
+  private[this] val TYPE_NAME_VARCHAR = "VARCHAR"
+  private[this] val TYPE_NAME_DATE = "DATE"
+  private[this] val TYPE_NAME_TIME = "TIME"
+  private[this] val TYPE_NAME_TIMETZ = "TIMETZ"
+  private[this] val TYPE_NAME_TIMESTAMP = "TIMESTAMP"
+  private[this] val TYPE_NAME_TIMESTAMPTZ = "TIMESTAMP"
+  private[this] val TYPE_NAME_BYTEA = "BYTEA"
+  private[this] val TYPE_NAME_BOOL = "BOOL"
 
   override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
     val columnName = column.name
     val typeName = column.dataType
 
     typeName.toUpperCase match {
-      case RDB_TYPE_BOOLEAN =>
-        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
-
-      case RDB_TYPE_BIT =>
-        java.lang.Byte.valueOf(resultSet.getByte(columnName))
-
-      case RDB_TYPE_INTEGER | RDB_TYPE_INTEGER_2 =>
+      case TYPE_NAME_INT2 | TYPE_NAME_INT4 =>
         java.lang.Integer.valueOf(resultSet.getInt(columnName))
 
-      case RDB_TYPE_BIGINT =>
+      case TYPE_NAME_INT8 =>
         java.lang.Long.valueOf(resultSet.getLong(columnName))
 
-      case RDB_TYPE_FLOAT | RDB_TYPE_FLOAT_2 => //TODO Refactor DB datatype for JDBC Source Connector
+      case TYPE_NAME_BIT =>
+        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+
+      case TYPE_NAME_FLOAT4 =>
         java.lang.Float.valueOf(resultSet.getFloat(columnName))
 
-      case RDB_TYPE_DOUBLE =>
+      case TYPE_NAME_FLOAT8 =>
         java.lang.Double.valueOf(resultSet.getDouble(columnName))
 
-      case RDB_TYPE_CHAR | RDB_TYPE_VARCHAR | RDB_TYPE_LONGVARCHAR =>
+      case TYPE_NAME_NUMERIC =>
+        resultSet.getBigDecimal(columnName)
+
+      case TYPE_NAME_BPCHAR | TYPE_NAME_VARCHAR =>
         Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
 
-      case RDB_TYPE_TIMESTAMP =>
+      case TYPE_NAME_DATE =>
+        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
+
+      case TYPE_NAME_TIME | TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ =>
         Optional
           .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
           .orElseGet(() => new Timestamp(0))
 
-      case RDB_TYPE_DATE =>
-        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
+      case TYPE_NAME_BYTEA =>
+        resultSet.getBytes(columnName)
 
-      case RDB_TYPE_TIME =>
-        Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
+      case TYPE_NAME_BOOL =>
+        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+
       case _ =>
-        throw new RuntimeException(s"Postgresql not support ${typeName} data type in ${columnName} column.")
+        throw new RuntimeException(
+          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for postgresql database.")
     }
   }
 }

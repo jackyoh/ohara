@@ -19,10 +19,10 @@ import java.sql.ResultSet
 
 import com.island.ohara.client.configurator.v0.QueryApi
 
-class CommonDataTypeConverter extends RDBDataTypeConverter {
+class GenericDataTypeConverter extends RDBDataTypeConverter {
 
   override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
-    None //TODO
+    None //Coming soon
   }
 
 }
