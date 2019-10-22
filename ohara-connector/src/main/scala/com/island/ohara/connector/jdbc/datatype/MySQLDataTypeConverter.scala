@@ -58,14 +58,11 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
     val typeName = column.dataType
 
     typeName.toUpperCase match {
-      case TYPE_NAME_BIT =>
+      case TYPE_NAME_BIT | TYPE_NAME_BOOL | TYPE_NAME_BOOLEAN =>
         java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
 
       case TYPE_NAME_TINYINT =>
         java.lang.Integer.valueOf(resultSet.getInt(columnName))
-
-      case TYPE_NAME_BOOL | TYPE_NAME_BOOLEAN =>
-        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
 
       case TYPE_NAME_SMALLINT | TYPE_NAME_MEDIUMINT | TYPE_NAME_INT | TYPE_NAME_INTEGER =>
         java.lang.Integer.valueOf(resultSet.getInt(columnName))
@@ -98,9 +95,10 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
         Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
 
       case TYPE_NAME_BINARY | TYPE_NAME_VARBINARY | TYPE_NAME_TINYBLOB | TYPE_NAME_BLOB | TYPE_NAME_MEDIUMBLOB |
-          TYPE_NAME_LONGBLOB =>
+          TYPE_NAME_LONGBLOB => {
         Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
 
+      }
       case _ =>
         s"MySQL implement not support ${typeName} data type in ${columnName} column."
     }
