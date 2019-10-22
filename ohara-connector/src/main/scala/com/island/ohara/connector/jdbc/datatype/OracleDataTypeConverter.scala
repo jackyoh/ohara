@@ -15,12 +15,96 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
-import java.sql.ResultSet
+import java.sql.{ResultSet, Timestamp}
+import java.util.Optional
 
 import com.island.ohara.client.configurator.v0.QueryApi
+import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 class OracleDataTypeConverter extends RDBDataTypeConverter {
+  private[this] val TYPE_NAME_CHAR: String = "CHAR"
+  private[this] val TYPE_NAME_CHARACTER: String = "CHARACTER"
+  private[this] val TYPE_NAME_LONG: String = "LONG"
+  private[this] val TYPE_NAME_STRING: String = "STRING"
+  private[this] val TYPE_NAME_VARCHAR: String = "VARCHAR"
+  private[this] val TYPE_NAME_VARCHAR2: String = "VARCHAR2"
+  private[this] val TYPE_NAME_NCHAR: String = "NCHAR"
+  private[this] val TYPE_NAME_NVARCHAR2: String = "NVARCHAR2"
+  private[this] val TYPE_NAME_RAW: String = "RAW"
+  private[this] val TYPE_NAME_LONGRAW: String = "LONG RAW"
+  private[this] val TYPE_NAME_BINARY_INTEGER: String = "BINARY_INTEGER"
+  private[this] val TYPE_NAME_NATURAL: String = "NATURAL"
+  private[this] val TYPE_NAME_NATURALN: String = "NATURALN"
+  private[this] val TYPE_NAME_PLS_INTEGER: String = "PLS_INTEGER"
+  private[this] val TYPE_NAME_POSITIVE: String = "POSITIVE"
+  private[this] val TYPE_NAME_POSITIVEN: String = "POSITIVEN"
+  private[this] val TYPE_NAME_SIGNTYPE: String = "SIGNTYPE"
+  private[this] val TYPE_NAME_INT: String = "INT"
+  private[this] val TYPE_NAME_INTEGER: String = "INTEGER"
+  private[this] val TYPE_NAME_DEC: String = "DEC"
+  private[this] val TYPE_NAME_DECIMAL: String = "DECIMAL"
+  private[this] val TYPE_NAME_NUMBER: String = "NUMBER"
+  private[this] val TYPE_NAME_NUMERIC: String = "NUMERIC"
+  private[this] val TYPE_NAME_DOUBLE_PRECISION: String = "DOUBLE PRECISION"
+  private[this] val TYPE_NAME_FLOAT: String = "FLOAT"
+  private[this] val TYPE_NAME_SMALLINT: String = "SMALLINT"
+  private[this] val TYPE_NAME_REAL: String = "REAL"
+  private[this] val TYPE_NAME_DATE: String = "DATE"
+  private[this] val TYPE_NAME_TIMESTAMP: String = "TIMESTAMP"
+  private[this] val TYPE_NAME_TIMESTAMP_WITH_TZ: String = "TIMESTAMP WITH TZ"
+  private[this] val TYPE_NAME_TIMESTAMP_WITH_LOCAL_TZ: String = "TIMESTAMP WITH LOCAL TZ"
+  private[this] val TYPE_NAME_INTERVAL_YEAR_TO_MONTH: String = "INTERVAL YEAR TO MONTH"
+  private[this] val TYPE_NAME_INTERVAL_DAY_TO_SECOND: String = "INTERVAL DAY TO SECOND"
+  private[this] val TYPE_NAME_BOOLEAN: String = "BOOLEAN"
+  private[this] val TYPE_NAME_CLOB: String = "CLOB"
+  private[this] val TYPE_NAME_BLOB: String = "BLOB"
+
   override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
-    None //TODO Coming soon
+    val columnName = column.name
+    val typeName = column.dataType
+
+    typeName.toUpperCase match {
+      case TYPE_NAME_CHAR | TYPE_NAME_CHARACTER | TYPE_NAME_LONG | TYPE_NAME_STRING | TYPE_NAME_VARCHAR |
+          TYPE_NAME_VARCHAR2 | TYPE_NAME_NCHAR | TYPE_NAME_NVARCHAR2 =>
+        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
+
+      case TYPE_NAME_RAW | TYPE_NAME_LONGRAW =>
+        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
+
+      case TYPE_NAME_BINARY_INTEGER | TYPE_NAME_NATURAL | TYPE_NAME_NATURALN | TYPE_NAME_PLS_INTEGER |
+          TYPE_NAME_POSITIVE | TYPE_NAME_POSITIVEN | TYPE_NAME_SIGNTYPE | TYPE_NAME_INT | TYPE_NAME_INTEGER |
+          TYPE_NAME_SMALLINT =>
+        java.lang.Integer.valueOf(resultSet.getInt(columnName))
+
+      case TYPE_NAME_DEC | TYPE_NAME_DECIMAL | TYPE_NAME_NUMBER | TYPE_NAME_NUMERIC =>
+        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
+
+      case TYPE_NAME_DOUBLE_PRECISION | TYPE_NAME_FLOAT =>
+        java.lang.Double.valueOf(resultSet.getDouble(columnName))
+
+      case TYPE_NAME_REAL =>
+        java.lang.Float.valueOf(resultSet.getFloat(columnName))
+
+      case TYPE_NAME_DATE | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMP_WITH_TZ | TYPE_NAME_TIMESTAMP_WITH_LOCAL_TZ =>
+        Optional
+          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
+          .orElseGet(() => new Timestamp(0))
+
+      case TYPE_NAME_INTERVAL_YEAR_TO_MONTH | TYPE_NAME_INTERVAL_DAY_TO_SECOND =>
+        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
+
+      case TYPE_NAME_BOOLEAN =>
+        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+
+      case TYPE_NAME_CLOB =>
+        resultSet.getClob(columnName)
+
+      case TYPE_NAME_BLOB =>
+        resultSet.getBlob(columnName)
+
+      case _ =>
+        throw new RuntimeException(
+          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for Oracle database.")
+    }
   }
 }

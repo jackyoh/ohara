@@ -100,7 +100,8 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
 
       }
       case _ =>
-        s"MySQL implement not support ${typeName} data type in ${columnName} column."
+        throw new RuntimeException(
+          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for MySQL database.")
     }
   }
 }

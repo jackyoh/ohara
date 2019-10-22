@@ -58,9 +58,10 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers with Matchers
         "column9 decimal," +
         "column10 date," +
         "column11 time," +
-        "column12 ENUM('A','B'))")
+        "column12 ENUM('A','B')," +
+        "column13 LONGTEXT)")
 
-    val sql = s"INSERT INTO table1 VALUES(?,?,?,?,?,?,?,?,?,?,?,?)"
+    val sql = s"INSERT INTO table1 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
     val pstmt = connection.prepareStatement(sql)
 
     val binaryData = "some string data ...".getBytes()
@@ -76,7 +77,7 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers with Matchers
     pstmt.setDate(10, Date.valueOf("2018-10-01"))
     pstmt.setTime(11, Time.valueOf("11:00:00"))
     pstmt.setString(12, "B")
-
+    pstmt.setString(13, "aaaaaaaaaa")
     pstmt.executeUpdate()
 
   }
@@ -161,6 +162,11 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers with Matchers
       // Test enum type
       row0.cell(11).value.isInstanceOf[String] shouldBe true
       row0.cell(11).value.toString shouldBe "B"
+
+      // Test longtext type
+      row0.cell(12).value.isInstanceOf[String] shouldBe true
+      row0.cell(12).value.toString shouldBe "aaaaaaaaaa"
+
     } finally consumer.close()
 
   }
