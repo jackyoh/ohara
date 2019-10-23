@@ -15,13 +15,7 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
-import java.sql.{Date, ResultSet, Time, Timestamp}
-import java.util.Optional
 
-import com.island.ohara.client.configurator.v0.QueryApi
-import com.island.ohara.connector.jdbc.util.DateTimeUtils
-
-// TODO Coming soon
 class GenericDataTypeConverter extends RDBDataTypeConverter {
 
   private[this] val TYPE_NAME_BOOLEAN: String = "BOOLEAN"
@@ -40,46 +34,37 @@ class GenericDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_VARCHAR2: String = "VARCHAR2"
   private[this] val TYPE_NAME_NUMBER: String = "NUMBER"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
-    val columnName = column.name
-    val typeName = column.dataType
+  override protected[datatype] def dataBaseProductName: String = "generic"
 
-    typeName.toUpperCase match {
-      case TYPE_NAME_BOOLEAN =>
-        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_INTEGER || typeName == TYPE_NAME_NUMBER
 
-      case TYPE_NAME_BIT =>
-        java.lang.Byte.valueOf(resultSet.getByte(columnName))
+  override protected[datatype] def isLongTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BIGINT
 
-      case TYPE_NAME_INTEGER | TYPE_NAME_NUMBER =>
-        java.lang.Integer.valueOf(resultSet.getInt(columnName))
+  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BOOLEAN
 
-      case TYPE_NAME_BIGINT =>
-        java.lang.Long.valueOf(resultSet.getLong(columnName))
+  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_FLOAT
 
-      case TYPE_NAME_FLOAT =>
-        java.lang.Float.valueOf(resultSet.getFloat(columnName))
+  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DOUBLE
 
-      case TYPE_NAME_DOUBLE =>
-        java.lang.Double.valueOf(resultSet.getDouble(columnName))
+  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean = false
 
-      case TYPE_NAME_CHAR | TYPE_NAME_VARCHAR | TYPE_NAME_LONGVARCHAR | TYPE_NAME_VARCHAR2 =>
-        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
+  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_CHAR || typeName == TYPE_NAME_VARCHAR || typeName == TYPE_NAME_LONGVARCHAR || typeName == TYPE_NAME_VARCHAR2
 
-      case TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMP6 =>
-        Optional
-          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
-          .orElseGet(() => new Timestamp(0))
+  override protected[datatype] def isDateTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DATE
 
-      case TYPE_NAME_DATE =>
-        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
+  override protected[datatype] def isTimeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_TIME
 
-      case TYPE_NAME_TIME =>
-        Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
+  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_TIMESTAMP || typeName == TYPE_NAME_TIMESTAMP6
 
-      case _ =>
-        throw new RuntimeException(s"Data type '$typeName' not support on column '$columnName'.")
-    }
-  }
-
+  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BIT
 }

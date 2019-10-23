@@ -15,12 +15,6 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
-import java.sql.{ResultSet, Date, Timestamp}
-
-import com.island.ohara.client.configurator.v0.QueryApi
-import java.util.Optional
-
-import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_INT2 = "INT2"
@@ -40,49 +34,40 @@ class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_BYTEA = "BYTEA"
   private[this] val TYPE_NAME_BOOL = "BOOL"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
-    val columnName = column.name
-    val typeName = column.dataType
+  override protected[datatype] def dataBaseProductName: String = "postgresql"
 
-    typeName.toUpperCase match {
-      case TYPE_NAME_INT2 | TYPE_NAME_INT4 =>
-        java.lang.Integer.valueOf(resultSet.getInt(columnName))
+  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_INT2 || typeName == TYPE_NAME_INT4
 
-      case TYPE_NAME_INT8 =>
-        java.lang.Long.valueOf(resultSet.getLong(columnName))
+  override protected[datatype] def isLongTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_INT8
 
-      case TYPE_NAME_BIT =>
-        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BIT || typeName == TYPE_NAME_BOOL
 
-      case TYPE_NAME_FLOAT4 =>
-        java.lang.Float.valueOf(resultSet.getFloat(columnName))
+  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_FLOAT4
 
-      case TYPE_NAME_FLOAT8 =>
-        java.lang.Double.valueOf(resultSet.getDouble(columnName))
+  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_FLOAT8
 
-      case TYPE_NAME_NUMERIC =>
-        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
+  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_NUMERIC
 
-      case TYPE_NAME_BPCHAR | TYPE_NAME_VARCHAR =>
-        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
+  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BPCHAR || typeName == TYPE_NAME_VARCHAR
 
-      case TYPE_NAME_DATE =>
-        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
+  override protected[datatype] def isDateTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DATE
 
-      case TYPE_NAME_TIME | TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ =>
-        Optional
-          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
-          .orElseGet(() => new Timestamp(0))
-
-      case TYPE_NAME_BYTEA =>
-        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
-
-      case TYPE_NAME_BOOL =>
-        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
-
-      case _ =>
-        throw new RuntimeException(
-          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for postgresql database.")
+  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
+    typeName match {
+      case TYPE_NAME_TIME | TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ => true
+      case _                                                                               => false
     }
-  }
+
+  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BYTEA
+
+  override protected[datatype] def isTimeTypeName(typeName: String): Boolean = false
 }

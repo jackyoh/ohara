@@ -15,11 +15,6 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
-import java.sql.{Date, ResultSet, Timestamp, Time}
-import java.util.Optional
-
-import com.island.ohara.client.configurator.v0.QueryApi
-import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 class MySQLDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_BIT = "BIT"
@@ -53,55 +48,49 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_ENUM: String = "ENUM"
   private[this] val TYPE_NAME_SET: String = "SET"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
-    val columnName = column.name
-    val typeName = column.dataType
+  override protected[datatype] def dataBaseProductName: String = "mysql"
 
-    typeName.toUpperCase match {
-      case TYPE_NAME_BIT | TYPE_NAME_BOOL | TYPE_NAME_BOOLEAN =>
-        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_TINYINT || typeName == TYPE_NAME_SMALLINT || typeName == TYPE_NAME_MEDIUMINT ||
+      typeName == TYPE_NAME_INT || typeName == TYPE_NAME_INTEGER
 
-      case TYPE_NAME_TINYINT =>
-        java.lang.Integer.valueOf(resultSet.getInt(columnName))
+  override protected[datatype] def isLongTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BIGINT
 
-      case TYPE_NAME_SMALLINT | TYPE_NAME_MEDIUMINT | TYPE_NAME_INT | TYPE_NAME_INTEGER =>
-        java.lang.Integer.valueOf(resultSet.getInt(columnName))
+  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_BIT | typeName == TYPE_NAME_BOOL | typeName == TYPE_NAME_BOOLEAN
 
-      case TYPE_NAME_BIGINT =>
-        java.lang.Long.valueOf(resultSet.getLong(columnName))
+  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_FLOAT
 
-      case TYPE_NAME_FLOAT =>
-        java.lang.Float.valueOf(resultSet.getFloat(columnName))
+  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DOUBLE
 
-      case TYPE_NAME_DOUBLE =>
-        java.lang.Double.valueOf(resultSet.getDouble(columnName))
+  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DECIMAL
 
-      case TYPE_NAME_DECIMAL =>
-        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
-
-      case TYPE_NAME_DATE =>
-        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
-
-      case TYPE_NAME_TIME =>
-        Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
-
-      case TYPE_NAME_DATETIME | TYPE_NAME_TIMESTAMP =>
-        Optional
-          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
-          .orElseGet(() => new Timestamp(0))
-
+  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
+    typeName match {
       case TYPE_NAME_CHAR | TYPE_NAME_VARCHAR | TYPE_NAME_TINYTEXT | TYPE_NAME_TEXT | TYPE_NAME_MEDIUMTEXT |
           TYPE_NAME_LONGTEXT | TYPE_NAME_ENUM | TYPE_NAME_SET =>
-        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
-
-      case TYPE_NAME_BINARY | TYPE_NAME_VARBINARY | TYPE_NAME_TINYBLOB | TYPE_NAME_BLOB | TYPE_NAME_MEDIUMBLOB |
-          TYPE_NAME_LONGBLOB => {
-        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
-
-      }
-      case _ =>
-        throw new RuntimeException(
-          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for MySQL database.")
+        true
+      case _ => false
     }
-  }
+
+  override protected[datatype] def isDateTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DATE
+
+  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DATETIME | typeName == TYPE_NAME_TIMESTAMP
+
+  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
+    typeName match {
+      case TYPE_NAME_BINARY | TYPE_NAME_VARBINARY | TYPE_NAME_TINYBLOB | TYPE_NAME_BLOB | TYPE_NAME_MEDIUMBLOB |
+          TYPE_NAME_LONGBLOB =>
+        true
+      case _ => false
+    }
+
+  override protected[datatype] def isTimeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_TIME
 }

@@ -15,11 +15,6 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
-import java.sql.{ResultSet, Timestamp}
-import java.util.Optional
-
-import com.island.ohara.client.configurator.v0.QueryApi
-import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 class OracleDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_CHAR: String = "CHAR"
@@ -46,41 +41,39 @@ class OracleDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_INTERVAL_YEAR_TO_MONTH: String = "INTERVAL YEAR TO MONTH"
   private[this] val TYPE_NAME_INTERVAL_DAY_TO_SECOND: String = "INTERVAL DAY TO SECOND"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
-    val columnName = column.name
-    val typeName = column.dataType
+  override protected[datatype] def dataBaseProductName: String = "oracle"
 
-    typeName.toUpperCase match {
+  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_INT || typeName == TYPE_NAME_INTEGER || typeName == TYPE_NAME_SMALLINT
+
+  override protected[datatype] def isLongTypeName(typeName: String): Boolean = false
+
+  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean = false
+
+  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_REAL
+
+  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DOUBLE_PRECISION || typeName == TYPE_NAME_FLOAT
+
+  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DEC || typeName == TYPE_NAME_DECIMAL || typeName == TYPE_NAME_NUMBER || typeName == TYPE_NAME_NUMERIC
+
+  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
+    typeName match {
       case TYPE_NAME_CHAR | TYPE_NAME_CHARACTER | TYPE_NAME_LONG | TYPE_NAME_VARCHAR | TYPE_NAME_VARCHAR2 |
-          TYPE_NAME_NCHAR | TYPE_NAME_NVARCHAR2 =>
-        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
-
-      case TYPE_NAME_RAW | TYPE_NAME_LONGRAW =>
-        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
-
-      case TYPE_NAME_INT | TYPE_NAME_INTEGER | TYPE_NAME_SMALLINT =>
-        java.lang.Integer.valueOf(resultSet.getInt(columnName))
-
-      case TYPE_NAME_DEC | TYPE_NAME_DECIMAL | TYPE_NAME_NUMBER | TYPE_NAME_NUMERIC =>
-        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
-
-      case TYPE_NAME_DOUBLE_PRECISION | TYPE_NAME_FLOAT =>
-        java.lang.Double.valueOf(resultSet.getDouble(columnName))
-
-      case TYPE_NAME_REAL =>
-        java.lang.Float.valueOf(resultSet.getFloat(columnName))
-
-      case TYPE_NAME_DATE | TYPE_NAME_TIMESTAMP =>
-        Optional
-          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
-          .orElseGet(() => new Timestamp(0))
-
-      case TYPE_NAME_INTERVAL_YEAR_TO_MONTH | TYPE_NAME_INTERVAL_DAY_TO_SECOND =>
-        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
-
-      case _ =>
-        throw new RuntimeException(
-          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for Oracle database.")
+          TYPE_NAME_NCHAR | TYPE_NAME_NVARCHAR2 | TYPE_NAME_INTERVAL_YEAR_TO_MONTH | TYPE_NAME_INTERVAL_DAY_TO_SECOND =>
+        true
+      case _ => false
     }
-  }
+
+  override protected[datatype] def isDateTypeName(typeName: String): Boolean = false
+
+  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_DATE || typeName == TYPE_NAME_TIMESTAMP
+
+  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_RAW || typeName == TYPE_NAME_LONGRAW
+
+  override protected[datatype] def isTimeTypeName(typeName: String): Boolean = false
 }
