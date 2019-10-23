@@ -24,6 +24,8 @@ object RDBDataTypeConverterFactory {
         new PostgresqlDataTypeConverter()
       case "mysql" =>
         new MySQLDataTypeConverter()
+      case "oracle" =>
+        new OracleDataTypeConverter()
       case _ =>
         new GenericDataTypeConverter()
     }
