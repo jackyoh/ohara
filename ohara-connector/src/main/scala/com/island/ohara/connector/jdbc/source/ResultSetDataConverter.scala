@@ -36,7 +36,7 @@ object ResultSetDataConverter {
                       resultSet: ResultSet,
                       columns: Seq[RdbColumn]): Seq[ColumnInfo[_]] = {
     columns.map(column => {
-      val resultValue: Object = rdbDataTypeConverter.converterValue(resultSet, column)
+      val resultValue: Any = rdbDataTypeConverter.converterValue(resultSet, column)
       // Setting data value to ColumnInfo case class
       ColumnInfo(column.name, column.dataType, resultValue)
     })

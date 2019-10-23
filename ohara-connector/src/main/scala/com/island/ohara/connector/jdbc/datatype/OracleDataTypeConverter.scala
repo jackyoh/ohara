@@ -46,7 +46,7 @@ class OracleDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_INTERVAL_YEAR_TO_MONTH: String = "INTERVAL YEAR TO MONTH"
   private[this] val TYPE_NAME_INTERVAL_DAY_TO_SECOND: String = "INTERVAL DAY TO SECOND"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
+  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
     val columnName = column.name
     val typeName = column.dataType
 

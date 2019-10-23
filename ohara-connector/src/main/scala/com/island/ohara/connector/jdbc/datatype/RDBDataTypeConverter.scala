@@ -21,5 +21,5 @@ import java.sql.ResultSet
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
 
 trait RDBDataTypeConverter {
-  def converterValue(resultSet: ResultSet, column: RdbColumn): Object
+  def converterValue(resultSet: ResultSet, column: RdbColumn): Any
 }

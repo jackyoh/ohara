@@ -40,7 +40,7 @@ class GenericDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_VARCHAR2: String = "VARCHAR2"
   private[this] val TYPE_NAME_NUMBER: String = "NUMBER"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
+  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
     val columnName = column.name
     val typeName = column.dataType
 

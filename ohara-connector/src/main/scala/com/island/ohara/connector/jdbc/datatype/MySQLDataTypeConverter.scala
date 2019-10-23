@@ -53,7 +53,7 @@ class MySQLDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_ENUM: String = "ENUM"
   private[this] val TYPE_NAME_SET: String = "SET"
 
-  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): AnyRef = {
+  override def converterValue(resultSet: ResultSet, column: QueryApi.RdbColumn): Any = {
     val columnName = column.name
     val typeName = column.dataType
 
