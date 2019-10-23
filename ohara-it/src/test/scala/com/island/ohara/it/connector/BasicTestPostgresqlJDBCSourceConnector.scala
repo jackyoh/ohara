@@ -23,11 +23,11 @@ abstract class BasicTestPostgresqlJDBCSourceConnector extends BasicTestConnector
   private[this] val DB_USER_NAME_KEY: String = "ohara.it.postgresql.db.username"
   private[this] val DB_PASSWORD_KEY: String = "ohara.it.postgresql.db.password"
 
-  override protected def dbUrl(): Option[String] = sys.env.get(DB_URL_KEY)
+  override protected def dbUrl(): Option[String] = Option(DB_URL_KEY)
 
-  override protected def dbUserName(): Option[String] = sys.env.get(DB_USER_NAME_KEY)
+  override protected def dbUserName(): Option[String] = Option(DB_USER_NAME_KEY)
 
-  override protected def dbPassword(): Option[String] = sys.env.get(DB_PASSWORD_KEY)
+  override protected def dbPassword(): Option[String] = Option(DB_PASSWORD_KEY)
 
   override protected def dbName(): String = "postgresql"
 
@@ -37,6 +37,7 @@ abstract class BasicTestPostgresqlJDBCSourceConnector extends BasicTestConnector
 
   override protected val columnPrefixName: String = "column"
 
-  override protected def insertTableSQL(tableName: String, columns: Seq[String], value: Int): String =
-    s"INSERT INTO $tableName(${columns(0)}, ${columns(1)}, ${columns(2)}) VALUES('2018-09-01 00:00:00', 'a${value}', ${value})"
+  override protected val insertDataSQL: String = s"INSERT INTO $tableName VALUES('2018-09-01 00:00:00',?,?,?)"
+
+  override protected val BINARY_TYPE_NAME: String = "BYTEA"
 }

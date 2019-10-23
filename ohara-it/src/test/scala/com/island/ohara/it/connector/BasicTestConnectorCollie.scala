@@ -17,7 +17,7 @@
 package com.island.ohara.it.connector
 
 import java.io.File
-import java.sql.{Statement, Timestamp}
+import java.sql.{PreparedStatement, Timestamp}
 
 import com.island.ohara.client.configurator.v0.FileInfoApi.FileInfo
 import com.island.ohara.client.configurator.v0.NodeApi.Node
@@ -68,8 +68,10 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
   protected def dbUserName(): Option[String]
   protected def dbPassword(): Option[String]
   protected def dbName(): String
-  protected def insertTableSQL(tableName: String, columns: Seq[String], value: Int): String
+  protected def insertDataSQL(): String
   protected def createor(): Unit
+
+  protected def BINARY_TYPE_NAME: String
 
   /**
     * This function for setting database JDBC jar file name.
@@ -98,18 +100,22 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
     client = DatabaseClient.builder.url(dbUrl().get).user(dbUserName().get).password(dbPassword().get).build
 
     // Create table
-    val columns = (1 to 3).map(x => s"${columnPrefixName()}$x")
+    val columns = (1 to 4).map(x => s"${columnPrefixName()}$x")
     timestampColumn = columns(0)
 
     val column1 = RdbColumn(columns(0), "TIMESTAMP", false)
     val column2 = RdbColumn(columns(1), "varchar(45)", false)
     val column3 = RdbColumn(columns(2), "integer", true)
-    client.createTable(tableName(), Seq(column1, column2, column3))
+    val column4 = RdbColumn(columns(3), BINARY_TYPE_NAME, false)
+    client.createTable(tableName(), Seq(column1, column2, column3, column4))
 
     // Insert data in the table
-    val statement: Statement = client.connection.createStatement()
+    val preParedstatement: PreparedStatement = client.connection.prepareStatement(insertDataSQL)
     (1 to 100).foreach(i => {
-      statement.execute(insertTableSQL(tableName(), columns, i))
+      preParedstatement.setString(1, s"a${i}")
+      preParedstatement.setInt(2, i)
+      preParedstatement.setBytes(3, s"binary-value${i}".getBytes)
+      preParedstatement.executeUpdate()
     })
   }
 
@@ -205,10 +211,13 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
       record.head.key.get.cell(0).value.asInstanceOf[Timestamp].getTime shouldBe 1535760000000L
       record.head.key.get.cell(1).value shouldBe "a1"
       record.head.key.get.cell(2).value shouldBe 1
+      new String(record.head.key.get.cell(3).value.asInstanceOf[Array[Byte]]) shouldBe "binary-value1"
 
       record.last.key.get.cell(0).value.asInstanceOf[Timestamp].getTime shouldBe 1535760000000L
       record.last.key.get.cell(1).value shouldBe "a100"
       record.last.key.get.cell(2).value shouldBe 100
+      new String(record.head.key.get.cell(3).value.asInstanceOf[Array[Byte]]) shouldBe "binary-value100"
+
     } finally {
       consumer.close()
     }
@@ -325,10 +334,10 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
 
   @After
   def afterTest(): Unit = {
-    if (client != null) {
+    /*if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table ${tableName()}")
-    }
+    }*/
     Releasable.close(client)
     Releasable.close(configurator)
     Releasable.close(nameHolder)
