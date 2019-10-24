@@ -167,12 +167,12 @@ Execute Configurator
 
    docker run --rm -p ${port}:${port} --add-host ${nodeHostName}:${nodeHostIP} oharastream/configurator:$|version| --port ${port} --hostname ${host}
 
--  folder: the folder used to store data (default is random). Mount the
+-  ``--folder``: the folder used to store data (default is random). Mount the
    volume if you want to keep your data after restarting Configurator
--  port: bound by Configurator (default is random)
--  add-host: add a host mapping to /etc/hosts in Ohara Configurator
-   (nodeHostName:nodeHostIP)
--  hostname: hostname to run Ohara Configurator (defaults to 0.0.0.0)
+-  ``--port``: bound by Configurator (default is random)
+-  ``--add-host``: add a host mapping to /etc/hosts in Ohara Configurator (nodeHostName:nodeHostIP).
+   If you have DNS server, you can just ignore parameter of add-host.
+-  ``--hostname``: hostname to run Ohara Configurator (defaults to 0.0.0.0)
 
 .. note::
   You can enable the jmx reporter via inputting two env variables - “JMX_HOSTNAME” and “JMX_PORT”.
@@ -230,8 +230,8 @@ Execute Manager
 
    docker run --rm -p 5050:5050 oharastream/manager:$|version| --port 5050 --configurator http://localhost:12345/v0
 
--  port: bound by manager (default is 5050)
--  configurator: basic form of restful API of Ohara Configurator
+-  ``--port``: bound by manager (default is 5050)
+-  ``--configurator``: basic form of restful API of Ohara Configurator
 
 
 Execute PostgreSQL Instance
@@ -825,13 +825,11 @@ How to use Kubernetes in Ohara?
 
 ..
 
-   --add-host: Add all k8s worker hostname and ip information to
-   configurator container /etc/hosts file.
+   ``--add-host``: Add all k8s worker hostname and ip information to
+   configurator container /etc/hosts file. If you have DNS server, you
+   can just ignore parameter of add-host.
 
-   if you have the DNS Server, you don't add --add-host argument to
-   run configurator container command
-
-   --k8s: Assignment your K8S API server HTTP URL
+   ``--k8s``: Assignment your K8S API server HTTP URL
 
 -  Use Ohara configurator to create a zookeeper and broker in Kubernetes
    pod for the test:
