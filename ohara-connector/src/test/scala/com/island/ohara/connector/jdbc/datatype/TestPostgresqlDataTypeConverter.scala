@@ -80,6 +80,7 @@ class TestPostgresqlDataTypeConverter extends OharaTest with Matchers with Mocki
     val column = RdbColumn("column1", BPCHAR, false)
     val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Any = rdbDataTypeConverter.converterValue(resultSet, column)
+    result.isInstanceOf[String] shouldBe true
     result shouldBe "h"
   }
 

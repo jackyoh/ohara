@@ -70,7 +70,7 @@ class OracleDataTypeConverter extends RDBDataTypeConverter {
   override protected[datatype] def isDateTypeName(typeName: String): Boolean = false
 
   override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_DATE || typeName == TYPE_NAME_TIMESTAMP
+    typeName.startsWith(TYPE_NAME_DATE) || typeName.startsWith(TYPE_NAME_TIMESTAMP)
 
   override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
     typeName == TYPE_NAME_RAW || typeName == TYPE_NAME_LONGRAW

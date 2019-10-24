@@ -17,7 +17,7 @@
 package com.island.ohara.it.connector
 
 import java.io.File
-import java.sql.{PreparedStatement, Timestamp}
+import java.sql.{PreparedStatement, Statement, Timestamp}
 
 import com.island.ohara.client.configurator.v0.FileInfoApi.FileInfo
 import com.island.ohara.client.configurator.v0.NodeApi.Node
@@ -334,10 +334,10 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
 
   @After
   def afterTest(): Unit = {
-    /*if (client != null) {
+    if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table ${tableName()}")
-    }*/
+    }
     Releasable.close(client)
     Releasable.close(configurator)
     Releasable.close(nameHolder)
