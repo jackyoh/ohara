@@ -825,10 +825,13 @@ How to use Kubernetes in Ohara?
 
 ..
 
-   –add-host: Add all k8s worker hostname and ip information to
-   configurator container /etc/hosts file
+   --add-host: Add all k8s worker hostname and ip information to
+   configurator container /etc/hosts file.
 
-   –k8s: Assignment your K8S API server HTTP URL
+   if you have the DNS Server, you don't add --add-host argument to
+   run configurator container command
+
+   --k8s: Assignment your K8S API server HTTP URL
 
 -  Use Ohara configurator to create a zookeeper and broker in Kubernetes
    pod for the test:
