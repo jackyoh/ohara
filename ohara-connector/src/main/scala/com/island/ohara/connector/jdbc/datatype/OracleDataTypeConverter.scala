@@ -44,28 +44,29 @@ class OracleDataTypeConverter extends RDBDataTypeConverter {
   override protected[datatype] def dataBaseProductName: String = "oracle"
 
   override protected[datatype] def isIntTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_INT || typeName == TYPE_NAME_INTEGER || typeName == TYPE_NAME_SMALLINT
+    typeName.startsWith(TYPE_NAME_INT) || typeName.startsWith(TYPE_NAME_INTEGER) || typeName.startsWith(
+      TYPE_NAME_SMALLINT) ||
+      typeName.startsWith(TYPE_NAME_DEC) || typeName.startsWith(TYPE_NAME_DECIMAL) || typeName.startsWith(
+      TYPE_NAME_NUMBER) ||
+      typeName.startsWith(TYPE_NAME_NUMERIC)
 
   override protected[datatype] def isLongTypeName(typeName: String): Boolean = false
 
   override protected[datatype] def isBooleanTypeName(typeName: String): Boolean = false
 
   override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_REAL
+    typeName.startsWith(TYPE_NAME_REAL)
 
   override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_DOUBLE_PRECISION || typeName == TYPE_NAME_FLOAT
+    typeName.startsWith(TYPE_NAME_DOUBLE_PRECISION) || typeName.startsWith(TYPE_NAME_FLOAT)
 
-  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_DEC || typeName == TYPE_NAME_DECIMAL || typeName == TYPE_NAME_NUMBER || typeName == TYPE_NAME_NUMERIC
+  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean = false
 
   override protected[datatype] def isStringTypeName(typeName: String): Boolean =
-    typeName match {
-      case TYPE_NAME_CHAR | TYPE_NAME_CHARACTER | TYPE_NAME_LONG | TYPE_NAME_VARCHAR | TYPE_NAME_VARCHAR2 |
-          TYPE_NAME_NCHAR | TYPE_NAME_NVARCHAR2 | TYPE_NAME_INTERVAL_YEAR_TO_MONTH | TYPE_NAME_INTERVAL_DAY_TO_SECOND =>
-        true
-      case _ => false
-    }
+    typeName.startsWith(TYPE_NAME_CHAR) || typeName.startsWith(TYPE_NAME_CHARACTER) || typeName.startsWith(
+      TYPE_NAME_LONG) || typeName.startsWith(TYPE_NAME_VARCHAR) || typeName.startsWith(TYPE_NAME_VARCHAR2) ||
+      typeName.startsWith(TYPE_NAME_NCHAR) || typeName.startsWith(TYPE_NAME_NVARCHAR2) || typeName.startsWith(
+      TYPE_NAME_INTERVAL_YEAR_TO_MONTH) || typeName.startsWith(TYPE_NAME_INTERVAL_DAY_TO_SECOND)
 
   override protected[datatype] def isDateTypeName(typeName: String): Boolean = false
 
@@ -73,7 +74,7 @@ class OracleDataTypeConverter extends RDBDataTypeConverter {
     typeName.startsWith(TYPE_NAME_DATE) || typeName.startsWith(TYPE_NAME_TIMESTAMP)
 
   override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_RAW || typeName == TYPE_NAME_LONGRAW
+    typeName.startsWith(TYPE_NAME_RAW) || typeName == TYPE_NAME_LONGRAW
 
   override protected[datatype] def isTimeTypeName(typeName: String): Boolean = false
 }
