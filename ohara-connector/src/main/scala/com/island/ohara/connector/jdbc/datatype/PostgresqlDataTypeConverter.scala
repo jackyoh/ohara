@@ -62,12 +62,13 @@ class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
 
   override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
     typeName match {
-      case TYPE_NAME_TIME | TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ => true
-      case _                                                                               => false
+      case TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ => true
+      case _                                                              => false
     }
 
   override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
     typeName == TYPE_NAME_BYTEA
 
-  override protected[datatype] def isTimeTypeName(typeName: String): Boolean = false
+  override protected[datatype] def isTimeTypeName(typeName: String): Boolean =
+    typeName == TYPE_NAME_TIME
 }
