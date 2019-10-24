@@ -40,5 +40,5 @@ abstract class BasicTestOracleJDBCSourceConnector extends BasicTestConnectorColl
   override protected val insertDataSQL: String =
     s"INSERT INTO $tableName VALUES(TO_TIMESTAMP('2018-09-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS'),?,?,?)"
 
-  override protected val BINARY_TYPE_NAME: String = "RAW"
+  override protected val BINARY_TYPE_NAME: String = "RAW(30)"
 }

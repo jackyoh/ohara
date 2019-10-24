@@ -216,7 +216,7 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
       record.last.key.get.cell(0).value.asInstanceOf[Timestamp].getTime shouldBe 1535760000000L
       record.last.key.get.cell(1).value shouldBe "a100"
       record.last.key.get.cell(2).value shouldBe 100
-      new String(record.head.key.get.cell(3).value.asInstanceOf[Array[Byte]]) shouldBe "binary-value100"
+      new String(record.last.key.get.cell(3).value.asInstanceOf[Array[Byte]]) shouldBe "binary-value100"
 
     } finally {
       consumer.close()
