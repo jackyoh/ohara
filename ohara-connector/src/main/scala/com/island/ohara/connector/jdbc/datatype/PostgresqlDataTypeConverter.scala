@@ -16,7 +16,6 @@
 
 package com.island.ohara.connector.jdbc.datatype
 import com.island.ohara.client.configurator.v0.QueryApi
-import com.island.ohara.connector.jdbc.datatype.DataTypeEnum.DataTypeEnum
 
 class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_INT2 = "INT2"

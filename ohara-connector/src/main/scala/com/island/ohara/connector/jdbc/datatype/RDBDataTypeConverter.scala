@@ -19,7 +19,6 @@ package com.island.ohara.connector.jdbc.datatype
 import java.sql.{Date, ResultSet, Time, Timestamp}
 import java.util.Optional
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
-import com.island.ohara.connector.jdbc.datatype.DataTypeEnum.DataTypeEnum
 import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 trait RDBDataTypeConverter {
