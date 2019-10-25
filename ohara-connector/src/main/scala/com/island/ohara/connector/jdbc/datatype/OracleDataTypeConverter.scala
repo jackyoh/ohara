@@ -15,6 +15,8 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
+import com.island.ohara.client.configurator.v0.QueryApi
+import com.island.ohara.connector.jdbc.datatype.DataTypeEnum.DataTypeEnum
 
 class OracleDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_CHAR: String = "CHAR"
@@ -43,38 +45,30 @@ class OracleDataTypeConverter extends RDBDataTypeConverter {
 
   override protected[datatype] def dataBaseProductName: String = "oracle"
 
-  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
-    typeName.startsWith(TYPE_NAME_INT) || typeName.startsWith(TYPE_NAME_INTEGER) || typeName.startsWith(
-      TYPE_NAME_SMALLINT) ||
-      typeName.startsWith(TYPE_NAME_DEC) || typeName.startsWith(TYPE_NAME_DECIMAL) || typeName.startsWith(
-      TYPE_NAME_NUMBER) ||
-      typeName.startsWith(TYPE_NAME_NUMERIC)
-
-  override protected[datatype] def isLongTypeName(typeName: String): Boolean = false
-
-  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean = false
-
-  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
-    typeName.startsWith(TYPE_NAME_REAL)
-
-  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
-    typeName.startsWith(TYPE_NAME_DOUBLE_PRECISION) || typeName.startsWith(TYPE_NAME_FLOAT)
-
-  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean = false
-
-  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
-    typeName.startsWith(TYPE_NAME_CHAR) || typeName.startsWith(TYPE_NAME_CHARACTER) || typeName.startsWith(
-      TYPE_NAME_LONG) || typeName.startsWith(TYPE_NAME_VARCHAR) || typeName.startsWith(TYPE_NAME_VARCHAR2) ||
-      typeName.startsWith(TYPE_NAME_NCHAR) || typeName.startsWith(TYPE_NAME_NVARCHAR2) || typeName.startsWith(
-      TYPE_NAME_INTERVAL_YEAR_TO_MONTH) || typeName.startsWith(TYPE_NAME_INTERVAL_DAY_TO_SECOND)
-
-  override protected[datatype] def isDateTypeName(typeName: String): Boolean = false
-
-  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
-    typeName.startsWith(TYPE_NAME_DATE) || typeName.startsWith(TYPE_NAME_TIMESTAMP)
-
-  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
-    typeName.startsWith(TYPE_NAME_RAW) || typeName == TYPE_NAME_LONGRAW
-
-  override protected[datatype] def isTimeTypeName(typeName: String): Boolean = false
+  override protected[datatype] def converterDataType(column: QueryApi.RdbColumn): DataTypeEnum = {
+    val typeName: String = column.dataType.toUpperCase
+    if (typeName.startsWith(TYPE_NAME_INT) || typeName.startsWith(TYPE_NAME_INTEGER) || typeName.startsWith(
+          TYPE_NAME_SMALLINT) ||
+        typeName.startsWith(TYPE_NAME_DEC) || typeName.startsWith(TYPE_NAME_DECIMAL) || typeName.startsWith(
+          TYPE_NAME_NUMBER) ||
+        typeName.startsWith(TYPE_NAME_NUMERIC))
+      DataTypeEnum.INTEGER
+    else if (typeName.startsWith(TYPE_NAME_REAL))
+      DataTypeEnum.FLOAT
+    else if (typeName.startsWith(TYPE_NAME_DOUBLE_PRECISION) || typeName.startsWith(TYPE_NAME_FLOAT))
+      DataTypeEnum.DOUBLE
+    else if (typeName.startsWith(TYPE_NAME_CHAR) || typeName.startsWith(TYPE_NAME_CHARACTER) || typeName.startsWith(
+               TYPE_NAME_LONG) || typeName.startsWith(TYPE_NAME_VARCHAR) || typeName.startsWith(TYPE_NAME_VARCHAR2) ||
+             typeName.startsWith(TYPE_NAME_NCHAR) || typeName.startsWith(TYPE_NAME_NVARCHAR2) || typeName.startsWith(
+               TYPE_NAME_INTERVAL_YEAR_TO_MONTH) || typeName.startsWith(TYPE_NAME_INTERVAL_DAY_TO_SECOND))
+      DataTypeEnum.STRING
+    else if (typeName.startsWith(TYPE_NAME_DATE))
+      DataTypeEnum.DATE
+    else if (typeName.startsWith(TYPE_NAME_TIMESTAMP))
+      DataTypeEnum.TIMESTAMP
+    else if (typeName.startsWith(TYPE_NAME_RAW) || typeName == TYPE_NAME_LONGRAW)
+      DataTypeEnum.BYTES
+    else
+      DataTypeEnum.NONETYPE
+  }
 }

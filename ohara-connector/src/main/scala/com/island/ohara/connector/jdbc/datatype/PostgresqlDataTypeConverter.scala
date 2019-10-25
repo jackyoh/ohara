@@ -15,6 +15,8 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
+import com.island.ohara.client.configurator.v0.QueryApi
+import com.island.ohara.connector.jdbc.datatype.DataTypeEnum.DataTypeEnum
 
 class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_INT2 = "INT2"
@@ -36,39 +38,33 @@ class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
 
   override protected[datatype] def dataBaseProductName: String = "postgresql"
 
-  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_INT2 || typeName == TYPE_NAME_INT4
-
-  override protected[datatype] def isLongTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_INT8
-
-  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_BIT || typeName == TYPE_NAME_BOOL
-
-  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_FLOAT4
-
-  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_FLOAT8
-
-  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_NUMERIC
-
-  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_BPCHAR || typeName == TYPE_NAME_VARCHAR
-
-  override protected[datatype] def isDateTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_DATE
-
-  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
+  override protected[datatype] def converterDataType(column: QueryApi.RdbColumn): DataTypeEnum = {
+    val typeName: String = column.dataType.toUpperCase
     typeName match {
-      case TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ => true
-      case _                                                              => false
+      case TYPE_NAME_INT2 | TYPE_NAME_INT4 =>
+        DataTypeEnum.INTEGER
+      case TYPE_NAME_INT8 =>
+        DataTypeEnum.LONG
+      case TYPE_NAME_BIT | TYPE_NAME_BOOL =>
+        DataTypeEnum.BOOLEAN
+      case TYPE_NAME_FLOAT4 =>
+        DataTypeEnum.FLOAT
+      case TYPE_NAME_FLOAT8 =>
+        DataTypeEnum.DOUBLE
+      case TYPE_NAME_NUMERIC =>
+        DataTypeEnum.BIGDECIMAL
+      case TYPE_NAME_BPCHAR | TYPE_NAME_VARCHAR =>
+        DataTypeEnum.STRING
+      case TYPE_NAME_DATE =>
+        DataTypeEnum.DATE
+      case TYPE_NAME_TIMETZ | TYPE_NAME_TIMESTAMP | TYPE_NAME_TIMESTAMPTZ =>
+        DataTypeEnum.TIMESTAMP
+      case TYPE_NAME_TIME =>
+        DataTypeEnum.TIME
+      case TYPE_NAME_BYTEA =>
+        DataTypeEnum.BYTES
+      case _ =>
+        DataTypeEnum.NONETYPE
     }
-
-  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_BYTEA
-
-  override protected[datatype] def isTimeTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_TIME
+  }
 }

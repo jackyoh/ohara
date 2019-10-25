@@ -15,6 +15,8 @@
  */
 
 package com.island.ohara.connector.jdbc.datatype
+import com.island.ohara.client.configurator.v0.QueryApi
+import com.island.ohara.connector.jdbc.datatype.DataTypeEnum.DataTypeEnum
 
 class GenericDataTypeConverter extends RDBDataTypeConverter {
 
@@ -30,41 +32,36 @@ class GenericDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_TIMESTAMP: String = "TIMESTAMP"
   private[this] val TYPE_NAME_DATE: String = "DATE"
   private[this] val TYPE_NAME_TIME: String = "TIME"
-  private[this] val TYPE_NAME_TIMESTAMP6: String = "TIMESTAMP(6)"
   private[this] val TYPE_NAME_VARCHAR2: String = "VARCHAR2"
   private[this] val TYPE_NAME_NUMBER: String = "NUMBER"
 
   override protected[datatype] def dataBaseProductName: String = "generic"
 
-  override protected[datatype] def isIntTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_INTEGER || typeName == TYPE_NAME_NUMBER
-
-  override protected[datatype] def isLongTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_BIGINT
-
-  override protected[datatype] def isBooleanTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_BOOLEAN
-
-  override protected[datatype] def isFloatTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_FLOAT
-
-  override protected[datatype] def isDoubeTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_DOUBLE
-
-  override protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean = false
-
-  override protected[datatype] def isStringTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_CHAR || typeName == TYPE_NAME_VARCHAR || typeName == TYPE_NAME_LONGVARCHAR || typeName == TYPE_NAME_VARCHAR2
-
-  override protected[datatype] def isDateTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_DATE
-
-  override protected[datatype] def isTimeTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_TIME
-
-  override protected[datatype] def isTimestampTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_TIMESTAMP || typeName == TYPE_NAME_TIMESTAMP6
-
-  override protected[datatype] def isBytesTypeName(typeName: String): Boolean =
-    typeName == TYPE_NAME_BIT
+  override protected[datatype] def converterDataType(column: QueryApi.RdbColumn): DataTypeEnum = {
+    val typeName: String = column.dataType.toUpperCase
+    typeName match {
+      case TYPE_NAME_INTEGER | TYPE_NAME_NUMBER =>
+        DataTypeEnum.INTEGER
+      case TYPE_NAME_BIGINT =>
+        DataTypeEnum.LONG
+      case TYPE_NAME_BOOLEAN =>
+        DataTypeEnum.BOOLEAN
+      case TYPE_NAME_FLOAT =>
+        DataTypeEnum.FLOAT
+      case TYPE_NAME_DOUBLE =>
+        DataTypeEnum.DOUBLE
+      case TYPE_NAME_CHAR | TYPE_NAME_VARCHAR | TYPE_NAME_LONGVARCHAR | TYPE_NAME_VARCHAR2 =>
+        DataTypeEnum.STRING
+      case TYPE_NAME_DATE =>
+        DataTypeEnum.DATE
+      case TYPE_NAME_TIME =>
+        DataTypeEnum.TIME
+      case TYPE_NAME_TIMESTAMP =>
+        DataTypeEnum.TIMESTAMP
+      case TYPE_NAME_BIT =>
+        DataTypeEnum.BYTES
+      case _ =>
+        DataTypeEnum.NONETYPE
+    }
+  }
 }

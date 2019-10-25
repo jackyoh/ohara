@@ -18,8 +18,8 @@ package com.island.ohara.connector.jdbc.datatype
 
 import java.sql.{Date, ResultSet, Time, Timestamp}
 import java.util.Optional
-
 import com.island.ohara.client.configurator.v0.QueryApi.RdbColumn
+import com.island.ohara.connector.jdbc.datatype.DataTypeEnum.DataTypeEnum
 import com.island.ohara.connector.jdbc.util.DateTimeUtils
 
 trait RDBDataTypeConverter {
@@ -33,44 +33,38 @@ trait RDBDataTypeConverter {
   def converterValue(resultSet: ResultSet, column: RdbColumn): Any = {
     val columnName = column.name
     val typeName = column.dataType.toUpperCase
-
-    if (isIntTypeName(typeName))
-      java.lang.Integer.valueOf(resultSet.getInt(columnName))
-    else if (isLongTypeName(typeName))
-      java.lang.Long.valueOf(resultSet.getLong(columnName))
-    else if (isBooleanTypeName(typeName))
-      java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
-    else if (isFloatTypeName(typeName))
-      java.lang.Float.valueOf(resultSet.getFloat(columnName))
-    else if (isDoubeTypeName(typeName))
-      java.lang.Double.valueOf(resultSet.getDouble(columnName))
-    else if (isBigDecimalTypeName(typeName))
-      Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
-    else if (isStringTypeName(typeName))
-      Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
-    else if (isDateTypeName(typeName))
-      Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
-    else if (isTimeTypeName(typeName))
-      Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
-    else if (isTimestampTypeName(typeName))
-      Optional.ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Timestamp(0))
-    else if (isBytesTypeName(typeName))
-      Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
-    else
-      throw new UnsupportedOperationException(
-        s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for ${dataBaseProductName} implement.")
+    val dataType: DataTypeEnum = converterDataType(column)
+    dataType match {
+      case DataTypeEnum.INTEGER =>
+        java.lang.Integer.valueOf(resultSet.getInt(columnName))
+      case DataTypeEnum.LONG =>
+        java.lang.Long.valueOf(resultSet.getLong(columnName))
+      case DataTypeEnum.BOOLEAN =>
+        java.lang.Boolean.valueOf(resultSet.getBoolean(columnName))
+      case DataTypeEnum.FLOAT =>
+        java.lang.Float.valueOf(resultSet.getFloat(columnName))
+      case DataTypeEnum.DOUBLE =>
+        java.lang.Double.valueOf(resultSet.getDouble(columnName))
+      case DataTypeEnum.BIGDECIMAL =>
+        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
+      case DataTypeEnum.STRING =>
+        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
+      case DataTypeEnum.DATE =>
+        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
+      case DataTypeEnum.TIME =>
+        Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
+      case DataTypeEnum.TIMESTAMP =>
+        Optional
+          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
+          .orElseGet(() => new Timestamp(0))
+      case DataTypeEnum.BYTES =>
+        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
+      case _ =>
+        throw new UnsupportedOperationException(
+          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for ${dataBaseProductName} implement.")
+    }
   }
-
   protected[datatype] def dataBaseProductName: String
-  protected[datatype] def isIntTypeName(typeName: String): Boolean
-  protected[datatype] def isLongTypeName(typeName: String): Boolean
-  protected[datatype] def isBooleanTypeName(typeName: String): Boolean
-  protected[datatype] def isFloatTypeName(typeName: String): Boolean
-  protected[datatype] def isDoubeTypeName(typeName: String): Boolean
-  protected[datatype] def isBigDecimalTypeName(typeName: String): Boolean
-  protected[datatype] def isStringTypeName(typeName: String): Boolean
-  protected[datatype] def isDateTypeName(typeName: String): Boolean
-  protected[datatype] def isTimeTypeName(typeName: String): Boolean
-  protected[datatype] def isTimestampTypeName(typeName: String): Boolean
-  protected[datatype] def isBytesTypeName(typeName: String): Boolean
+
+  protected[datatype] def converterDataType(column: RdbColumn): DataTypeEnum
 }

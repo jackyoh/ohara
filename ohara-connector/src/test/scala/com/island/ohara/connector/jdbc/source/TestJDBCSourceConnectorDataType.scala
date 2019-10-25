@@ -79,7 +79,6 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers with Matchers
     pstmt.setString(12, "B")
     pstmt.setString(13, "aaaaaaaaaa")
     pstmt.executeUpdate()
-
   }
 
   @Test

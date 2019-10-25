@@ -128,4 +128,14 @@ class TestPostgresqlDataTypeConverter extends OharaTest with Matchers with Mocki
     result.isInstanceOf[Time] shouldBe true
     result.asInstanceOf[Time].toString shouldBe "11:00:00"
   }
+
+  @Test
+  def testErrorDataType(): Unit = {
+    val resultSet: ResultSet = mock[ResultSet]
+    when(resultSet.getString("column1")).thenReturn("aaa")
+    val column = RdbColumn("column1", "AAA", false)
+    val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
+    an[UnsupportedOperationException] should be thrownBy
+      rdbDataTypeConverter.converterValue(resultSet, column)
+  }
 }
