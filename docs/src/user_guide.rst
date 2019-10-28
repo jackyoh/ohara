@@ -798,6 +798,17 @@ Log into Kubernetes master and use the following command to see if these Kuberne
 
    # curl -X GET http://${Your_K8S_Master_Host_IP}:8080/api/v1/nodes
 
+**4. How to auto running the Kubernetes API proxy server after reboot server?**
+
+- Copy "ohara/kubernetes/k8sproxyserver.service" file to your Kubernetes master server "/etc/systemd/system" path
+
+- Below is setting auto running the command for run the Kubernetes API proxy server:
+
+.. code-block:: console
+
+   # systemctl enable k8sproxyserver.service
+   # systemctl start k8sproxyserver.service
+
 How to use Kubernetes in Ohara?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

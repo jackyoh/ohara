@@ -1,0 +1,13 @@
+[Unit]
+Description=kubectl proxy 8080
+After=network.target
+
+[Service]
+Environment=KUBECONFIG=/etc/kubernetes/admin.conf
+Type=k8sproxyserver
+User=root
+ExecStart=/usr/bin/kubectl proxy --port 8080 --accept-hosts=^*$ --address=0.0.0.0
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
