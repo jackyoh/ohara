@@ -802,7 +802,7 @@ Log into Kubernetes master and use the following command to see if these Kuberne
 
 - Copy "ohara/kubernetes/k8sproxyserver.service" file to your Kubernetes master server "/etc/systemd/system" path
 
-- Below is setting autostart the command to run the Kubernetes API proxy server:
+- Below is setting autostart the command to run the Kubernetes API proxy server ``(default port is 8080)``:
 
 .. code-block:: console
 
