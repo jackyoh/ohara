@@ -42,6 +42,8 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers
   private[this] val tableName = "table1"
   private[this] val timestampColumnName = "column1"
   private[this] val workerClient = WorkerClient(testUtil.workersConnProps)
+  private[this] val connectorKey1 = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+  private[this] val connectorKey2 = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
 
   @Before
   def setup(): Unit = {
@@ -69,14 +71,10 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 MINUTE, 'a41', 'a42', 4)")
     statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)")
-
   }
 
   @Test
   def testRunningTwoConnector(): Unit = {
-    val connectorKey1 = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-    val connectorKey2 = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-
     val topicKey = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
 
     result(
@@ -89,73 +87,69 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers with Matchers
         .settings(props.toMap)
         .create())
 
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
     try {
-      val consumer =
-        Consumer
-          .builder()
-          .topicName(topicKey.topicNameOnKafka)
-          .offsetFromBegin()
-          .connectionProps(testUtil.brokersConnProps)
-          .keySerializer(Serializer.ROW)
-          .valueSerializer(Serializer.BYTES)
-          .build()
-      try {
-        val record1 = consumer.poll(java.time.Duration.ofSeconds(30), 6).asScala
-        record1.size shouldBe 6
+      val record1 = consumer.poll(java.time.Duration.ofSeconds(30), 6).asScala
+      record1.size shouldBe 6
 
-        result(
-          workerClient
-            .connectorCreator()
-            .connectorKey(connectorKey2)
-            .connectorClass(classOf[JDBCSourceConnector])
-            .topicKey(topicKey)
-            .numberOfTasks(1)
-            .settings(props.toMap)
-            .create())
+      result(
+        workerClient
+          .connectorCreator()
+          .connectorKey(connectorKey2)
+          .connectorClass(classOf[JDBCSourceConnector])
+          .topicKey(topicKey)
+          .numberOfTasks(1)
+          .settings(props.toMap)
+          .create())
 
-        consumer.seekToBeginning()
-        val record2 = consumer.poll(java.time.Duration.ofSeconds(30), 12).asScala
-        record2.size shouldBe 12
+      consumer.seekToBeginning()
+      val record2 = consumer.poll(java.time.Duration.ofSeconds(30), 12).asScala
+      record2.size shouldBe 12
 
-        val statement: Statement = db.connection.createStatement()
-        statement.executeUpdate(
-          s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2018-09-02 00:00:05', 'a81', 'a82', 8)")
+      val statement: Statement = db.connection.createStatement()
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2018-09-02 00:00:05', 'a81', 'a82', 8)")
 
-        consumer.seekToBeginning()
-        val record3 = consumer.poll(java.time.Duration.ofSeconds(30), 14).asScala
-        record3.size shouldBe 14
+      consumer.seekToBeginning()
+      val record3 = consumer.poll(java.time.Duration.ofSeconds(30), 14).asScala
+      record3.size shouldBe 14
 
-        val expectResult: Seq[String] = Seq(
-          "2018-09-01 00:00:00.0,a11,a12,1",
-          "2018-09-01 00:00:01.0,a21,a22,2",
-          "2018-09-01 00:00:02.0,a31,a32,3",
-          "2018-09-01 00:00:03.123456,a61,a62,6",
-          "2018-09-01 00:00:04.123,a71,a72,7",
-          "2018-09-01 00:00:05.0,null,null,0",
-          "2018-09-01 00:00:00.0,a11,a12,1",
-          "2018-09-01 00:00:01.0,a21,a22,2",
-          "2018-09-01 00:00:02.0,a31,a32,3",
-          "2018-09-01 00:00:03.123456,a61,a62,6",
-          "2018-09-01 00:00:04.123,a71,a72,7",
-          "2018-09-01 00:00:05.0,null,null,0",
-          "2018-09-02 00:00:05.0,a81,a82,8",
-          "2018-09-02 00:00:05.0,a81,a82,8"
-        )
-        val resultData: Seq[String] = record3.map(x => x.key.get).map(x => x.cells().asScala.map(_.value).mkString(","))
+      val expectResult: Seq[String] = Seq(
+        "2018-09-01 00:00:00.0,a11,a12,1",
+        "2018-09-01 00:00:01.0,a21,a22,2",
+        "2018-09-01 00:00:02.0,a31,a32,3",
+        "2018-09-01 00:00:03.123456,a61,a62,6",
+        "2018-09-01 00:00:04.123,a71,a72,7",
+        "2018-09-01 00:00:05.0,null,null,0",
+        "2018-09-01 00:00:00.0,a11,a12,1",
+        "2018-09-01 00:00:01.0,a21,a22,2",
+        "2018-09-01 00:00:02.0,a31,a32,3",
+        "2018-09-01 00:00:03.123456,a61,a62,6",
+        "2018-09-01 00:00:04.123,a71,a72,7",
+        "2018-09-01 00:00:05.0,null,null,0",
+        "2018-09-02 00:00:05.0,a81,a82,8",
+        "2018-09-02 00:00:05.0,a81,a82,8"
+      )
+      val resultData: Seq[String] = record3.map(x => x.key.get).map(x => x.cells().asScala.map(_.value).mkString(","))
 
-        (0 to expectResult.size - 1).foreach(i => resultData(i) shouldBe expectResult(i))
-
-      } finally consumer.close()
-    } finally {
-      result(workerClient.delete(connectorKey2))
-      result(workerClient.delete(connectorKey1))
-    }
+      (0 to expectResult.size - 1).foreach(i => resultData(i) shouldBe expectResult(i))
+    } finally consumer.close()
   }
 
   private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
 
   @After
   def tearDown(): Unit = {
+    result(workerClient.delete(connectorKey2))
+    result(workerClient.delete(connectorKey1))
     Releasable.close(client)
     Releasable.close(db)
   }
