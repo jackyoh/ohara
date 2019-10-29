@@ -64,7 +64,7 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers with Matchers
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
 
-    await(
+    result(
       workerClient
         .connectorCreator()
         .connectorKey(connectorKey)
@@ -74,97 +74,96 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers with Matchers
         .settings(props.toMap)
         .create()
     )
-
-    val consumer = Consumer
-      .builder()
-      .topicName(topicKey.topicNameOnKafka)
-      .offsetFromBegin()
-      .connectionProps(testUtil.brokersConnProps)
-      .keySerializer(Serializer.ROW)
-      .valueSerializer(Serializer.BYTES)
-      .build()
-
     try {
-      val poll1 = consumer.poll(java.time.Duration.ofSeconds(30), 1).asScala
+      val consumer = Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
 
-      poll1.size < 1000 shouldBe true
+      try {
+        val poll1 = consumer.poll(java.time.Duration.ofSeconds(30), 1).asScala
 
-      //Pause JDBC Source Connector
-      await(workerClient.pause(connectorKey))
+        poll1.size < 1000 shouldBe true
 
-      val row0: Row = poll1.head.key.get
-      row0.cell(0).name shouldBe "column1"
-      row0.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
+        //Pause JDBC Source Connector
+        result(workerClient.pause(connectorKey))
 
-      //Confirm topic data is zero
-      val poll2 = consumer.poll(java.time.Duration.ofSeconds(1), 0).asScala
-      poll2.isEmpty shouldBe true
+        val row0: Row = poll1.head.key.get
+        row0.cell(0).name shouldBe "column1"
+        row0.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
 
-      //Insert Data before resuming connector
-      val statement: Statement = db.connection.createStatement()
+        //Confirm topic data is zero
+        val poll2 = consumer.poll(java.time.Duration.ofSeconds(1), 0).asScala
+        poll2.isEmpty shouldBe true
 
-      statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES('2018-09-01 01:00:00', 'a1001-1', 'a1001-2', 1001)")
+        //Insert Data before resuming connector
+        val statement: Statement = db.connection.createStatement()
 
-      //Resume JDBC Source Connector
-      await(workerClient.resume(connectorKey))
+        statement.executeUpdate(
+          s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES('2018-09-01 01:00:00', 'a1001-1', 'a1001-2', 1001)")
 
-      consumer.seekToBeginning() //Reset consumer
+        //Resume JDBC Source Connector
+        result(workerClient.resume(connectorKey))
 
-      val poll3 = consumer.poll(java.time.Duration.ofSeconds(60), 1001).asScala
-      poll3.size shouldBe 1001
+        consumer.seekToBeginning() //Reset consumer
 
-      poll3.head.key.get.cell(1).name shouldBe "column2"
-      poll3.head.key.get.cell(1).value shouldBe "a1-1"
+        val poll3 = consumer.poll(java.time.Duration.ofSeconds(60), 1001).asScala
+        poll3.size shouldBe 1001
 
-      poll3(500).key.get.cell(1).name shouldBe "column2"
-      poll3(500).key.get.cell(1).value shouldBe "a501-1"
+        poll3.head.key.get.cell(1).name shouldBe "column2"
+        poll3.head.key.get.cell(1).value shouldBe "a1-1"
 
-      poll3(1000).key.get.cell(1).name shouldBe "column2"
-      poll3.last.key.get.cell(1).name shouldBe "column2"
-      poll3.last.key.get.cell(1).value shouldBe "a1001-1"
+        poll3(500).key.get.cell(1).name shouldBe "column2"
+        poll3(500).key.get.cell(1).value shouldBe "a501-1"
 
-      //Delete JDBC Source Connector
-      await(workerClient.delete(connectorKey))
+        poll3(1000).key.get.cell(1).name shouldBe "column2"
+        poll3.last.key.get.cell(1).name shouldBe "column2"
+        poll3.last.key.get.cell(1).value shouldBe "a1001-1"
 
-      val poll4 = consumer.poll(java.time.Duration.ofSeconds(1), 0).asScala
-      poll4.isEmpty shouldBe true
+        //Delete JDBC Source Connector
+        result(workerClient.delete(connectorKey))
 
-      //Create JDBC Source Connector
-      await(
-        workerClient
-          .connectorCreator()
-          .connectorKey(connectorKey)
-          .connectorClass(classOf[JDBCSourceConnector])
-          .topicKey(topicKey)
-          .numberOfTasks(1)
-          .settings(props.toMap)
-          .create()
-      )
-      statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES('2018-09-02 00:00:01', 'a1002-1', 'a1002-2', 1002)")
+        val poll4 = consumer.poll(java.time.Duration.ofSeconds(1), 0).asScala
+        poll4.isEmpty shouldBe true
 
-      //Get all topic data for test
-      consumer.seekToBeginning() //Reset consumer
-      val poll5 = consumer.poll(java.time.Duration.ofSeconds(30), 1002).asScala
-      poll5.size shouldBe 1002
-      poll5.last.key.get.cell(1).name shouldBe "column2"
-      poll5.last.key.get.cell(1).value shouldBe "a1002-1"
+        //Create JDBC Source Connector
+        result(
+          workerClient
+            .connectorCreator()
+            .connectorKey(connectorKey)
+            .connectorClass(classOf[JDBCSourceConnector])
+            .topicKey(topicKey)
+            .numberOfTasks(1)
+            .settings(props.toMap)
+            .create()
+        )
+        statement.executeUpdate(
+          s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES('2018-09-02 00:00:01', 'a1002-1', 'a1002-2', 1002)")
 
-      poll5.last.key.get.cell(2).name shouldBe "column3"
-      poll5.last.key.get.cell(2).value shouldBe "a1002-2"
+        //Get all topic data for test
+        consumer.seekToBeginning() //Reset consumer
+        val poll5 = consumer.poll(java.time.Duration.ofSeconds(30), 1002).asScala
+        poll5.size shouldBe 1002
+        poll5.last.key.get.cell(1).name shouldBe "column2"
+        poll5.last.key.get.cell(1).value shouldBe "a1002-1"
 
-      poll5(1000).key.get.cell(2).name shouldBe "column3"
-      poll5(1000).key.get.cell(2).value shouldBe "a1001-2"
+        poll5.last.key.get.cell(2).name shouldBe "column3"
+        poll5.last.key.get.cell(2).value shouldBe "a1002-2"
 
-      poll5(1001).key.get.cell(2).value shouldBe "a1002-2"
+        poll5(1000).key.get.cell(2).name shouldBe "column3"
+        poll5(1000).key.get.cell(2).value shouldBe "a1001-2"
 
-      consumer.seekToBeginning() //Reset consumer
-      val poll6 = consumer.poll(java.time.Duration.ofSeconds(30), 1002).asScala
-      poll6.size shouldBe 1002
-    } finally {
-      consumer.close
-    }
+        poll5(1001).key.get.cell(2).value shouldBe "a1002-2"
+
+        consumer.seekToBeginning() //Reset consumer
+        val poll6 = consumer.poll(java.time.Duration.ofSeconds(30), 1002).asScala
+        poll6.size shouldBe 1002
+      } finally consumer.close
+    } finally result(workerClient.delete(connectorKey))
   }
 
   @After
@@ -184,5 +183,5 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers with Matchers
       JDBC_FETCHDATA_SIZE -> "1",
       JDBC_FLUSHDATA_SIZE -> "1"
     ).asJava))
-  private[this] def await[T](f: Future[T]): Unit = Await.result(f, 30 seconds)
+  private[this] def result[T](f: Future[T]): T = Await.result(f, 30 seconds)
 }

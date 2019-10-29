@@ -25,6 +25,7 @@ import com.island.ohara.common.data.{Cell, Row, Serializer}
 import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
 import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.kafka.Consumer
+import com.island.ohara.kafka.Consumer.Record
 import com.island.ohara.kafka.connector.TaskSetting
 import com.island.ohara.testing.With3Brokers3Workers
 import com.island.ohara.testing.service.Database
@@ -32,8 +33,9 @@ import org.junit.{After, Before, Test}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Test the JDBC Source Connector
@@ -78,7 +80,7 @@ class TestJDBCSourceConnector extends With3Brokers3Workers with Matchers {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
 
-    Await.result(
+    result(
       workerClient
         .connectorCreator()
         .connectorKey(connectorKey)
@@ -86,21 +88,11 @@ class TestJDBCSourceConnector extends With3Brokers3Workers with Matchers {
         .topicKey(topicKey)
         .numberOfTasks(1)
         .settings(props.toMap)
-        .create(),
-      10 seconds
-    )
-
-    val consumer =
-      Consumer
-        .builder()
-        .topicName(topicKey.topicNameOnKafka)
-        .offsetFromBegin()
-        .connectionProps(testUtil.brokersConnProps)
-        .keySerializer(Serializer.ROW)
-        .valueSerializer(Serializer.BYTES)
-        .build()
+        .create())
     try {
-      val record = consumer.poll(java.time.Duration.ofSeconds(30), 6).asScala
+
+      val record = pollData(topicKey, 30 seconds, 6)
+
       val row0: Row = record.head.key.get
       row0.size shouldBe 4
       row0.cell(0).toString shouldBe Cell.of("column1", "2018-09-01 00:00:00.0").toString
@@ -143,8 +135,7 @@ class TestJDBCSourceConnector extends With3Brokers3Workers with Matchers {
       row5.cell(2) shouldBe Cell.of("column3", "null")
       row5.cell(3).toString shouldBe Cell.of("column4", "0").toString
       record.size shouldBe 6
-
-    } finally consumer.close()
+    } finally result(workerClient.delete(connectorKey))
   }
 
   @Test
@@ -182,6 +173,23 @@ class TestJDBCSourceConnector extends With3Brokers3Workers with Matchers {
       jdbcSourceConnector.checkTimestampColumnName("100col")
     }
   }
+
+  private[this] def pollData(topicKey: TopicKey,
+                             timeout: scala.concurrent.duration.Duration,
+                             size: Int): Seq[Record[Row, Array[Byte]]] = {
+    val consumer = Consumer
+      .builder()
+      .topicName(topicKey.topicNameOnKafka)
+      .offsetFromBegin()
+      .connectionProps(testUtil.brokersConnProps)
+      .keySerializer(Serializer.ROW)
+      .valueSerializer(Serializer.BYTES)
+      .build()
+    try consumer.poll(java.time.Duration.ofNanos(timeout.toNanos), size).asScala
+    finally consumer.close()
+  }
+
+  private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
 
   @After
   def tearDown(): Unit = {
