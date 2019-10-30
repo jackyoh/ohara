@@ -67,7 +67,7 @@ class JDBCSourceTask extends RowSourceTask {
     //println(s"hash code is ${hash}")
     val current = CommonUtils.current()
 
-    if (current - lastPoll > 100) {
+    if (current - lastPoll > 5000) {
       count = count + 1
       val tableName: String = jdbcSourceConnectorConfig.dbTableName
       val timestampColumnName: String = jdbcSourceConnectorConfig.timestampColumnName
