@@ -55,6 +55,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
       preparedStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
 
       val currentTimestamp: Timestamp = dbCurrentTime(DateTimeUtils.CALENDAR)
+      println(s"current time stamp $currentTimestamp")
       preparedStatement.setTimestamp(1, tsOffset, DateTimeUtils.CALENDAR)
       preparedStatement.setTimestamp(2, currentTimestamp, DateTimeUtils.CALENDAR)
 

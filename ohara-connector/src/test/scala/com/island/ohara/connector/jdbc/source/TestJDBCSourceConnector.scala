@@ -30,7 +30,7 @@ import com.island.ohara.testing.With3Brokers3Workers
 import com.island.ohara.testing.service.Database
 import org.junit.{After, Before, Test}
 import org.scalatest.Matchers
-
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -143,7 +143,7 @@ class TestJDBCSourceConnector extends With3Brokers3Workers with Matchers {
       row5.cell(2) shouldBe Cell.of("column3", "null")
       row5.cell(3).toString shouldBe Cell.of("column4", "0").toString
       record.size shouldBe 6
-
+      Await.result(workerClient.delete(connectorKey), 10 seconds)
     } finally consumer.close()
   }
 

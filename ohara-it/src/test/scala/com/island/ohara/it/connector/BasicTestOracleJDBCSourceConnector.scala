@@ -19,15 +19,11 @@ package com.island.ohara.it.connector
 import com.island.ohara.common.util.CommonUtils
 
 abstract class BasicTestOracleJDBCSourceConnector extends BasicTestConnectorCollie {
-  private[this] val DB_URL_KEY: String = "ohara.it.oracle.db.url"
-  private[this] val DB_USER_NAME_KEY: String = "ohara.it.oracle.db.username"
-  private[this] val DB_PASSWORD_KEY: String = "ohara.it.oracle.db.password"
+  override protected def dbUrl(): Option[String] = Option("jdbc:oracle:thin:@//10.100.0.138:1521/ORCLCDB.localdomain")
 
-  override protected def dbUrl(): Option[String] = sys.env.get(DB_URL_KEY)
+  override protected def dbUserName(): Option[String] = Option("tuser")
 
-  override protected def dbUserName(): Option[String] = sys.env.get(DB_USER_NAME_KEY)
-
-  override protected def dbPassword(): Option[String] = sys.env.get(DB_PASSWORD_KEY)
+  override protected def dbPassword(): Option[String] = Option("tuser")
 
   override protected def dbName(): String = "oracle"
 

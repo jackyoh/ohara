@@ -17,7 +17,7 @@
 package com.island.ohara.it.connector
 
 import java.io.File
-import java.sql.{PreparedStatement, Statement, Timestamp}
+import java.sql.{PreparedStatement, Timestamp}
 
 import com.island.ohara.client.configurator.v0.FileInfoApi.FileInfo
 import com.island.ohara.client.configurator.v0.NodeApi.Node
@@ -170,7 +170,7 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
     runningJDBCSourceConnector(wkCluster.connectionProps)
     checkTopicData(bkCluster.connectionProps, topicKey.topicNameOnKafka())
 
-    result(wk_stop(wkCluster.key))
+    /*result(wk_stop(wkCluster.key))
     await(() => {
       // In configurator mode: clusters() will return the "stopped list" in normal case
       // In collie mode: clusters() will return the "cluster list except stop one" in normal case
@@ -179,7 +179,7 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
       !clusters.map(_.key).contains(wkCluster.key) || clusters.find(_.key == wkCluster.key).get.state.isEmpty
     })
     // the cluster is stopped actually, delete the data
-    wk_delete(wkCluster.key)
+    wk_delete(wkCluster.key)*/
   }
 
   private[this] def runningJDBCSourceConnector(workerConnProps: String): Unit =
@@ -271,15 +271,15 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
 
   private[this] def wk_start(clusterKey: ObjectKey): Future[Unit] = wkApi.start(clusterKey)
 
-  private[this] def wk_stop(clusterKey: ObjectKey): Future[Unit] =
+  /*private[this] def wk_stop(clusterKey: ObjectKey): Future[Unit] =
     wkApi.forceStop(clusterKey).map(_ => Unit)
-
+  */
   private[this] def wk_containers(clusterKey: ObjectKey): Future[Seq[ContainerApi.ContainerInfo]] =
     containerApi.get(clusterKey).map(_.flatMap(_.containers))
 
   private[this] def wk_exist(clusterKey: ObjectKey): Future[Boolean] = wkApi.list().map(_.exists(_.key == clusterKey))
 
-  private[this] def wk_delete(clusterKey: ObjectKey): Future[Unit] = wkApi.delete(clusterKey)
+  //private[this] def wk_delete(clusterKey: ObjectKey): Future[Unit] = wkApi.delete(clusterKey)
 
   private[this] def wk_clusters(): Future[Seq[WorkerApi.WorkerClusterInfo]] = wkApi.list()
 
@@ -331,12 +331,12 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
 
   @After
   def afterTest(): Unit = {
-    if (client != null) {
+    /*if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table ${tableName()}")
-    }
+    }*/
     Releasable.close(client)
     Releasable.close(configurator)
-    Releasable.close(nameHolder)
+    //Releasable.close(nameHolder)
   }
 }

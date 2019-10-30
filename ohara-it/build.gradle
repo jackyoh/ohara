@@ -75,12 +75,12 @@ dependencies {
   testImplementation libs.junit
   testImplementation libs.akkaStream
 
-  if (project.hasProperty("ohara.it.jar.folder")) {
+  //if (project.hasProperty("ohara.it.jar.folder")) {
     // Load jar file for JDBC driver test
-    fileTree(project.getProperty("ohara.it.jar.folder")).visit { FileVisitDetails jar ->
-      testImplementation files(jar.file.path)
-    }
-  }
+    //fileTree(project.getProperty("ohara.it.jar.folder")).visit { FileVisitDetails jar ->
+      testImplementation files("/jar/ojdbc8.jar")
+   // }
+  //}
 }
 
 /**

@@ -29,7 +29,7 @@ import com.island.ohara.testing.With3Brokers3Workers
 import com.island.ohara.testing.service.Database
 import org.junit.{After, Before, Test}
 import org.scalatest.Matchers
-
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.Await
@@ -165,7 +165,7 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers with Matchers
       // Test longtext type
       row0.cell(12).value.isInstanceOf[String] shouldBe true
       row0.cell(12).value.toString shouldBe "aaaaaaaaaa"
-
+      Await.result(workerClient.delete(connectorKey), 10 seconds)
     } finally consumer.close()
 
   }
