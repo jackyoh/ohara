@@ -273,7 +273,7 @@ abstract class BasicTestConnectorCollie extends IntegrationTest with Matchers {
 
   /*private[this] def wk_stop(clusterKey: ObjectKey): Future[Unit] =
     wkApi.forceStop(clusterKey).map(_ => Unit)
-  */
+   */
   private[this] def wk_containers(clusterKey: ObjectKey): Future[Seq[ContainerApi.ContainerInfo]] =
     containerApi.get(clusterKey).map(_.flatMap(_.containers))
 
