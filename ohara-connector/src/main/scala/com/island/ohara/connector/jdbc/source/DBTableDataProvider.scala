@@ -67,6 +67,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
   }
 
   def releaseResultSet(queryFlag: Boolean): Unit = {
+    println("Close ResultSet instance .................")
     Releasable.close(resultSet.getStatement())
     Releasable.close(resultSet)
     resultSet = null
