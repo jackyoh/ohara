@@ -43,7 +43,9 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
 
   private[this] var resultSet: ResultSet = _
 
-  def executeQuery(tableName: String, timeStampColumnName: String, tsOffset: Timestamp): QueryResultIterator = {
+  protected[source] def executeQuery(tableName: String,
+                                     timeStampColumnName: String,
+                                     tsOffset: Timestamp): QueryResultIterator = {
     if (queryFlag) {
       val sql =
         s"SELECT * FROM $tableName WHERE $timeStampColumnName > ? AND $timeStampColumnName < ? ORDER BY $timeStampColumnName"
@@ -65,7 +67,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     new QueryResultIterator(rdbDataTypeConverter, resultSet, columns(tableName))
   }
 
-  def releaseResultSet(queryFlag: Boolean): Unit = {
+  protected[source] def releaseResultSet(queryFlag: Boolean): Unit = {
     Releasable.close(resultSet.getStatement())
     Releasable.close(resultSet)
     resultSet = null
@@ -76,14 +78,15 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     this.queryFlag = queryFlag
   }
 
-  def columns(tableName: String): Seq[RdbColumn] = {
+  protected[source] def columns(tableName: String): Seq[RdbColumn] = {
     val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
     rdbTables.head.columns
   }
 
-  def isTableExists(tableName: String): Boolean = client.tableQuery.tableName(tableName).execute().nonEmpty
+  protected[source] def isTableExists(tableName: String): Boolean =
+    client.tableQuery.tableName(tableName).execute().nonEmpty
 
-  def dbCurrentTime(cal: Calendar): Timestamp = {
+  protected[source] def dbCurrentTime(cal: Calendar): Timestamp = {
 
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"

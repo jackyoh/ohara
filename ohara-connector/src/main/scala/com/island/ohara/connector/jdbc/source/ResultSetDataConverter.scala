@@ -32,9 +32,9 @@ object ResultSetDataConverter {
     * @param columns
     * @return
     */
-  def converterRecord(rdbDataTypeConverter: RDBDataTypeConverter,
-                      resultSet: ResultSet,
-                      columns: Seq[RdbColumn]): Seq[ColumnInfo[_]] = {
+  protected[source] def converterRecord(rdbDataTypeConverter: RDBDataTypeConverter,
+                                        resultSet: ResultSet,
+                                        columns: Seq[RdbColumn]): Seq[ColumnInfo[_]] = {
     columns.map(column => {
       val resultValue: Any = rdbDataTypeConverter.converterValue(resultSet, column)
       // Setting data value to ColumnInfo case class
