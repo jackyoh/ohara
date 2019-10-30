@@ -30,13 +30,23 @@ object EnvTestingUtils {
   val K8S_MASTER_KEY: String = "ohara.it.k8s"
   private[this] val K8S_NODES_KEY: String = "ohara.it.k8s.nodename"
 
-  def configuratorHostName(): String = "10.100.0.138"
+  private[this] val CONFIGURATOR_HOSTNAME_KEY: String = "ohara.it.hostname"
+  private[this] val CONFIGURATOR_HOSTPORT_KEY: String = "ohara.it.port"
 
-  def configuratorHostPort(): Int = 12345
+  def configuratorHostName(): String = sys.env.getOrElse(
+    CONFIGURATOR_HOSTNAME_KEY,
+    throw new AssumptionViolatedException(s"$CONFIGURATOR_HOSTNAME_KEY does not exists!!!"))
 
-  def k8sClient(): K8SClient = K8SClient("http://ohara-jenkins-it-00:8080/api/v1")
+  def configuratorHostPort(): Int = sys.env
+    .getOrElse(CONFIGURATOR_HOSTPORT_KEY,
+               throw new AssumptionViolatedException(s"$CONFIGURATOR_HOSTPORT_KEY does not exists!!!"))
+    .toInt
 
-  def k8sNodes(): Seq[Node] = Option("ohara-jenkins-it-01,ohara-jenkins-it-02")
+  def k8sClient(): K8SClient = K8SClient(
+    sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!")))
+
+  def k8sNodes(): Seq[Node] = sys.env
+    .get(K8S_NODES_KEY)
     .map(
       _.split(",")
         .map(node =>
