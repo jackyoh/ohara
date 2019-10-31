@@ -180,6 +180,15 @@ class JDBCSourceConnector extends RowSourceConnector {
       .key(JDBC_FLUSHDATA_SIZE)
       .optional(String.valueOf(JDBC_FLUSHDATA_SIZE_DEFAULT))
       .orderInGroup(counter.getAndIncrement())
+      .build(),
+    SettingDef
+      .builder()
+      .displayName("Fetch data frequence")
+      .documentation("Setting fetch data frequency from database")
+      .valueType(SettingDef.Type.INT)
+      .key(JDBC_FREQUENCE_TIME)
+      .optional(String.valueOf(JDBC_FREQUENCE_TIME_DEFAULT))
+      .orderInGroup(counter.getAndIncrement())
       .build()
   ).asJava
 

@@ -67,6 +67,37 @@ class TestJDBCSourceConnectorConfig extends OharaTest with Matchers {
   }
 
   @Test
+  def testFrequenceTimeDefault(): Unit = {
+    val map1: Map[String, String] =
+      Map(
+        DB_URL -> "jdbc:mysql://localhost/test",
+        DB_USERNAME -> "root",
+        DB_PASSWORD -> "123456",
+        DB_TABLENAME -> "TABLE1",
+        DB_SCHEMA_PATTERN -> "schema1",
+        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
+      )
+    val jdbcSourceConnectorConfig = jdbcConfig(map1)
+    jdbcSourceConnectorConfig.jdbcFrequenceTime shouldBe 0
+  }
+
+  @Test
+  def testFrequenceTime(): Unit = {
+    val map1: Map[String, String] =
+      Map(
+        DB_URL -> "jdbc:mysql://localhost/test",
+        DB_USERNAME -> "root",
+        DB_PASSWORD -> "123456",
+        DB_TABLENAME -> "TABLE1",
+        DB_SCHEMA_PATTERN -> "schema1",
+        JDBC_FREQUENCE_TIME -> "5000",
+        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
+      )
+    val jdbcSourceConnectorConfig = jdbcConfig(map1)
+    jdbcSourceConnectorConfig.jdbcFrequenceTime shouldBe 5000
+  }
+
+  @Test
   def testException(): Unit = {
     intercept[NoSuchElementException] {
       jdbcConfig(Map())
@@ -93,6 +124,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest with Matchers {
       mode = "123",
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
+      jdbcFrequenceTime = 0,
       timestampColumnName = "123"
     )
 

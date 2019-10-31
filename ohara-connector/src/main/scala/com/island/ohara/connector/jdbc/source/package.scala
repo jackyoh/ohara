@@ -25,10 +25,12 @@ package object source {
   val DB_SCHEMA_PATTERN: String = "source.schema.pattern"
   val JDBC_FETCHDATA_SIZE: String = "source.jdbc.fetch.size"
   val JDBC_FLUSHDATA_SIZE: String = "source.jdbc.flush.size"
+  val JDBC_FREQUENCE_TIME: String = "source.jdbc.frequence.time"
   val MODE: String = "mode"
   val MODE_DEFAULT = "timestamp"
   val JDBC_FETCHDATA_SIZE_DEFAULT: Int = 1000
   val JDBC_FLUSHDATA_SIZE_DEFAULT: Int = 1000
+  val JDBC_FREQUENCE_TIME_DEFAULT: Int = 0
   val TIMESTAMP_COLUMN_NAME: String = "source.timestamp.column.name"
   val ORACLE_DB_NAME = "oracle"
 }

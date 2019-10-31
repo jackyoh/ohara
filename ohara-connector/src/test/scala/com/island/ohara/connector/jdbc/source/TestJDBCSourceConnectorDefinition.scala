@@ -91,6 +91,17 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker with Matchers {
   }
 
   @Test
+  def checkFrequenceTime(): Unit = {
+    val definition = jdbcSource.definitions().asScala.find(_.key() == JDBC_FREQUENCE_TIME).get
+    definition.required shouldBe false
+    definition.defaultValue shouldBe String.valueOf(JDBC_FREQUENCE_TIME_DEFAULT)
+    definition.editable() shouldBe true
+    definition.internal() shouldBe false
+    definition.reference() shouldBe Reference.NONE
+    definition.valueType() shouldBe SettingDef.Type.INT
+  }
+
+  @Test
   def checkTableName(): Unit = {
     val definition = jdbcSource.definitions().asScala.find(_.key() == DB_TABLENAME).get
     definition.required shouldBe true
@@ -168,7 +179,8 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker with Matchers {
           DB_TABLENAME -> tableName,
           TIMESTAMP_COLUMN_NAME -> timeStampColumnName,
           JDBC_FETCHDATA_SIZE -> "1000",
-          JDBC_FLUSHDATA_SIZE -> "1000"
+          JDBC_FLUSHDATA_SIZE -> "1000",
+          JDBC_FREQUENCE_TIME -> "5000",
         ))
         .connectorClass(classOf[JDBCSourceConnector])
         .run())
@@ -221,6 +233,14 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker with Matchers {
     response.settings().asScala.filter(_.value().key() == DB_PASSWORD).head.definition().required() shouldBe true
 
     response.settings().asScala.filter(_.value().key() == DB_TABLENAME).head.definition().required() shouldBe true
+
+    response
+      .settings()
+      .asScala
+      .filter(_.value().key() == JDBC_FREQUENCE_TIME)
+      .head
+      .definition()
+      .required() shouldBe false
 
     response
       .settings()
