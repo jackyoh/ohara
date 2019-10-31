@@ -183,8 +183,12 @@ class JDBCSourceTask extends RowSourceTask {
       .getOrElse(
         throw new RuntimeException(s"$timestampColumnName not in ${jdbcSourceConnectorConfig.dbTableName} table."))
 
-  private[source] def isRunningQuery(currentTime: Long, lstPoll: Long, frequenceTime: Duration): Boolean =
+  private[source] def isRunningQuery(currentTime: Long, lastPoll: Long, frequenceTime: Duration): Boolean =
     (currentTime - lastPoll) > frequenceTime.toMillis
+
+
+
+
 
   /**
     * Offset format is ${TimestampOffset},${QueryRecordCount}

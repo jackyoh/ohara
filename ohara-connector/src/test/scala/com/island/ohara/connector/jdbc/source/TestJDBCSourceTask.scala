@@ -34,6 +34,7 @@ import org.scalatest.Matchers
 import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 
 class TestJDBCSourceTask extends OharaTest with Matchers with MockitoSugar {
   private[this] val db = Database.local()
@@ -236,6 +237,31 @@ class TestJDBCSourceTask extends OharaTest with Matchers with MockitoSugar {
     )
     val timestamp: String = jdbcSourceTask.dbTimestampColumnValue(dbColumnInfo, "column2")
     timestamp shouldBe "2018-09-21 14:21:40.0"
+  }
+
+  @Test
+  def testIsRunningQuery(): Unit = {
+    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val frequenceTime = Duration("5 second")
+    // Test first call _poll function
+    var currentTime: Long = System.currentTimeMillis()
+    var lastTime: Long = -1
+    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe true
+
+    // Test second call _poll function
+    lastTime = currentTime
+    currentTime = System.currentTimeMillis()
+    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe false
+
+    // Test third call _poll function
+    Thread.sleep(6000L)
+    lastTime = currentTime
+    currentTime = System.currentTimeMillis()
+    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe true
+
+    lastTime = currentTime
+    currentTime = System.currentTimeMillis()
+    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe false
   }
 
   @After
