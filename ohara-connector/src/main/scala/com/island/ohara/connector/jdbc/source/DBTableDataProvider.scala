@@ -24,12 +24,14 @@ import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.util.{Releasable, ReleaseOnce}
 import com.island.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import com.island.ohara.connector.jdbc.util.DateTimeUtils
+import com.typesafe.scalalogging.Logger
 
 /**
   * Connection to database and query data
   *
   */
 class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) extends ReleaseOnce {
+  private[this] lazy val logger = Logger(getClass.getName)
 
   private[this] val client: DatabaseClient = DatabaseClient.builder
     .url(jdbcSourceConnectorConfig.dbURL)
@@ -60,6 +62,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
       preparedStatement.setTimestamp(1, tsOffset, DateTimeUtils.CALENDAR)
       preparedStatement.setTimestamp(2, currentTimestamp, DateTimeUtils.CALENDAR)
 
+      logger.info(s"Run executeQuery function. current time is ${currentTimestamp}")
       resultSet = preparedStatement.executeQuery()
       queryFlag = false
     }
@@ -68,6 +71,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
   }
 
   protected[source] def releaseResultSet(queryFlag: Boolean): Unit = {
+    logger.info("Close ResultSet ........")
     Releasable.close(resultSet.getStatement())
     Releasable.close(resultSet)
     resultSet = null
@@ -87,7 +91,6 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     client.tableQuery.tableName(tableName).execute().nonEmpty
 
   protected[source] def dbCurrentTime(cal: Calendar): Timestamp = {
-
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _              => "SELECT CURRENT_TIMESTAMP;"

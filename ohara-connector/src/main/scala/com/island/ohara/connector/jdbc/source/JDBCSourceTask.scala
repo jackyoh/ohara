@@ -16,8 +16,9 @@
 
 package com.island.ohara.connector.jdbc.source
 import java.sql.Timestamp
+
 import com.island.ohara.common.data.{Cell, Column, DataType, Row}
-import com.island.ohara.common.util.{Releasable, VersionUtils}
+import com.island.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
 import com.island.ohara.connector.jdbc.util.ColumnInfo
 import com.island.ohara.kafka.connector._
 import com.typesafe.scalalogging.Logger
@@ -33,6 +34,7 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] var topics: Seq[String] = _
   private[this] var inMemoryOffsets: Offsets = _
   private[this] var topicOffsets: Offsets = _
+  private[this] var lastPoll: Long = -1
 
   /**
     * Start the Task. This should handle any configuration parsing and one-time setup from the task.
@@ -58,61 +60,68 @@ class JDBCSourceTask extends RowSourceTask {
     * @return a array from RowSourceRecord
     */
   override protected[source] def _poll(): java.util.List[RowSourceRecord] = try {
-    val tableName: String = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName: String = jdbcSourceConnectorConfig.timestampColumnName
-    val flushDataSize: Int = jdbcSourceConnectorConfig.jdbcFlushDataSize
-    var inMemoryOffset = inMemoryOffsets.readOffset()
-    var topicOffset = topicOffsets.readOffset()
-    val resultSet: QueryResultIterator =
-      dbTableDataProvider
-        .executeQuery(tableName, timestampColumnName, Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
+    val current = CommonUtils.current()
+    val frequenceTime: Int = jdbcSourceConnectorConfig.jdbcFrequenceTime
+    if (current - lastPoll > frequenceTime) {
+      val tableName: String = jdbcSourceConnectorConfig.dbTableName
+      val timestampColumnName: String = jdbcSourceConnectorConfig.timestampColumnName
+      val flushDataSize: Int = jdbcSourceConnectorConfig.jdbcFlushDataSize
+      var inMemoryOffset = inMemoryOffsets.readOffset()
+      var topicOffset = topicOffsets.readOffset()
+      val resultSet: QueryResultIterator =
+        dbTableDataProvider
+          .executeQuery(tableName, timestampColumnName, Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
 
-    var recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
+      var recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
 
-    // Running empty loop for recovery
-    resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
+      // Running empty loop for recovery
+      resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
 
-    Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
-      val newSchema =
-        if (schema.isEmpty)
-          columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-        else schema
+      lastPoll = current
+      Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
+        val newSchema =
+          if (schema.isEmpty)
+            columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+          else schema
 
-      val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
+        val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
 
-      if (!timestampColumnValue.equals(parseOffsetInfo(inMemoryOffset).timestamp)) {
-        val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
-        topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1 + recoveryQueryRecordCount))
-        inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1 + recoveryQueryRecordCount))
-        recoveryQueryRecordCount = 0
-      } else {
-        val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
-        inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))
-        topicOffset = offsetStringResult(OffsetInfo(parseOffsetInfo(topicOffset).timestamp, queryRecordCount))
-      }
-      inMemoryOffsets.updateOffset(inMemoryOffset)
-      logger.debug(s"Topic offset is $topicOffset and Memory offset is $inMemoryOffset")
+        if (!timestampColumnValue.equals(parseOffsetInfo(inMemoryOffset).timestamp)) {
+          val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
+          topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1 + recoveryQueryRecordCount))
+          inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1 + recoveryQueryRecordCount))
+          recoveryQueryRecordCount = 0
+        } else {
+          val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
+          inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))
+          topicOffset = offsetStringResult(OffsetInfo(parseOffsetInfo(topicOffset).timestamp, queryRecordCount))
+        }
+        inMemoryOffsets.updateOffset(inMemoryOffset)
+        logger.debug(s"Topic offset is $topicOffset and Memory offset is $inMemoryOffset")
 
-      topics.map(
-        RowSourceRecord
-          .builder()
-          .sourcePartition(JDBCSourceTask.partition(tableName).asJava)
-          //Writer Offset
-          .sourceOffset(JDBCSourceTask.offset(topicOffset).asJava)
-          //Create Ohara Row
-          .row(row(newSchema, columns))
-          .topicName(_)
-          .build())
-    }).map { rowSourceRecords =>
-        if (rowSourceRecords.isEmpty) {
-          inMemoryOffsets.updateOffset(inMemoryOffset)
-          dbTableDataProvider.releaseResultSet(true)
-          Seq.empty
-        } else rowSourceRecords
-      }
-      .get
-      .toList
-      .asJava
+        topics.map(
+          RowSourceRecord
+            .builder()
+            .sourcePartition(JDBCSourceTask.partition(tableName).asJava)
+            //Writer Offset
+            .sourceOffset(JDBCSourceTask.offset(topicOffset).asJava)
+            //Create Ohara Row
+            .row(row(newSchema, columns))
+            .topicName(_)
+            .build())
+      }).map { rowSourceRecords =>
+          if (rowSourceRecords.isEmpty) {
+            inMemoryOffsets.updateOffset(inMemoryOffset)
+            dbTableDataProvider.releaseResultSet(true)
+            Seq.empty
+          } else rowSourceRecords
+        }
+        .get
+        .toList
+        .asJava
+    } else {
+      Seq.empty.asJava
+    }
   } catch {
     case e: Throwable =>
       logger.error(e.getMessage, e)
