@@ -186,10 +186,6 @@ class JDBCSourceTask extends RowSourceTask {
   private[source] def isRunningQuery(currentTime: Long, lastPoll: Long, frequenceTime: Duration): Boolean =
     (currentTime - lastPoll) > frequenceTime.toMillis
 
-
-
-
-
   /**
     * Offset format is ${TimestampOffset},${QueryRecordCount}
     * Example: 2018-09-01 00:00:00,0
