@@ -45,9 +45,9 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
 
   private[this] var resultSet: ResultSet = _
 
-  protected[source] def executeQuery(tableName: String,
-                                     timeStampColumnName: String,
-                                     tsOffset: Timestamp): QueryResultIterator = {
+  private[source] def executeQuery(tableName: String,
+                                   timeStampColumnName: String,
+                                   tsOffset: Timestamp): QueryResultIterator = {
     if (queryFlag) {
       val sql =
         s"SELECT * FROM $tableName WHERE $timeStampColumnName > ? AND $timeStampColumnName < ? ORDER BY $timeStampColumnName"
@@ -70,7 +70,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     new QueryResultIterator(rdbDataTypeConverter, resultSet, columns(tableName))
   }
 
-  protected[source] def releaseResultSet(queryFlag: Boolean): Unit = {
+  private[source] def releaseResultSet(queryFlag: Boolean): Unit = {
     logger.debug("close ResultSet ........")
     Releasable.close(resultSet.getStatement())
     Releasable.close(resultSet)
@@ -82,15 +82,15 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     this.queryFlag = queryFlag
   }
 
-  protected[source] def columns(tableName: String): Seq[RdbColumn] = {
+  private[source] def columns(tableName: String): Seq[RdbColumn] = {
     val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
     rdbTables.head.columns
   }
 
-  protected[source] def isTableExists(tableName: String): Boolean =
+  private[source] def isTableExists(tableName: String): Boolean =
     client.tableQuery.tableName(tableName).execute().nonEmpty
 
-  protected[source] def dbCurrentTime(cal: Calendar): Timestamp = {
+  private[source] def dbCurrentTime(cal: Calendar): Timestamp = {
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _              => "SELECT CURRENT_TIMESTAMP;"
