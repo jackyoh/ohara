@@ -21,6 +21,7 @@ import org.junit.Test
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 class TestJDBCSourceConnectorConfig extends OharaTest with Matchers {
 
   private[this] def jdbcConfig(settings: Map[String, String]): JDBCSourceConnectorConfig =
@@ -78,7 +79,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest with Matchers {
         TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
       )
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
-    jdbcSourceConnectorConfig.jdbcFrequenceTime shouldBe 0
+    jdbcSourceConnectorConfig.jdbcFrequenceTime.toMillis shouldBe 0
   }
 
   @Test
@@ -90,11 +91,11 @@ class TestJDBCSourceConnectorConfig extends OharaTest with Matchers {
         DB_PASSWORD -> "123456",
         DB_TABLENAME -> "TABLE1",
         DB_SCHEMA_PATTERN -> "schema1",
-        JDBC_FREQUENCE_TIME -> "5000",
+        JDBC_FREQUENCE_TIME -> "10 second",
         TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
       )
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
-    jdbcSourceConnectorConfig.jdbcFrequenceTime shouldBe 5000
+    jdbcSourceConnectorConfig.jdbcFrequenceTime.toMillis shouldBe 10000
   }
 
   @Test
@@ -124,7 +125,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest with Matchers {
       mode = "123",
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
-      jdbcFrequenceTime = 0,
+      jdbcFrequenceTime = Duration("0 second"),
       timestampColumnName = "123"
     )
 

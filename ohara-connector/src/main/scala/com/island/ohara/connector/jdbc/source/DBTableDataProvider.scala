@@ -62,7 +62,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
       preparedStatement.setTimestamp(1, tsOffset, DateTimeUtils.CALENDAR)
       preparedStatement.setTimestamp(2, currentTimestamp, DateTimeUtils.CALENDAR)
 
-      logger.info(s"Run executeQuery function. current time is ${currentTimestamp}")
+      logger.debug(s"Run executeQuery function. current time is ${currentTimestamp}")
       resultSet = preparedStatement.executeQuery()
       queryFlag = false
     }
@@ -71,7 +71,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
   }
 
   protected[source] def releaseResultSet(queryFlag: Boolean): Unit = {
-    logger.info("Close ResultSet ........")
+    logger.debug("close ResultSet ........")
     Releasable.close(resultSet.getStatement())
     Releasable.close(resultSet)
     resultSet = null

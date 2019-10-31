@@ -24,6 +24,7 @@ import com.island.ohara.kafka.connector._
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 
 class JDBCSourceTask extends RowSourceTask {
 
@@ -61,8 +62,9 @@ class JDBCSourceTask extends RowSourceTask {
     */
   override protected[source] def _poll(): java.util.List[RowSourceRecord] = try {
     val current = CommonUtils.current()
-    val frequenceTime: Int = jdbcSourceConnectorConfig.jdbcFrequenceTime
-    if (current - lastPoll > frequenceTime) {
+    val frequenceTime: Duration = jdbcSourceConnectorConfig.jdbcFrequenceTime
+
+    if (isRunningQuery(current, lastPoll, frequenceTime)) {
       val tableName: String = jdbcSourceConnectorConfig.dbTableName
       val timestampColumnName: String = jdbcSourceConnectorConfig.timestampColumnName
       val flushDataSize: Int = jdbcSourceConnectorConfig.jdbcFlushDataSize
@@ -180,6 +182,9 @@ class JDBCSourceTask extends RowSourceTask {
       .map(_.value.asInstanceOf[Timestamp].toString)
       .getOrElse(
         throw new RuntimeException(s"$timestampColumnName not in ${jdbcSourceConnectorConfig.dbTableName} table."))
+
+  private[source] def isRunningQuery(currentTime: Long, lstPoll: Long, frequenceTime: Duration): Boolean =
+    (currentTime - lastPoll) > frequenceTime.toMillis
 
   /**
     * Offset format is ${TimestampOffset},${QueryRecordCount}

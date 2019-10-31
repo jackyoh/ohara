@@ -98,7 +98,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker with Matchers {
     definition.editable() shouldBe true
     definition.internal() shouldBe false
     definition.reference() shouldBe Reference.NONE
-    definition.valueType() shouldBe SettingDef.Type.INT
+    definition.valueType() shouldBe SettingDef.Type.DURATION
   }
 
   @Test
@@ -180,7 +180,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker with Matchers {
           TIMESTAMP_COLUMN_NAME -> timeStampColumnName,
           JDBC_FETCHDATA_SIZE -> "1000",
           JDBC_FLUSHDATA_SIZE -> "1000",
-          JDBC_FREQUENCE_TIME -> "5000",
+          JDBC_FREQUENCE_TIME -> "1 second",
         ))
         .connectorClass(classOf[JDBCSourceConnector])
         .run())

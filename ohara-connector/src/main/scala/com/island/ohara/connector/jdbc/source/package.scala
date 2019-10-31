@@ -16,6 +16,8 @@
 
 package com.island.ohara.connector.jdbc
 
+import scala.concurrent.duration.Duration
+
 package object source {
   val DB_URL: String = "source.db.url"
   val DB_USERNAME: String = "source.db.username"
@@ -30,7 +32,11 @@ package object source {
   val MODE_DEFAULT = "timestamp"
   val JDBC_FETCHDATA_SIZE_DEFAULT: Int = 1000
   val JDBC_FLUSHDATA_SIZE_DEFAULT: Int = 1000
-  val JDBC_FREQUENCE_TIME_DEFAULT: Int = 0
+  val JDBC_FREQUENCE_TIME_DEFAULT: Duration = Duration("0 second")
   val TIMESTAMP_COLUMN_NAME: String = "source.timestamp.column.name"
   val ORACLE_DB_NAME = "oracle"
+
+  def toJavaDuration(d: Duration): java.time.Duration = java.time.Duration.ofMillis(d.toMillis)
+  def toScalaDuration(d: java.time.Duration): Duration =
+    Duration(d.toMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
 }

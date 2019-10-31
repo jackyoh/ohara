@@ -86,6 +86,8 @@ class TestJDBCSourceTask extends OharaTest with Matchers with MockitoSugar {
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.durationOption(JDBC_FREQUENCE_TIME))
+      .thenReturn(java.util.Optional.of(java.time.Duration.ofMillis(0)))
 
     val columns: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build(),
@@ -210,7 +212,8 @@ class TestJDBCSourceTask extends OharaTest with Matchers with MockitoSugar {
 
     when(taskSetting.columns).thenReturn(columns.asJava)
     when(taskSetting.topicNames()).thenReturn(Seq("topic1").asJava)
-
+    when(taskSetting.durationOption(JDBC_FREQUENCE_TIME))
+      .thenReturn(java.util.Optional.of(java.time.Duration.ofMillis(0)))
     jdbcSourceTask._start(taskSetting)
 
     val rows: Seq[RowSourceRecord] = jdbcSourceTask._poll().asScala

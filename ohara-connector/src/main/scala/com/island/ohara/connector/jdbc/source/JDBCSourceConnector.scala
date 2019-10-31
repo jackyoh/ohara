@@ -185,7 +185,7 @@ class JDBCSourceConnector extends RowSourceConnector {
       .builder()
       .displayName("Fetch data frequence")
       .documentation("Setting fetch data frequency from database")
-      .valueType(SettingDef.Type.INT)
+      .valueType(SettingDef.Type.DURATION)
       .key(JDBC_FREQUENCE_TIME)
       .optional(String.valueOf(JDBC_FREQUENCE_TIME_DEFAULT))
       .orderInGroup(counter.getAndIncrement())
