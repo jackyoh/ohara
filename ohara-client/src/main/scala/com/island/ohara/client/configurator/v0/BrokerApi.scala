@@ -95,7 +95,7 @@ object BrokerApi {
   val NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_DEFINITION: SettingDef = createDef(
     _.key(NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_KEY)
       .documentation("the number of replications for internal offset topic")
-      .valueType(Type.INT)
+      .valueType(Type.SHORT)
       .optional(NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_DEFAULT)
       .build())
   private[this] val NUMBER_OF_NETWORK_THREADS_KEY: String = "num.network.threads"
