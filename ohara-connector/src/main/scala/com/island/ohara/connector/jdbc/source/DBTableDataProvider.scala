@@ -45,6 +45,8 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
 
   private[this] var resultSet: ResultSet = _
 
+  private[this] val rdbColumnInfo = columns(jdbcSourceConnectorConfig.dbTableName)
+
   private[source] def executeQuery(tableName: String,
                                    timeStampColumnName: String,
                                    tsOffset: Timestamp): QueryResultIterator = {
@@ -67,7 +69,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
       queryFlag = false
     }
     val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
-    new QueryResultIterator(rdbDataTypeConverter, resultSet, columns(tableName))
+    new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
   }
 
   private[source] def releaseResultSet(queryFlag: Boolean): Unit = {
