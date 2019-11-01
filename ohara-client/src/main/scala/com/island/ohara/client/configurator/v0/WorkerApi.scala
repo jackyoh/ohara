@@ -56,7 +56,7 @@ object WorkerApi {
   val NODE_NAMES_DEFINITION: SettingDef =
     createDef(_.key(NODE_NAMES_KEY).documentation("the nodes hosting this cluster").valueType(Type.ARRAY).build())
   val TAGS_DEFINITION: SettingDef =
-    createDef(_.key(TAGS_KEY).documentation("the tags to this cluster").optional().build())
+    createDef(_.key(TAGS_KEY).documentation("the tags to this cluster").valueType(Type.TAGS).optional().build())
   private[this] val BROKER_CLUSTER_KEY_KEY = "brokerClusterKey"
   val BROKER_CLUSTER_KEY_DEFINITION: SettingDef = createDef(
     _.key(BROKER_CLUSTER_KEY_KEY)
@@ -65,10 +65,15 @@ object WorkerApi {
       .reference(Reference.BROKER_CLUSTER)
       .build())
   val CLIENT_PORT_DEFINITION: SettingDef =
-    createDef(_.key(CLIENT_PORT_KEY).documentation("the port used to receive HTTP request").optional().build())
+    createDef(
+      _.key(CLIENT_PORT_KEY)
+        .documentation("the port used to receive HTTP request")
+        .valueType(Type.PORT)
+        .optional()
+        .build())
   private[this] val JMX_PORT_KEY = "jmxPort"
   val JMX_PORT_DEFINITION: SettingDef =
-    createDef(_.key(JMX_PORT_KEY).documentation("the port used to expose jmx").optional().build())
+    createDef(_.key(JMX_PORT_KEY).documentation("the port used to expose jmx").valueType(Type.PORT).optional().build())
   private[this] val FILE_KEYS_KEY = "fileKeys"
   val FILE_KEYS_DEFINITION: SettingDef = createDef(
     _.key(FILE_KEYS_KEY)
@@ -82,6 +87,7 @@ object WorkerApi {
     _.key(FREE_PORTS_KEY)
       .documentation(
         "the pre-binding ports for this worker cluster. If your connectors have to use socket, please bind the port in running worker cluster")
+      .valueType(Type.PORT)
       .optional()
       .build())
   private[this] val GROUP_ID_KEY = "group.id"
@@ -99,6 +105,7 @@ object WorkerApi {
   val STATUS_TOPIC_PARTITIONS_DEFINITION: SettingDef = createDef(
     _.key(STATUS_TOPIC_PARTITIONS_KEY)
       .documentation("number of partitions for status topic")
+      .valueType(Type.INT)
       .optional(STATUS_TOPIC_PARTITIONS_DEFAULT)
       .build())
   private[this] val STATUS_TOPIC_REPLICATIONS_KEY = "status.storage.replication.factor"
@@ -106,6 +113,7 @@ object WorkerApi {
   val STATUS_TOPIC_REPLICATIONS_DEFINITION: SettingDef = createDef(
     _.key(STATUS_TOPIC_REPLICATIONS_KEY)
       .documentation("number of replications for status topic")
+      .valueType(Type.SHORT)
       .optional(STATUS_TOPIC_REPLICATIONS_DEFAULT)
       .build())
 
@@ -118,6 +126,7 @@ object WorkerApi {
   val CONFIG_TOPIC_PARTITIONS_DEFINITION: SettingDef = createDef(
     _.key(CONFIG_TOPIC_PARTITIONS_KEY)
       .documentation("number of partitions for config topic. this value MUST be 1")
+      .valueType(Type.INT)
       .optional(CONFIG_TOPIC_PARTITIONS_DEFAULT)
       .readonly()
       .build())
@@ -127,6 +136,7 @@ object WorkerApi {
     _.key(CONFIG_TOPIC_REPLICATIONS_KEY)
       .documentation("number of replications for config topic")
       .optional(CONFIG_TOPIC_REPLICATIONS_DEFAULT)
+      .valueType(Type.SHORT)
       .build())
   //-------------[offset topic]-------------//
   private[this] val OFFSET_TOPIC_NAME_KEY = "offset.storage.topic"
@@ -137,6 +147,7 @@ object WorkerApi {
   val OFFSET_TOPIC_PARTITIONS_DEFINITION: SettingDef = createDef(
     _.key(OFFSET_TOPIC_PARTITIONS_KEY)
       .documentation("number of partitions for offset topic")
+      .valueType(Type.INT)
       .optional(OFFSET_TOPIC_PARTITIONS_DEFAULT)
       .build())
   private[this] val OFFSET_TOPIC_REPLICATIONS_KEY = "offset.storage.replication.factor"
@@ -144,6 +155,7 @@ object WorkerApi {
   val OFFSET_TOPIC_REPLICATIONS_DEFINITION: SettingDef = createDef(
     _.key(OFFSET_TOPIC_REPLICATIONS_KEY)
       .documentation("number of replications for offset topic")
+      .valueType(Type.SHORT)
       .optional(OFFSET_TOPIC_REPLICATIONS_DEFAULT)
       .build())
 

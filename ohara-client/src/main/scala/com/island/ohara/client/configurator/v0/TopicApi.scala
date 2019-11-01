@@ -56,7 +56,12 @@ object TopicApi {
   val NAME_DEFINITION: SettingDef =
     coreDefinitionBuilder.key(NAME_KEY).documentation("name of this worker cluster").optional().build()
   val TAGS_DEFINITION: SettingDef =
-    coreDefinitionBuilder.key(TAGS_KEY).documentation("the tags to this cluster").optional().build()
+    coreDefinitionBuilder
+      .key(TAGS_KEY)
+      .documentation("the tags to this cluster")
+      .optional()
+      .valueType(Type.TAGS)
+      .build()
   private[this] val BROKER_CLUSTER_KEY_KEY = "brokerClusterKey"
   val BROKER_CLUSTER_KEY_DEFINITION: SettingDef = coreDefinitionBuilder
     .key(BROKER_CLUSTER_KEY_KEY)
@@ -69,6 +74,7 @@ object TopicApi {
   val NUMBER_OF_PARTITIONS_DEFINITION: SettingDef = coreDefinitionBuilder
     .key(NUMBER_OF_PARTITIONS_KEY)
     .documentation("the number of partitions")
+    .valueType(Type.INT)
     .optional(NUMBER_OF_PARTITIONS_DEFAULT)
     .build()
   private[this] val NUMBER_OF_REPLICATIONS_KEY = "numberOfReplications"
@@ -76,6 +82,7 @@ object TopicApi {
   val NUMBER_OF_REPLICATIONS_DEFINITION: SettingDef = coreDefinitionBuilder
     .key(NUMBER_OF_REPLICATIONS_KEY)
     .documentation("the number of replications")
+    .valueType(Type.SHORT)
     .optional(NUMBER_OF_REPLICATIONS_DEFAULT)
     .build()
 
@@ -85,6 +92,7 @@ object TopicApi {
     .key(SEGMENT_BYTES_KEY)
     .documentation(TopicConfig.SEGMENT_BYTES_DOC)
     // ONE WEEK
+    .valueType(Type.LONG)
     .optional(SEGMENT_BYTES_DEFAULT)
     .build()
 
@@ -93,6 +101,7 @@ object TopicApi {
   val SEGMENT_MS_DEFINITION: SettingDef = extraDefinitionBuilder
     .key(SEGMENT_MS_KEY)
     .documentation(TopicConfig.SEGMENT_MS_DOC)
+    .valueType(Type.LONG)
     // ONE WEEK
     .optional(SEGMENT_MS_DEFAULT)
     .build()

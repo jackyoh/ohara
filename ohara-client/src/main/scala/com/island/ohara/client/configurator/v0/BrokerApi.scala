@@ -57,7 +57,7 @@ object BrokerApi {
   val NODE_NAMES_DEFINITION: SettingDef =
     createDef(_.key(NODE_NAMES_KEY).documentation("the nodes hosting this cluster").valueType(Type.ARRAY).build())
   val TAGS_DEFINITION: SettingDef =
-    createDef(_.key(TAGS_KEY).documentation("the tags to this cluster").optional().build())
+    createDef(_.key(TAGS_KEY).documentation("the tags to this cluster").valueType(Type.TAGS).optional().build())
   private[this] val ZOOKEEPER_CLUSTER_KEY_KEY: String = "zookeeperClusterKey"
   val ZOOKEEPER_CLUSTER_KEY_DEFINITION: SettingDef = createDef(
     _.key(ZOOKEEPER_CLUSTER_KEY_KEY)
@@ -66,10 +66,18 @@ object BrokerApi {
       .reference(Reference.ZOOKEEPER_CLUSTER)
       .build())
   val CLIENT_PORT_DEFINITION: SettingDef = createDef(
-    _.key(CLIENT_PORT_KEY).documentation("the port exposed to client to connect to broker").optional().build())
+    _.key(CLIENT_PORT_KEY)
+      .documentation("the port exposed to client to connect to broker")
+      .valueType(Type.PORT)
+      .optional()
+      .build())
   private[this] val JMX_PORT_KEY: String = "jmxPort"
   val JMX_PORT_DEFINITION: SettingDef = createDef(
-    _.key(JMX_PORT_KEY).documentation("the port exposed to client to connect to broker jmx").optional().build())
+    _.key(JMX_PORT_KEY)
+      .documentation("the port exposed to client to connect to broker jmx")
+      .valueType(Type.PORT)
+      .optional()
+      .build())
   private[this] val LOG_DIRS_KEY: String = "log.dirs"
   private[this] val LOG_DIRS_DEFAULT = s"$BROKER_HOME_FOLDER/data"
   val LOG_DIRS_DEFINITION: SettingDef = createDef(
@@ -79,6 +87,7 @@ object BrokerApi {
   val NUMBER_OF_PARTITIONS_DEFINITION: SettingDef = createDef(
     _.key(NUMBER_OF_PARTITIONS_KEY)
       .documentation("the number of partitions for all topics by default")
+      .valueType(Type.INT)
       .optional(NUMBER_OF_PARTITIONS_DEFAULT)
       .build())
   private[this] val NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_KEY: String = "offsets.topic.replication.factor"
@@ -86,6 +95,7 @@ object BrokerApi {
   val NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_DEFINITION: SettingDef = createDef(
     _.key(NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_KEY)
       .documentation("the number of replications for internal offset topic")
+      .valueType(Type.INT)
       .optional(NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_DEFAULT)
       .build())
   private[this] val NUMBER_OF_NETWORK_THREADS_KEY: String = "num.network.threads"
@@ -93,6 +103,7 @@ object BrokerApi {
   val NUMBER_OF_NETWORK_THREADS_DEFINITION: SettingDef = createDef(
     _.key(NUMBER_OF_NETWORK_THREADS_KEY)
       .documentation("the number of threads used to accept network requests")
+      .valueType(Type.INT)
       .optional(NUMBER_OF_NETWORK_THREADS_DEFAULT)
       .build())
   private[this] val NUMBER_OF_IO_THREADS_KEY: String = "num.io.threads"
@@ -100,6 +111,7 @@ object BrokerApi {
   val NUMBER_OF_IO_THREADS_DEFINITION: SettingDef = createDef(
     _.key(NUMBER_OF_IO_THREADS_KEY)
       .documentation("the number of threads used to process network requests")
+      .valueType(Type.INT)
       .optional(NUMBER_OF_IO_THREADS_DEFAULT)
       .build())
 

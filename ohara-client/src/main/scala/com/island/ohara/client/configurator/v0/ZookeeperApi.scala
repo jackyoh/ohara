@@ -54,28 +54,46 @@ object ZookeeperApi {
   val NODE_NAMES_DEFINITION: SettingDef =
     createDef(_.key(NODE_NAMES_KEY).documentation("the nodes hosting this cluster").valueType(Type.ARRAY).build())
   val TAGS_DEFINITION: SettingDef =
-    createDef(_.key(TAGS_KEY).documentation("the tags to this cluster").optional().build())
+    createDef(_.key(TAGS_KEY).documentation("the tags to this cluster").valueType(Type.TAGS).optional().build())
   val CLIENT_PORT_DEFINITION: SettingDef = createDef(
-    _.key(CLIENT_PORT_KEY).documentation("the port exposed to client to connect to zookeeper").optional().build())
+    _.key(CLIENT_PORT_KEY)
+      .documentation("the port exposed to client to connect to zookeeper")
+      .valueType(Type.PORT)
+      .optional()
+      .build())
   private[this] val PEER_PORT_KEY = "peerPort"
   val PEER_PORT_DEFINITION: SettingDef =
-    createDef(_.key(PEER_PORT_KEY).documentation("the port exposed to each quorum").optional().build())
+    createDef(
+      _.key(PEER_PORT_KEY).documentation("the port exposed to each quorum").valueType(Type.PORT).optional().build())
   private[this] val ELECTION_PORT_KEY = "electionPort"
   val ELECTION_PORT_DEFINITION: SettingDef =
-    createDef(_.key(ELECTION_PORT_KEY).documentation("quorum leader election port").optional().build())
+    createDef(
+      _.key(ELECTION_PORT_KEY).documentation("quorum leader election port").valueType(Type.PORT).optional().build())
   // export these variables to collie for creating
   private[this] val TICK_TIME_KEY = "tickTime"
   private[this] val TICK_TIME_DEFAULT: Int = 2000
   val TICK_TIME_DEFINITION: SettingDef = createDef(
-    _.key(TICK_TIME_KEY).documentation("basic time unit in zookeeper").optional(TICK_TIME_DEFAULT).build())
+    _.key(TICK_TIME_KEY)
+      .documentation("basic time unit in zookeeper")
+      .valueType(Type.INT)
+      .optional(TICK_TIME_DEFAULT)
+      .build())
   private[this] val INIT_LIMIT_KEY = "initLimit"
   private[this] val INIT_LIMIT_DEFAULT: Int = 10
   val INIT_LIMIT_DEFINITION: SettingDef = createDef(
-    _.key(INIT_LIMIT_KEY).documentation("timeout to connect to leader").optional(INIT_LIMIT_DEFAULT).build())
+    _.key(INIT_LIMIT_KEY)
+      .documentation("timeout to connect to leader")
+      .valueType(Type.INT)
+      .optional(INIT_LIMIT_DEFAULT)
+      .build())
   private[this] val SYNC_LIMIT_KEY = "syncLimit"
   private[this] val SYNC_LIMIT_DEFAULT: Int = 5
   val SYNC_LIMIT_DEFINITION: SettingDef = createDef(
-    _.key(SYNC_LIMIT_KEY).documentation("the out-of-date of a sever from leader").optional(SYNC_LIMIT_DEFAULT).build())
+    _.key(SYNC_LIMIT_KEY)
+      .documentation("the out-of-date of a sever from leader")
+      .valueType(Type.INT)
+      .optional(SYNC_LIMIT_DEFAULT)
+      .build())
   private[this] val DATA_DIR_KEY = "dataDir"
   private[this] val DATA_DIR_DEFAULT = s"$ZOOKEEPER_HOME_FOLDER/data"
   val DATA_DIR_DEFINITION: SettingDef = createDef(
