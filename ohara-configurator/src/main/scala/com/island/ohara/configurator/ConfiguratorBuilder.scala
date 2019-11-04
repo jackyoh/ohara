@@ -46,6 +46,7 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   private[this] var store: DataStore = _
   private[this] var serviceCollie: ServiceCollie = _
   private[this] var k8sClient: K8SClient = _
+  private[this] var k8sNamespace: Option[String] = None
 
   @Optional("default is random folder")
   def homeFolder(homeFolder: String): ConfiguratorBuilder = doOrReleaseObjects {
@@ -381,6 +382,36 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
     if (this.k8sClient != null) throw new IllegalArgumentException(alreadyExistMessage("k8sClient"))
     if (this.serviceCollie != null) throw new IllegalArgumentException(alreadyExistMessage("serviceCollie"))
     this.k8sClient = Objects.requireNonNull(k8sClient)
+    this
+  }
+
+  /**
+    * Set a k8s namespace to use k8s platform
+    * @param namespace k8s namespace
+    * @return this builder
+    */
+  @Optional("default value is default")
+  private[configurator] def k8sNamespace(namespace: Option[String]): ConfiguratorBuilder = {
+    this.k8sNamespace = namespace
+    this
+  }
+
+  /**
+    * Set a k8s api server url
+    * @param url k8s api server url
+    * @return this builder
+    */
+  @Optional("default value is null")
+  private[configurator] def k8sApiServer(url: String): ConfiguratorBuilder = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    val client = K8SClient(url, k8sNamespace)
+    try if (Await.result(client.nodeNameIPInfo(), 30 seconds).isEmpty)
+      throw new IllegalArgumentException("your k8s clusters is empty!!!")
+    catch {
+      case e: Throwable =>
+        throw new IllegalArgumentException(s"unable to access k8s cluster:$url", e)
+    }
+    this.k8sClient(client)
     this
   }
 

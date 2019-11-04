@@ -56,7 +56,10 @@ object K8SClient {
 
   private[agent] val K8S_KIND_NAME = "K8S"
 
-  def apply(k8sApiServerURL: String, namespace: String): K8SClient = {
+  def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, None)
+
+  def apply(k8sApiServerURL: String, namespaceOption: Option[String]): K8SClient = {
+    val namespace = namespaceOption.getOrElse("default")
     if (k8sApiServerURL.isEmpty) throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")
 
     new K8SClient() with SprayJsonSupport {

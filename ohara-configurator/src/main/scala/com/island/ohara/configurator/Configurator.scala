@@ -315,6 +315,7 @@ object Configurator {
   private[configurator] val HELP_KEY = "--help"
   private[configurator] val FOLDER_KEY = "--folder"
   private[configurator] val HOSTNAME_KEY = "--hostname"
+  private[configurator] val K8S_NAMESPACE_KEY = "--k8s-namespace"
   private[configurator] val K8S_KEY = "--k8s"
   private[configurator] val FAKE_KEY = "--fake"
   private[configurator] val PORT_KEY = "--port"
@@ -329,19 +330,11 @@ object Configurator {
     val configuratorBuilder = Configurator.builder
     try {
       args.sliding(2, 2).foreach {
-        case Array(FOLDER_KEY, value)   => configuratorBuilder.homeFolder(value)
-        case Array(HOSTNAME_KEY, value) => configuratorBuilder.hostname(value)
-        case Array(PORT_KEY, value)     => configuratorBuilder.port(value.toInt)
-        case Array(K8S_KEY, value) =>
-          import scala.concurrent.ExecutionContext.Implicits.global
-          val client = K8SClient(value, "default")
-          try if (Await.result(client.nodeNameIPInfo(), 30 seconds).isEmpty)
-            throw new IllegalArgumentException("your k8s clusters is empty!!!")
-          catch {
-            case e: Throwable =>
-              throw new IllegalArgumentException(s"unable to access k8s cluster:$value", e)
-          }
-          configuratorBuilder.k8sClient(client)
+        case Array(FOLDER_KEY, value)        => configuratorBuilder.homeFolder(value)
+        case Array(HOSTNAME_KEY, value)      => configuratorBuilder.hostname(value)
+        case Array(PORT_KEY, value)          => configuratorBuilder.port(value.toInt)
+        case Array(K8S_NAMESPACE_KEY, value) => configuratorBuilder.k8sNamespace(Option(value))
+        case Array(K8S_KEY, value)           => configuratorBuilder.k8sApiServer(value)
         case Array(FAKE_KEY, value) =>
           if (value.toBoolean) configuratorBuilder.fake()
         case _ =>

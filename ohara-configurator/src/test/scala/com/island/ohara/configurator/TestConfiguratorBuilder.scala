@@ -16,11 +16,17 @@
 
 package com.island.ohara.configurator
 
+import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Directives.{complete, get, path}
+import akka.http.scaladsl.{Http, server}
+import akka.stream.ActorMaterializer
 import com.island.ohara.agent.ServiceCollie
 import com.island.ohara.agent.k8s.K8SClient
 import com.island.ohara.client.configurator.v0.NodeApi.Node
 import com.island.ohara.common.rule.OharaTest
-import com.island.ohara.common.util.CommonUtils
+import com.island.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.Test
 import org.scalatest.Matchers
 import org.scalatest.mockito.MockitoSugar
@@ -106,6 +112,57 @@ class TestConfiguratorBuilder extends OharaTest with Matchers {
     .build()
 
   @Test
+  def testK8SClientNamespaceDefault(): Unit = {
+    val namespace = "default"
+    val podName = "pod1"
+    val logMessage = "start pods ......."
+    val apiServer = k8sServer(namespace, podName, logMessage)
+    try {
+      val configurator: Configurator = Configurator.builder.k8sApiServer(apiServer.url).build()
+      Await.result(configurator.k8sClient.get.log(podName), 10 seconds) shouldBe logMessage
+
+    } finally apiServer.close()
+  }
+
+  @Test
+  def testK8SClientNamespaceAssign(): Unit = {
+    val namespace = Option("ohara")
+    val podName = "pod1"
+    val logMessage = "start pods ......."
+    val apiServer = k8sServer(namespace.get, podName, logMessage)
+    try {
+      val configurator: Configurator = Configurator.builder.k8sNamespace(namespace).k8sApiServer(apiServer.url).build()
+      Await.result(configurator.k8sClient.get.log(podName), 10 seconds) shouldBe logMessage
+
+    } finally apiServer.close()
+  }
+
+  @Test
+  def testK8SClientNamespaceNone(): Unit = {
+    val namespace = "default"
+    val podName = "pod1"
+    val logMessage = "start pods ......."
+    val apiServer = k8sServer(namespace, podName, logMessage)
+    try {
+      val configurator: Configurator = Configurator.builder.k8sClient(K8SClient(apiServer.url)).build()
+      Await.result(configurator.k8sClient.get.log(podName), 10 seconds) shouldBe logMessage
+    } finally apiServer.close()
+  }
+
+  @Test
+  def testK8SClientNamespace(): Unit = {
+    val namespace = "ohara"
+    val podName = "pod1"
+    val logMessage = "start pods ......."
+    val apiServer = k8sServer(namespace, podName, logMessage)
+    try {
+      val configurator: Configurator =
+        Configurator.builder.k8sClient(K8SClient(apiServer.url, Option(namespace))).build()
+      Await.result(configurator.k8sClient.get.log(podName), 10 seconds) shouldBe logMessage
+    } finally apiServer.close()
+  }
+
+  @Test
   def reassignServiceCollie(): Unit = an[IllegalArgumentException] should be thrownBy Configurator.builder
     .serviceCollie(MockitoSugar.mock[ServiceCollie])
     .serviceCollie(MockitoSugar.mock[ServiceCollie])
@@ -142,4 +199,83 @@ class TestConfiguratorBuilder extends OharaTest with Matchers {
     Configurator.builder
       .k8sClient(mock[K8SClient])
       .homeFolder(CommonUtils.createTempFolder(CommonUtils.randomString(5)).getAbsolutePath)
+
+  private[this] def toServer(route: server.Route): SimpleServer = {
+    implicit val system = ActorSystem("my-system")
+    implicit val materializer = ActorMaterializer()
+    val server = Await.result(Http().bindAndHandle(route, "localhost", 0), 30 seconds)
+
+    new SimpleServer {
+      override def hostname: String = server.localAddress.getHostString
+      override def port: Int = server.localAddress.getPort
+      override def close(): Unit = {
+        Await.result(server.unbind(), 30 seconds)
+        Await.result(system.terminate(), 30 seconds)
+      }
+    }
+  }
+
+  private[this] def k8sServer(namespace: String, podName: String, logMessage: String): SimpleServer = {
+    val podName = "pod1"
+    toServer {
+      path("namespaces" / namespace / "pods" / podName / "log") {
+        get {
+          complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, logMessage)))
+        }
+      } ~
+        path("nodes") {
+          get {
+            complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, k8sNodesResponse)))
+          }
+        }
+    }
+  }
+
+  private[this] val k8sNodesResponse = s"""
+        |{"items": [
+        |    {
+        |      "metadata": {
+        |        "name": "node1"
+        |      },
+        |      "status": {
+        |        "conditions": [
+        |          {
+        |            "type": "Ready",
+        |            "status": "True",
+        |            "lastHeartbeatTime": "2019-05-14T06:14:46Z",
+        |            "lastTransitionTime": "2019-04-15T08:21:11Z",
+        |            "reason": "KubeletReady",
+        |            "message": "kubelet is posting ready status"
+        |          }
+        |        ],
+        |        "addresses": [
+        |          {
+        |            "type": "InternalIP",
+        |            "address": "10.2.0.4"
+        |          },
+        |          {
+        |            "type": "Hostname",
+        |            "address": "ohara-it-02"
+        |          }
+        |        ],
+        |        "images": [
+        |          {
+        |            "names": [
+        |              "quay.io/coreos/etcd@sha256:ea49a3d44a50a50770bff84eab87bac2542c7171254c4d84c609b8c66aefc211",
+        |              "quay.io/coreos/etcd:v3.3.9"
+        |            ],
+        |            "sizeBytes": 39156721
+        |          }
+        |        ]
+        |      }
+        |    }
+        |  ]
+        |}""".stripMargin
+
+  trait SimpleServer extends Releasable {
+    def hostname: String
+    def port: Int
+
+    def url: String = s"http://$hostname:$port"
+  }
 }
