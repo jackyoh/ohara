@@ -56,13 +56,13 @@ object K8SClient {
 
   private[agent] val K8S_KIND_NAME = "K8S"
 
-  def apply(k8sApiServerURL: String): K8SClient = {
+  def apply(k8sApiServerURL: String, namespace: String): K8SClient = {
     if (k8sApiServerURL.isEmpty) throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")
 
     new K8SClient() with SprayJsonSupport {
       override def containers()(implicit executionContext: ExecutionContext): Future[Seq[ContainerInfo]] =
         HttpExecutor.SINGLETON
-          .get[PodList, K8SErrorResponse](s"$k8sApiServerURL/namespaces/default/pods")
+          .get[PodList, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$namespace/pods")
           .map(podList =>
             podList.items.map(pod => {
               val spec: PodSpec = pod.spec.getOrElse(
@@ -122,7 +122,7 @@ object K8SClient {
                                 configs,
                                 Metadata(uid = None, name = name, labels = None, creationTimestamp = None))
         HttpExecutor.SINGLETON
-          .post[ConfigMap, ConfigMap, K8SErrorResponse](s"$k8sApiServerURL/namespaces/default/configmaps", request)
+          .post[ConfigMap, ConfigMap, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$namespace/configmaps", request)
           .map(_.metadata.name)
       }
 
@@ -133,7 +133,7 @@ object K8SClient {
 
       private[this] def removeConfig(name: String, isForce: Boolean)(
         implicit executionContext: ExecutionContext): Future[Boolean] = {
-        var url = s"$k8sApiServerURL/namespaces/default/configmaps/$name"
+        var url = s"$k8sApiServerURL/namespaces/$namespace/configmaps/$name"
         if (isForce) url += "?gracePeriodSeconds=0"
         HttpExecutor.SINGLETON.delete[K8SErrorResponse](url).map(_ => true)
       }
@@ -141,7 +141,7 @@ object K8SClient {
       override def inspectConfig(name: String)(
         implicit executionContext: ExecutionContext): Future[Map[String, String]] = {
         HttpExecutor.SINGLETON
-          .get[ConfigMap, K8SErrorResponse](s"$k8sApiServerURL/namespaces/default/configmaps/$name")
+          .get[ConfigMap, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$namespace/configmaps/$name")
           .map(_.data)
       }
 
@@ -181,7 +181,7 @@ object K8SClient {
 
       override def log(name: String)(implicit executionContext: ExecutionContext): Future[String] =
         HttpExecutor.SINGLETON
-          .getOnlyMessage(s"$k8sApiServerURL/namespaces/default/pods/$name/log")
+          .getOnlyMessage(s"$k8sApiServerURL/namespaces/$namespace/pods/$name/log")
           .map(msg => if (msg.contains("ERROR:")) throw new IllegalArgumentException(msg) else msg)
 
       override def nodeNameIPInfo()(implicit executionContext: ExecutionContext): Future[Seq[HostAliases]] =
@@ -320,7 +320,7 @@ object K8SClient {
               }
               .flatMap(podSpec => { //name is pod name
                 val request = Pod(Metadata(None, name, Some(Label(labelName)), None), Some(podSpec), None)
-                HttpExecutor.SINGLETON.post[Pod, Pod, K8SErrorResponse](s"$k8sApiServerURL/namespaces/default/pods",
+                HttpExecutor.SINGLETON.post[Pod, Pod, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$namespace/pods",
                                                                         request)
               })
               .map(pod => {
@@ -352,10 +352,10 @@ object K8SClient {
           .flatMap(container => {
             if (isForce)
               HttpExecutor.SINGLETON.delete[K8SErrorResponse](
-                s"$k8sApiServerURL/namespaces/default/pods/${container.name}?gracePeriodSeconds=0")
+                s"$k8sApiServerURL/namespaces/$namespace/pods/${container.name}?gracePeriodSeconds=0")
             else
               HttpExecutor.SINGLETON
-                .delete[K8SErrorResponse](s"$k8sApiServerURL/namespaces/default/pods/${container.name}")
+                .delete[K8SErrorResponse](s"$k8sApiServerURL/namespaces/$namespace/pods/${container.name}")
 
             Future.successful(container)
           })

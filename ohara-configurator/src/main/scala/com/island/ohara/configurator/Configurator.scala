@@ -334,7 +334,7 @@ object Configurator {
         case Array(PORT_KEY, value)     => configuratorBuilder.port(value.toInt)
         case Array(K8S_KEY, value) =>
           import scala.concurrent.ExecutionContext.Implicits.global
-          val client = K8SClient(value)
+          val client = K8SClient(value, "default")
           try if (Await.result(client.nodeNameIPInfo(), 30 seconds).isEmpty)
             throw new IllegalArgumentException("your k8s clusters is empty!!!")
           catch {

@@ -35,6 +35,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 class TestK8SClient extends OharaTest with Matchers {
+  private[this] val namespace: String = "default"
 
   @Test
   def testCreatorEnumator(): Unit = {
@@ -53,7 +54,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val podName = "container1"
     val s = imagePolicyURL(nodeName, podName, ImagePullPolicy.IFNOTPRESENT)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient(s.url, namespace)
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -80,7 +81,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val podName = "container1"
     val s = imagePolicyURL(nodeName, podName, ImagePullPolicy.IFNOTPRESENT)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient(s.url, namespace)
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -106,7 +107,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val podName = "container1"
     val s = imagePolicyURL(nodeName, podName, ImagePullPolicy.ALWAYS)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient(s.url, namespace)
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -132,7 +133,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val podName = "container1"
     val s = imagePolicyURL(nodeName, podName, ImagePullPolicy.NEVER)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient(s.url, namespace)
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -158,7 +159,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val podName = "container1"
     val s = imagePolicyURL(nodeName, podName, ImagePullPolicy.IFNOTPRESENT)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient(s.url, namespace)
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -214,7 +215,7 @@ class TestK8SClient extends OharaTest with Matchers {
       }
     }
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient(s.url, namespace)
       val imagesFromServer = Await.result(client.images(node), 30 seconds)
       imagesFromServer shouldBe images
     } finally s.close()
@@ -223,7 +224,7 @@ class TestK8SClient extends OharaTest with Matchers {
   @Test
   def testForceRemovePod(): Unit = {
     val s = forceRemovePodURL("k8soccl-057aac6a97-bk-c720992")
-    val k8sClient = K8SClient(s.url)
+    val k8sClient = K8SClient(s.url, namespace)
     try {
       val result: ContainerInfo = Await.result(k8sClient.forceRemove("k8soccl-057aac6a97-bk-c720992"), 30 seconds)
       result.name shouldBe "k8soccl-057aac6a97-bk-c720992"
@@ -237,7 +238,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val podName = "broker-pod"
     val s = log(podName)
     try {
-      val k8sClient = K8SClient(s.url)
+      val k8sClient = K8SClient(s.url, namespace)
       val result: String = Await.result(k8sClient.log(podName), 5 seconds)
       result shouldBe "start pods ......."
     } finally s.close()
@@ -247,7 +248,7 @@ class TestK8SClient extends OharaTest with Matchers {
   def testCreatePodFailed(): Unit = {
     val s = createFailedPod()
     try {
-      val k8sClient = K8SClient(s.url)
+      val k8sClient = K8SClient(s.url, namespace)
       intercept[IllegalArgumentException] {
         Await.result(
           k8sClient
@@ -270,7 +271,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val configName = "configMap1"
     val s = configMap(configName)
     try {
-      val k8sClient = K8SClient(s.url)
+      val k8sClient = K8SClient(s.url, namespace)
       val result: Map[String, String] = Await.result(k8sClient.inspectConfig(configName), 5 seconds)
       result.size shouldBe 3
       (1 to 3).foreach(i => result(s"key${i}") shouldBe s"value${i}")
@@ -282,7 +283,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val configName = "configmap3"
     val s = configMapFailed(configName)
     try {
-      val k8sClient = K8SClient(s.url)
+      val k8sClient = K8SClient(s.url, namespace)
       intercept[IllegalArgumentException] {
         Await.result(k8sClient.inspectConfig(configName), 5 seconds)
       }.getMessage() shouldBe s"configmaps ${configName} not found"
@@ -294,7 +295,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val configName = "configMap2"
     val s = addConfig(configName)
     try {
-      val k8sClient = K8SClient(s.url)
+      val k8sClient = K8SClient(s.url, namespace)
       val result: String =
         Await.result(k8sClient.addConfig(configName, Map("key4" -> "value4", "key5" -> "value5")), 5 seconds)
       result shouldBe configName
@@ -306,7 +307,7 @@ class TestK8SClient extends OharaTest with Matchers {
     val configName = "configmap1"
     val s = deleteConfig(configName)
     try {
-      val k8sClient = K8SClient(s.url)
+      val k8sClient = K8SClient(s.url, namespace)
       val result: Boolean = Await.result(k8sClient.removeConfig(configName), 5 seconds)
       result shouldBe true
     } finally s.close()

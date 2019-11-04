@@ -121,6 +121,7 @@ class OharaTest extends Test {
           // hostname used to expose the location of configurator
           "ohara.it.port",
           "ohara.it.k8s",
+          "ohara.it.k8s.namespace",
           "ohara.it.k8s.nodename",
           // set the prefix to all containers
           "ohara.it.container.prefix",

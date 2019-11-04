@@ -29,7 +29,7 @@ object EnvTestingUtils {
 
   val K8S_MASTER_KEY: String = "ohara.it.k8s"
   private[this] val K8S_NODES_KEY: String = "ohara.it.k8s.nodename"
-
+  private[this] val K8S_NAMESPACE_KEY: String = "ohara.it.k8s.namespace"
   private[this] val CONFIGURATOR_HOSTNAME_KEY: String = "ohara.it.hostname"
   private[this] val CONFIGURATOR_HOSTPORT_KEY: String = "ohara.it.port"
 
@@ -43,7 +43,9 @@ object EnvTestingUtils {
     .toInt
 
   def k8sClient(): K8SClient = K8SClient(
-    sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!")))
+    sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!")),
+    sys.env.getOrElse(K8S_NAMESPACE_KEY, "default")
+  )
 
   def k8sNodes(): Seq[Node] = sys.env
     .get(K8S_NODES_KEY)
