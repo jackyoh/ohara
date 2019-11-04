@@ -840,6 +840,9 @@ How to use Kubernetes in Ohara?
    configurator container /etc/hosts file. If you have DNS server, you
    can just ignore parameter of add-host.
 
+   ``--k8s-namespace``: If you don't use the Kubernetes default namespace,
+   you can assign the --k8s-namespace argument to set other the Kubernetes namespace.
+
    ``--k8s``: Assignment your K8S API server HTTP URL
 
 -  Use Ohara configurator to create a zookeeper and broker in Kubernetes
