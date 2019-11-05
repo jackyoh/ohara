@@ -113,7 +113,7 @@ class TestConfiguratorBuilder extends OharaTest with Matchers {
 
   @Test
   def testK8SClientNamespaceDefault(): Unit = {
-    val namespace = "default"
+    val namespace = K8SClient.NAMESPACE_DEFAULT_VALUE
     val podName = "pod1"
     val logMessage = "start pods ......."
     val apiServer = k8sServer(namespace, podName, logMessage)
@@ -126,10 +126,10 @@ class TestConfiguratorBuilder extends OharaTest with Matchers {
 
   @Test
   def testK8SClientNamespaceAssign(): Unit = {
-    val namespace = Option("ohara")
+    val namespace = "ohara"
     val podName = "pod1"
     val logMessage = "start pods ......."
-    val apiServer = k8sServer(namespace.get, podName, logMessage)
+    val apiServer = k8sServer(namespace, podName, logMessage)
     try {
       val configurator: Configurator = Configurator.builder.k8sNamespace(namespace).k8sApiServer(apiServer.url).build()
       Await.result(configurator.k8sClient.get.log(podName), 10 seconds) shouldBe logMessage
@@ -139,7 +139,7 @@ class TestConfiguratorBuilder extends OharaTest with Matchers {
 
   @Test
   def testK8SClientNamespaceNone(): Unit = {
-    val namespace = "default"
+    val namespace = K8SClient.NAMESPACE_DEFAULT_VALUE
     val podName = "pod1"
     val logMessage = "start pods ......."
     val apiServer = k8sServer(namespace, podName, logMessage)
@@ -157,7 +157,7 @@ class TestConfiguratorBuilder extends OharaTest with Matchers {
     val apiServer = k8sServer(namespace, podName, logMessage)
     try {
       val configurator: Configurator =
-        Configurator.builder.k8sClient(K8SClient(apiServer.url, Option(namespace))).build()
+        Configurator.builder.k8sClient(K8SClient(apiServer.url, namespace)).build()
       Await.result(configurator.k8sClient.get.log(podName), 10 seconds) shouldBe logMessage
     } finally apiServer.close()
   }

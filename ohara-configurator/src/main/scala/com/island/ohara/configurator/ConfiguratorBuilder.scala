@@ -46,7 +46,7 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   private[this] var store: DataStore = _
   private[this] var serviceCollie: ServiceCollie = _
   private[this] var k8sClient: K8SClient = _
-  private[this] var k8sNamespace: Option[String] = None
+  private[this] var k8sNamespace: String = K8SClient.NAMESPACE_DEFAULT_VALUE
 
   @Optional("default is random folder")
   def homeFolder(homeFolder: String): ConfiguratorBuilder = doOrReleaseObjects {
@@ -391,7 +391,7 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
     * @return this builder
     */
   @Optional("default value is default")
-  private[configurator] def k8sNamespace(namespace: Option[String]): ConfiguratorBuilder = {
+  private[configurator] def k8sNamespace(namespace: String): ConfiguratorBuilder = {
     this.k8sNamespace = namespace
     this
   }

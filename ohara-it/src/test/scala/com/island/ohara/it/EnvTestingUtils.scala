@@ -44,7 +44,7 @@ object EnvTestingUtils {
 
   def k8sClient(): K8SClient = K8SClient(
     sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!")),
-    sys.env.get(K8S_NAMESPACE_KEY)
+    sys.env.getOrElse(K8S_NAMESPACE_KEY, K8SClient.NAMESPACE_DEFAULT_VALUE)
   )
 
   def k8sNodes(): Seq[Node] = sys.env

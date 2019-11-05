@@ -333,7 +333,7 @@ object Configurator {
         case Array(FOLDER_KEY, value)        => configuratorBuilder.homeFolder(value)
         case Array(HOSTNAME_KEY, value)      => configuratorBuilder.hostname(value)
         case Array(PORT_KEY, value)          => configuratorBuilder.port(value.toInt)
-        case Array(K8S_NAMESPACE_KEY, value) => configuratorBuilder.k8sNamespace(Option(value))
+        case Array(K8S_NAMESPACE_KEY, value) => configuratorBuilder.k8sNamespace(value)
         case Array(K8S_KEY, value)           => configuratorBuilder.k8sApiServer(value)
         case Array(FAKE_KEY, value) =>
           if (value.toBoolean) configuratorBuilder.fake()

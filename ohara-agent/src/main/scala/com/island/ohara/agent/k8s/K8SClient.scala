@@ -52,14 +52,14 @@ trait K8SClient {
 
 object K8SClient {
   import scala.concurrent.duration._
-  val TIMEOUT: FiniteDuration = 30 seconds
+  val NAMESPACE_DEFAULT_VALUE: String = "default"
 
+  private[this] val TIMEOUT: FiniteDuration = 30 seconds
   private[agent] val K8S_KIND_NAME = "K8S"
 
-  def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, None)
+  def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, NAMESPACE_DEFAULT_VALUE)
 
-  def apply(k8sApiServerURL: String, namespaceOption: Option[String]): K8SClient = {
-    val namespace = namespaceOption.getOrElse("default")
+  def apply(k8sApiServerURL: String, namespace: String): K8SClient = {
     if (k8sApiServerURL.isEmpty) throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")
 
     new K8SClient() with SprayJsonSupport {
