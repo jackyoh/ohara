@@ -842,6 +842,7 @@ How to use Kubernetes in Ohara?
 
    ``--k8s-namespace``: If you don't use the Kubernetes default namespace,
    you can assign the --k8s-namespace argument to set other the Kubernetes namespace.
+   Kubernetes namespace default value is "default" string
 
    ``--k8s``: Assignment your K8S API server HTTP URL
 
