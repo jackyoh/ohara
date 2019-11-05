@@ -266,6 +266,79 @@ class TestK8SClient extends OharaTest {
     } finally s.close()
   }
 
+  @Test
+  def testNodes(): Unit = {
+    val s = nodes()
+    try {
+      val k8sClient = K8SClient(s.url)
+      val nodes = Await.result(k8sClient.nodes, 5 seconds)
+      nodes.size shouldBe 3
+      nodes(0).nodeName shouldBe "ohara-jenkins-it-00"
+      nodes(1).nodeName shouldBe "ohara-jenkins-it-01"
+      nodes(2).nodeName shouldBe "ohara-jenkins-it-02"
+    } finally s.close()
+  }
+
+  private[this] def nodes(): SimpleServer = {
+    val response: String = s"""
+         |{"items": [
+         |  {
+         |    "metadata": {
+         |      "name": "ohara-jenkins-it-00"
+         |    },
+         |    "status": {
+         |      "addresses": [
+         |        {
+         |          "type": "InternalIP",
+         |          "address": "10.2.0.8"
+         |         }
+         |      ],
+         |      "images": [],
+         |      "conditions": []
+         |    }
+         |  },
+         |  {
+         |    "metadata": {
+         |      "name": "ohara-jenkins-it-01"
+         |    },
+         |    "status": {
+         |      "addresses": [
+         |        {
+         |          "type": "InternalIP",
+         |          "address": "10.2.0.8"
+         |        }
+         |      ],
+         |      "images": [],
+         |      "conditions": []
+         |    }
+         |  },
+         |  {
+         |    "metadata": {
+         |      "name": "ohara-jenkins-it-02"
+         |    },
+         |    "status": {
+         |      "addresses": [
+         |        {
+         |          "type": "InternalIP",
+         |          "address": "10.2.0.8"
+         |         }
+         |      ],
+         |      "images": [],
+         |      "conditions": []
+         |    }
+         |  }
+         |]}
+       """.stripMargin
+
+    toServer {
+      path("nodes") {
+        get {
+          complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, response)))
+        }
+      }
+    }
+  }
+
   private[this] def imagePolicyURL(nodeName: String,
                                    podName: String,
                                    expectImagePullPolicy: ImagePullPolicy): SimpleServer = {

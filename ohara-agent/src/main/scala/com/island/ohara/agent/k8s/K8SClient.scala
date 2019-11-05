@@ -29,6 +29,7 @@ import com.island.ohara.common.util.CommonUtils
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 case class K8SStatusInfo(isHealth: Boolean, message: String)
+case class K8SNodeReport(nodeName: String)
 case class Report(nodeName: String, isK8SNode: Boolean, statusInfo: Option[K8SStatusInfo])
 
 trait K8SClient {
@@ -42,6 +43,7 @@ trait K8SClient {
   def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator
   def images(nodeName: String)(implicit executionContext: ExecutionContext): Future[Seq[String]]
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
+  def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]]
 }
 
 object K8SClient {
@@ -161,6 +163,11 @@ object K8SClient {
               HostAliases(internalIP, Seq(hostName))
             }))
 
+      override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] = {
+        HttpExecutor.SINGLETON
+          .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
+          .map(nodeInfo => nodeInfo.items.map(item => K8SNodeReport(item.metadata.name)))
+      }
       override def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator =
         new ContainerCreator() {
           private[this] var name: String = CommonUtils.randomString()
