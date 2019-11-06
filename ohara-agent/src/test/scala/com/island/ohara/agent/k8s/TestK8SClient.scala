@@ -271,7 +271,7 @@ class TestK8SClient extends OharaTest {
     val s = nodes()
     try {
       val k8sClient = K8SClient(s.url)
-      val nodes = Await.result(k8sClient.nodes, 5 seconds)
+      val nodes: Seq[K8SNodeReport] = Await.result(k8sClient.nodes, 5 seconds)
       nodes.size shouldBe 3
       nodes(0).nodeName shouldBe "ohara-jenkins-it-00"
       nodes(1).nodeName shouldBe "ohara-jenkins-it-01"
