@@ -838,7 +838,7 @@ How to use Kubernetes in Ohara?
 
    ``--add-host``: Add all k8s worker hostname and ip information to
    configurator container /etc/hosts file. If you have DNS server, you
-   can just ignore parameter of add-host.
+   can just ignore parameter of ``--add-host``.
 
    ``--k8s-namespace``: If you don't use the Kubernetes default namespace,
    you can assign the --k8s-namespace argument to set other the Kubernetes namespace.
@@ -854,19 +854,19 @@ How to use Kubernetes in Ohara?
    # Add Ohara Node example
    $ curl -H "Content-Type: application/json" \
           -X POST \
-          -d '{"name": "${K8S_WORKER01_HOSTNAME}", \
+          -d '{"hostname": "${K8S_WORKER01_HOSTNAME}", \
                "port": 22, \
                "user": "${USERNAME}", \
                "password": "${PASSWORD}"}' \
-          http://${CONFIGURATOR_HOST_IP}:5000/v0/nodes
+          http://${CONFIGURATOR_HOSTNAME_OR_IP}:5000/v0/nodes
 
    $ curl -H "Content-Type: application/json" \
           -X POST \
-          -d '{"name": "${K8S_WORKER02_HOSTNAME}", \
+          -d '{"hostname": "${K8S_WORKER02_HOSTNAME}", \
                "port": 22, \
                "user": "${USERNAME}", \
                "password": "${PASSWORD}"}' \
-          http://${CONFIGURATOR_HOST_IP}:5000/v0/nodes
+          http://${CONFIGURATOR_HOSTNAME_OR_IP}:5000/v0/nodes
 
    # You must pre pull docker image in the ${K8S_WORKER01_HOSTNAME} and ${K8S_WORKER02_HOSTNAME} host, Below is command:
    docker pull oharastream/zookeeper:$|version|
@@ -881,10 +881,10 @@ How to use Kubernetes in Ohara?
                "peerPort": 2000, \
                "electionPort": 2001, \
                "nodeNames": ["${K8S_WORKER01_HOSTNAME}"]}' \
-          http://${CONFIGURATOR_HOST_IP}:5000/v0/zookeepers
+          http://${CONFIGURATOR_HOSTNAME_OR_IP}:5000/v0/zookeepers
 
    # Start Zookeeper cluster service
-   $ curl -H "Content-Type: application/json" -X PUT http://${CONFIGURATOR_HOST_IP}:5000/v0/zookeepers/zk/start
+   $ curl -H "Content-Type: application/json" -X PUT http://${CONFIGURATOR_HOSTNAME_OR_IP}:5000/v0/zookeepers/zk/start
 
    # Create Broker service example
    $ curl -H "Content-Type: application/json" \
@@ -893,10 +893,10 @@ How to use Kubernetes in Ohara?
                "clientPort": 9092, \
                "zookeeperClusterName": "zk", \
                "nodeNames": ["${K8S_WORKER02_HOSTNAME}"]}' \
-          http://${CONFIGURATOR_HOST_IP}:5000/v0/brokers
+          http://${CONFIGURATOR_HOSTNAME_OR_IP}:5000/v0/brokers
 
    # Start Broker cluster service
-   $ curl -H "Content-Type: application/json" -X PUT http://192.168.56.103:12345/v0/brokers/bk/start
+   $ curl -H "Content-Type: application/json" -X PUT http://${CONFIGURATOR_HOSTNAME_OR_IP}:5000/v0/brokers/bk/start
 
 -  You can use the kubectl command to get zookeeper and broker pod
    status with the following command:
