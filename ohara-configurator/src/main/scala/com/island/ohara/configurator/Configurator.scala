@@ -209,6 +209,22 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
       .build
   }
 
+  private[configurator] def addK8SNodes(): Unit = {
+    val nodeApi = NodeApi.access.hostname(hostname).port(port)
+    val client: K8SClient = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
+    client
+      .nodes()
+      .map(
+        nodes =>
+          nodes.foreach(
+            k8sNode =>
+              nodeApi
+                .list()
+                .map(nodeList =>
+                  if (nodeList.isEmpty)
+                    nodeApi.request.hostname(k8sNode.nodeName).create())))
+  }
+
   /**
     * the version of APIs supported by Configurator.
     * We are not ready to support multiples version APIs so it is ok to make a constant string.
@@ -353,6 +369,9 @@ object Configurator {
     while (!GLOBAL_CONFIGURATOR_SHOULD_CLOSE) {
       TimeUnit.SECONDS.sleep(2)
       LOG.info(s"Current data size:${GLOBAL_CONFIGURATOR.size}")
+      if (GLOBAL_CONFIGURATOR.k8sClient.nonEmpty) {
+        GLOBAL_CONFIGURATOR.addK8SNodes()
+      }
     }
   } finally {
     Releasable.close(GLOBAL_CONFIGURATOR)
