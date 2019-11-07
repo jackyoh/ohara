@@ -41,7 +41,7 @@ import com.typesafe.scalalogging.Logger
 import spray.json.DeserializationException
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * A simple impl from Configurator. This impl maintains all subclass from ohara data in a single ohara store.
@@ -209,20 +209,24 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
       .build
   }
 
-  private[configurator] def addK8SNodes(): Unit = {
+  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
     val nodeApi = NodeApi.access.hostname(hostname).port(port)
     val client: K8SClient = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
     client
       .nodes()
-      .map(
+      .flatMap(
         nodes =>
-          nodes.foreach(
-            k8sNode =>
-              nodeApi
-                .list()
-                .map(nodeList =>
-                  if (nodeList.isEmpty)
-                    nodeApi.request.hostname(k8sNode.nodeName).create())))
+          Future.sequence(
+            nodes.map(
+              k8sNode =>
+                nodeApi
+                  .list()
+                  .filter(_.isEmpty)
+                  .flatMap(_ => {
+                    nodeApi.request.hostname(k8sNode.nodeName).create()
+                  })
+            ))
+      )
   }
 
   /**
@@ -369,9 +373,6 @@ object Configurator {
     while (!GLOBAL_CONFIGURATOR_SHOULD_CLOSE) {
       TimeUnit.SECONDS.sleep(2)
       LOG.info(s"Current data size:${GLOBAL_CONFIGURATOR.size}")
-      if (GLOBAL_CONFIGURATOR.k8sClient.nonEmpty) {
-        GLOBAL_CONFIGURATOR.addK8SNodes()
-      }
     }
   } finally {
     Releasable.close(GLOBAL_CONFIGURATOR)
