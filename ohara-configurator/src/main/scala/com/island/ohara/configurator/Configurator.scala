@@ -209,7 +209,12 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
       .build
   }
 
-  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
+  private[configurator] def executeAddK8SNodes[T](timeout: Long): Unit = {
+    threadPool.execute(loopRunning(addK8SNodes(), timeout))
+  }
+
+  private[this] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
+    log.info("Running check Kubernetes node")
     val nodeApi = NodeApi.access.hostname(hostname).port(port)
     val client: K8SClient = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
     client
@@ -227,6 +232,15 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
                   })
             ))
       )
+  }
+
+  private[this] def loopRunning(future: => Unit, timeout: Long): Runnable = new Runnable() {
+    def run(): Unit = {
+      while (true) {
+        TimeUnit.SECONDS.sleep(timeout)
+        future
+      }
+    }
   }
 
   /**
@@ -370,6 +384,11 @@ object Configurator {
     LOG.info(
       s"start a configurator built on hostname:${GLOBAL_CONFIGURATOR.hostname} and port:${GLOBAL_CONFIGURATOR.port}")
     LOG.info("enter ctrl+c to terminate the configurator")
+
+    val intervalAddK8SNodeTime = 5
+    if (GLOBAL_CONFIGURATOR.k8sClient.nonEmpty)
+      GLOBAL_CONFIGURATOR.executeAddK8SNodes(intervalAddK8SNodeTime)
+
     while (!GLOBAL_CONFIGURATOR_SHOULD_CLOSE) {
       TimeUnit.SECONDS.sleep(2)
       LOG.info(s"Current data size:${GLOBAL_CONFIGURATOR.size}")
