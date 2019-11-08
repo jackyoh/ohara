@@ -219,19 +219,16 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
     val client: K8SClient = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
     client
       .nodes()
-      .flatMap(
-        nodes =>
-          Future.sequence(
-            nodes.map(
-              k8sNode =>
-                nodeApi
-                  .list()
-                  .filter(_.isEmpty)
-                  .flatMap(_ => {
-                    nodeApi.request.hostname(k8sNode.nodeName).create()
-                  })
-            ))
-      )
+      .flatMap(nodes =>
+        Future.sequence(nodes.map { k8sNode =>
+          nodeApi
+            .list()
+            .map(node => node.map(_.hostname))
+            .filter(nodes => !nodes.contains(k8sNode.nodeName))
+            .flatMap(_ => {
+              nodeApi.request.hostname(k8sNode.nodeName).create()
+            })
+        }))
   }
 
   private[this] def loopRunning(future: => Unit, timeout: Long): Runnable = new Runnable() {
