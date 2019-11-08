@@ -17,13 +17,16 @@
 package com.island.ohara.configurator
 import java.util.concurrent.{Executors, TimeUnit}
 
+import com.island.ohara.agent.fake.FakeK8SClient
+import com.island.ohara.agent.k8s.K8SNodeReport
 import com.island.ohara.common.rule.OharaTest
 import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.configurator.Configurator.Mode
 import org.junit.{After, Test}
 import org.scalatest.Matchers._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
 
 class TestConfiguratorMain extends OharaTest {
 
@@ -59,6 +62,17 @@ class TestConfiguratorMain extends OharaTest {
   def testSshMode(): Unit =
     runMain(Array[String](Configurator.HOSTNAME_KEY, "localhost", Configurator.PORT_KEY, "0"),
             configurator => configurator.mode shouldBe Mode.SSH)
+
+  @Test
+  def testAddK8SNodes(): Unit = {
+    val k8sClient = new FakeK8SClient(true, None, "") {
+      override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] =
+        Future.successful(Seq(K8SNodeReport("node1"), K8SNodeReport("node2")))
+    }
+    val configurator = Configurator.builder.k8sClient(k8sClient).build()
+    val nodes = Await.result(configurator.addK8sNodes(), 5 seconds)
+    nodes.size shouldBe 2
+  }
 
   private[this] def runMain(args: Array[String], action: Configurator => Unit): Unit = {
     Configurator.GLOBAL_CONFIGURATOR_SHOULD_CLOSE = false
