@@ -19,6 +19,7 @@ import java.util.concurrent.{Executors, TimeUnit}
 
 import com.island.ohara.agent.fake.FakeK8SClient
 import com.island.ohara.agent.k8s.K8SNodeReport
+import com.island.ohara.client.configurator.v0.NodeApi
 import com.island.ohara.common.rule.OharaTest
 import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.configurator.Configurator.Mode
@@ -27,6 +28,7 @@ import org.scalatest.Matchers._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestConfiguratorMain extends OharaTest {
 
@@ -64,14 +66,21 @@ class TestConfiguratorMain extends OharaTest {
             configurator => configurator.mode shouldBe Mode.SSH)
 
   @Test
-  def testAddK8SNodes(): Unit = {
+  def testK8SNodes(): Unit = {
     val k8sClient = new FakeK8SClient(true, None, "") {
       override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] =
-        Future.successful(Seq(K8SNodeReport("node1"), K8SNodeReport("node2")))
+        Future.successful(Seq(K8SNodeReport("node1"), K8SNodeReport("node2"), K8SNodeReport("node3")))
     }
     val configurator = Configurator.builder.k8sClient(k8sClient).build()
-    val nodes = Await.result(configurator.addK8sNodes(), 5 seconds)
-    nodes.size shouldBe 2
+
+    val nodeApi = NodeApi.access.hostname(configurator.hostname).port(configurator.port)
+    Await.result(nodeApi.request.hostname("node1").create(), 5 seconds)
+
+    val nodes = Await.result(configurator.k8sNodes(), 5 seconds)
+    nodes.size shouldBe 3
+    nodes(0) shouldBe "node1"
+    nodes(1) shouldBe "node2"
+    nodes(2) shouldBe "node3"
   }
 
   private[this] def runMain(args: Array[String], action: Configurator => Unit): Unit = {
