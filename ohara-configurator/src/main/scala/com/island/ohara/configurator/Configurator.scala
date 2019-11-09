@@ -64,6 +64,7 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
   }
 
   private[this] val threadPool = Executors.newFixedThreadPool(threadMax)
+  private[this] val checkK8SNodePool = Executors.newSingleThreadExecutor()
 
   private[this] implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
@@ -210,7 +211,7 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
   }
 
   private[configurator] def executeAddK8SNodes[T](timeout: Long): Unit = {
-    threadPool.execute(loopRunning(k8sNodes(), timeout))
+    checkK8SNodePool.execute(loopRunning(k8sNodes(), timeout))
   }
 
   private[configurator] def k8sNodes(): Future[Seq[String]] = {
@@ -318,6 +319,11 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
       threadPool.shutdownNow()
       if (!threadPool.awaitTermination(terminateTimeout.toMillis, TimeUnit.MILLISECONDS))
         log.error("failed to terminate all running threads!!!")
+    }
+    if (checkK8SNodePool != null) {
+      checkK8SNodePool.shutdownNow()
+      if (!checkK8SNodePool.awaitTermination(terminateTimeout.toMillis, TimeUnit.MILLISECONDS))
+        log.error("failed to terminate a running threads!!!")
     }
     Releasable.close(serviceCollie)
     Releasable.close(store)
