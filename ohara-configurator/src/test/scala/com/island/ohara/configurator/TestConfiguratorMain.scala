@@ -76,11 +76,10 @@ class TestConfiguratorMain extends OharaTest {
     val nodeApi = NodeApi.access.hostname(configurator.hostname).port(configurator.port)
     Await.result(nodeApi.request.hostname("node1").create(), 5 seconds)
 
-    val nodes = Await.result(configurator.k8sNodes(), 5 seconds)
-    nodes.size shouldBe 3
-    nodes(0) shouldBe "node1"
-    nodes(1) shouldBe "node2"
-    nodes(2) shouldBe "node3"
+    val nodes = Await.result(configurator.addK8SNodes(), 5 seconds)
+    nodes.size shouldBe 2
+    nodes(0).hostname shouldBe "node2"
+    nodes(1).hostname shouldBe "node3"
   }
 
   private[this] def runMain(args: Array[String], action: Configurator => Unit): Unit = {

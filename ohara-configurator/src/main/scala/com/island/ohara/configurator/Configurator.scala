@@ -211,10 +211,10 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
   }
 
   private[configurator] def executeAddK8SNodes[T](timeout: Long): Unit = {
-    checkK8SNodePool.execute(loopRunning(k8sNodes(), timeout))
+    checkK8SNodePool.execute(loopRunning(addK8SNodes(), timeout))
   }
 
-  private[configurator] def k8sNodes(): Future[Seq[String]] = {
+  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
     log.info("Running check Kubernetes node")
     val nodeApi = NodeApi.access.hostname(hostname).port(port)
     val client: K8SClient = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
@@ -224,13 +224,11 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(i
         Future.sequence(nodes.map { k8sNode =>
           nodeApi
             .list()
-            .map(nodes => {
-              if (nodes.filter(n => n.hostname == k8sNode.nodeName).isEmpty) {
-                nodeApi.request.hostname(k8sNode.nodeName).create()
-              }
-              k8sNode.nodeName
-            })
+            .map(nodes =>
+              if (nodes.map(_.hostname).contains(k8sNode.nodeName)) Seq.empty
+              else Seq(nodeApi.request.hostname(k8sNode.nodeName).create()))
         }))
+      .flatMap(x => Future.sequence(x.flatten))
   }
 
   private[this] def loopRunning(future: => Unit, timeout: Long): Runnable = new Runnable() {
