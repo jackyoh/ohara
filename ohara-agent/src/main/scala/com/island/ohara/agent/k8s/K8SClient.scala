@@ -22,6 +22,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.island.ohara.agent.k8s.K8SClient.ContainerCreator
 import com.island.ohara.agent.k8s.K8SJson._
 import com.island.ohara.client.configurator.v0.ContainerApi.{ContainerInfo, PortMapping}
+import com.island.ohara.client.configurator.v0.NodeApi.Resource
 import com.island.ohara.client.{Enum, HttpExecutor}
 import com.island.ohara.common.annotations.Optional
 import com.island.ohara.common.util.CommonUtils
@@ -42,6 +43,7 @@ trait K8SClient {
   def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator
   def images(nodeName: String)(implicit executionContext: ExecutionContext): Future[Seq[String]]
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
+  def resources()(implicit executionContext: ExecutionContext): Future[Resource]
 }
 
 object K8SClient {
@@ -50,6 +52,13 @@ object K8SClient {
 
   private[this] val TIMEOUT: FiniteDuration = 30 seconds
   private[agent] val K8S_KIND_NAME = "K8S"
+
+  private[this] var metricsServiceURL: String = ""
+
+  def k8sMetricsServiceURL(metricsServiceURL: String) = {
+    this.metricsServiceURL = metricsServiceURL
+    this
+  }
 
   def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, NAMESPACE_DEFAULT_VALUE)
 
@@ -160,6 +169,26 @@ object K8SClient {
                 item.status.addresses.filter(node => node.nodeType.equals("Hostname")).head.nodeAddress
               HostAliases(internalIP, Seq(hostName))
             }))
+
+      override def resources()(implicit executionContext: ExecutionContext): Future[Resource] = {
+        // Get K8S metrics
+        HttpExecutor.SINGLETON
+
+
+        // Get K8S Node info
+        HttpExecutor.SINGLETON
+          .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
+          .map(nodeInfo =>
+            nodeInfo.items.map { item =>
+              val allocatable =
+                item.status.allocatable.getOrElse(throw new IllegalArgumentException("No resource allotable info"))
+              (item.metadata.name, allocatable.cpu, allocatable.memory)
+            }
+            .map(x =>)
+
+          )
+        null
+      }
 
       override def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator =
         new ContainerCreator() {
@@ -323,6 +352,8 @@ object K8SClient {
 
             Future.successful(container)
           })
+
+
     }
   }
 
