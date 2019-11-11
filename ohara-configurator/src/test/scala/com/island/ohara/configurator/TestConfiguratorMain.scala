@@ -74,9 +74,10 @@ class TestConfiguratorMain extends OharaTest {
     val configurator = Configurator.builder.k8sClient(k8sClient).build()
 
     val nodeApi = NodeApi.access.hostname(configurator.hostname).port(configurator.port)
-    Await.result(nodeApi.request.hostname("node1").create(), 5 seconds)
+    val createNode = Await.result(nodeApi.request.hostname("node1").create(), 15 seconds)
+    createNode.hostname shouldBe "node1"
 
-    val nodes = Await.result(configurator.addK8SNodes(), 5 seconds)
+    val nodes = Await.result(configurator.addK8SNodes(), 15 seconds)
     nodes.size shouldBe 2
     nodes(0).hostname shouldBe "node2"
     nodes(1).hostname shouldBe "node3"
