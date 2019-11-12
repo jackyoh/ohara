@@ -43,7 +43,7 @@ trait K8SClient {
   def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator
   def images(nodeName: String)(implicit executionContext: ExecutionContext): Future[Seq[String]]
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
-  def resources()(implicit executionContext: ExecutionContext): Future[Resource]
+  def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]]
 }
 
 object K8SClient {
@@ -51,14 +51,8 @@ object K8SClient {
   val NAMESPACE_DEFAULT_VALUE: String = "default"
 
   private[this] val TIMEOUT: FiniteDuration = 30 seconds
+  private[this] val metricsAPIServerURL = "http://ohara-jenkins-it-00:8080/apis"
   private[agent] val K8S_KIND_NAME = "K8S"
-
-  private[this] var metricsServiceURL: String = ""
-
-  def k8sMetricsServiceURL(metricsServiceURL: String) = {
-    this.metricsServiceURL = metricsServiceURL
-    this
-  }
 
   def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, NAMESPACE_DEFAULT_VALUE)
 
@@ -170,24 +164,40 @@ object K8SClient {
               HostAliases(internalIP, Seq(hostName))
             }))
 
-      override def resources()(implicit executionContext: ExecutionContext): Future[Resource] = {
+      override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]] = {
         // Get K8S metrics
-        HttpExecutor.SINGLETON
-
+        val nodeResourceUsage: Future[Map[String, K8SJson.K8SMetricsUsage]] = HttpExecutor.SINGLETON
+          .get[K8SMetricsItem, K8SErrorResponse](s"$metricsAPIServerURL/metrics.k8s.io/v1beta1/nodes")
+          .map(nodeMetricsInfo => {
+            Map(
+              nodeMetricsInfo.metadata.name -> K8SMetricsUsage(nodeMetricsInfo.usage.cpu, nodeMetricsInfo.usage.memory))
+          })
 
         // Get K8S Node info
         HttpExecutor.SINGLETON
           .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
           .map(nodeInfo =>
-            nodeInfo.items.map { item =>
-              val allocatable =
-                item.status.allocatable.getOrElse(throw new IllegalArgumentException("No resource allotable info"))
-              (item.metadata.name, allocatable.cpu, allocatable.memory)
-            }
-            .map(x =>)
-
-          )
-        null
+            nodeInfo.items
+              .map { item =>
+                val allocatable =
+                  item.status.allocatable.getOrElse(throw new IllegalArgumentException("No resource allotable info"))
+                (item.metadata.name, allocatable.cpu, allocatable.memory)
+              }
+              .map { nodeResource =>
+                nodeResourceUsage.map {
+                  resourceUsage =>
+                    val hostname: String = nodeResource._1
+                    val cpuInfo: String = nodeResource._2
+                    val memoryInfo: String = nodeResource._3
+                    val cpuUsage = Option(resourceUsage(hostname).cpu.toDouble)
+                    val memoryUsage = Option(resourceUsage(hostname).memory.toDouble)
+                    hostname -> Seq(
+                      Resource(name = "CPU", value = cpuInfo.toDouble, unit = "cores", used = cpuUsage),
+                      Resource(name = "Memory", value = memoryInfo.toDouble, unit = "Ki", used = memoryUsage))
+                }
+            })
+          .flatMap(Future.sequence(_))
+          .map(_.toMap)
       }
 
       override def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator =
@@ -352,7 +362,6 @@ object K8SClient {
 
             Future.successful(container)
           })
-
 
     }
   }
