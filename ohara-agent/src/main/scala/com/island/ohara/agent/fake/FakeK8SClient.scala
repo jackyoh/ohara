@@ -18,7 +18,7 @@ package com.island.ohara.agent.fake
 
 import com.island.ohara.agent.k8s._
 import com.island.ohara.client.configurator.v0.ContainerApi.ContainerInfo
-import com.island.ohara.client.configurator.v0.{BrokerApi, ContainerApi, WorkerApi, ZookeeperApi}
+import com.island.ohara.client.configurator.v0.{BrokerApi, ContainerApi, NodeApi, WorkerApi, ZookeeperApi}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -71,4 +71,7 @@ class FakeK8SClient(isK8SNode: Boolean, k8sStatusInfo: Option[K8SStatusInfo], co
 
   override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] =
     throw new UnsupportedOperationException("FakeK8SClient not support force nodes function")
+
+  override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[NodeApi.Resource]]] =
+    throw new UnsupportedOperationException("FakeK8SClient not support resources function")
 }

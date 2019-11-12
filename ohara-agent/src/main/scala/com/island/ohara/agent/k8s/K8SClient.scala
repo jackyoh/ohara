@@ -22,6 +22,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.island.ohara.agent.k8s.K8SClient.ContainerCreator
 import com.island.ohara.agent.k8s.K8SJson._
 import com.island.ohara.client.configurator.v0.ContainerApi.{ContainerInfo, PortMapping}
+import com.island.ohara.client.configurator.v0.NodeApi.Resource
 import com.island.ohara.client.{Enum, HttpExecutor}
 import com.island.ohara.common.annotations.Optional
 import com.island.ohara.common.util.CommonUtils
@@ -44,6 +45,7 @@ trait K8SClient {
   def images(nodeName: String)(implicit executionContext: ExecutionContext): Future[Seq[String]]
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
   def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]]
+  def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]]
 }
 
 object K8SClient {
@@ -51,6 +53,7 @@ object K8SClient {
   val NAMESPACE_DEFAULT_VALUE: String = "default"
 
   private[this] val TIMEOUT: FiniteDuration = 30 seconds
+  private[this] val metricsAPIServerURL = "http://ohara-jenkins-it-00:8080/apis"
   private[agent] val K8S_KIND_NAME = "K8S"
 
   def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, NAMESPACE_DEFAULT_VALUE)
@@ -162,6 +165,50 @@ object K8SClient {
                 item.status.addresses.filter(node => node.nodeType.equals("Hostname")).head.nodeAddress
               HostAliases(internalIP, Seq(hostName))
             }))
+
+      override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]] = {
+        if (metricsAPIServerURL == null) Future.successful(Map.empty)
+        else {
+          // Get K8S metrics
+          val nodeResourceUsage: Future[Map[String, K8SJson.K8SMetricsUsage]] = HttpExecutor.SINGLETON
+            .get[K8SMetricsItem, K8SErrorResponse](s"$metricsAPIServerURL/metrics.k8s.io/v1beta1/nodes")
+            .map(nodeMetricsInfo => {
+              Map(
+                nodeMetricsInfo.metadata.name ->
+                  K8SMetricsUsage(nodeMetricsInfo.usage.cpu, nodeMetricsInfo.usage.memory))
+            })
+
+          // Get K8S Node info
+          HttpExecutor.SINGLETON
+            .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
+            .map(nodeInfo =>
+              nodeInfo.items
+                .map { item =>
+                  val allocatable =
+                    item.status.allocatable.getOrElse(Allocatable(None, None))
+                  (item.metadata.name, allocatable.cpu, allocatable.memory)
+                }
+                .map { nodeResource =>
+                  nodeResourceUsage.map {
+                    resourceUsage =>
+                      val nodeName: String = nodeResource._1
+                      val cpuValue: Int = nodeResource._2.getOrElse("0").toInt
+                      val memoryValue: Long = nodeResource._3.getOrElse("0").toLong
+
+                      val cpuUsage: Option[Double] =
+                        Option(resourceUsage(nodeName).cpu.replace("n", "").toDouble / (1000 * 1000 * 1000 * cpuValue))
+
+                      val memoryUsage: Option[Double] =
+                        Option(resourceUsage(nodeName).memory.replace("Ki", "").toDouble / memoryValue)
+
+                      nodeName -> Seq(Resource.cpu(cpuValue, cpuUsage),
+                                      Resource.memory(memoryValue * 1024, memoryUsage))
+                  }
+              })
+            .flatMap(Future.sequence(_))
+            .map(_.toMap)
+        }
+      }
 
       override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] = {
         HttpExecutor.SINGLETON

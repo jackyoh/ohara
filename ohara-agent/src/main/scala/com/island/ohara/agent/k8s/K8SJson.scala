@@ -145,8 +145,14 @@ object K8SJson {
       )
     }
 
-  final case class NodeStatus(addresses: Seq[NodeAddresses], images: Seq[ImageNames], conditions: Seq[Condition])
-  implicit val NODESTATUS_JSON_FORMAT: RootJsonFormat[NodeStatus] = jsonFormat3(NodeStatus)
+  final case class Allocatable(cpu: Option[String], memory: Option[String])
+  implicit val ALLOCATABLE_JSON_FORMAT: RootJsonFormat[Allocatable] = jsonFormat2(Allocatable)
+
+  final case class NodeStatus(allocatable: Option[Allocatable],
+                              addresses: Seq[NodeAddresses],
+                              images: Seq[ImageNames],
+                              conditions: Seq[Condition])
+  implicit val NODESTATUS_JSON_FORMAT: RootJsonFormat[NodeStatus] = jsonFormat4(NodeStatus)
 
   final case class NodeMetaData(name: String)
   implicit val NODEMETADATA_JSON_FORMAT: RootJsonFormat[NodeMetaData] = jsonFormat1(NodeMetaData)
@@ -159,6 +165,19 @@ object K8SJson {
 
   final case class ConfigMap(apiVersion: String, kind: String, data: Map[String, String], metadata: Metadata)
   implicit val CONFIGMAP_FORMAT: RootJsonFormat[ConfigMap] = jsonFormat4(ConfigMap)
+
+  //for node metrics
+  final case class K8SMetricsMetadata(name: String)
+  implicit val K8SMETRICSMETADATA_JSON_FORMAT: RootJsonFormat[K8SMetricsMetadata] = jsonFormat1(K8SMetricsMetadata)
+
+  final case class K8SMetricsUsage(cpu: String, memory: String)
+  implicit val K8SMETRICSUSAGE_JSON_FORMAT: RootJsonFormat[K8SMetricsUsage] = jsonFormat2(K8SMetricsUsage)
+
+  final case class K8SMetricsItem(metadata: K8SMetricsMetadata, usage: K8SMetricsUsage)
+  implicit val K8SMETRICSITEM_JSON_FORMAT: RootJsonFormat[K8SMetricsItem] = jsonFormat2(K8SMetricsItem)
+
+  final case class K8SMetrics(items: Seq[K8SMetricsItem])
+  implicit val K8SMETRICS_JSON_FORMAT: RootJsonFormat[K8SMetrics] = jsonFormat1(K8SMetrics)
 
   //for error
   final case class K8SErrorResponse(message: String) extends HttpExecutor.Error
