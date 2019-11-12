@@ -382,8 +382,8 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   def k8sClient(k8sClient: K8SClient): ConfiguratorBuilder = doOrReleaseObjects {
     if (this.k8sClient != null) throw new IllegalArgumentException(alreadyExistMessage("k8sClient"))
     if (this.serviceCollie != null) throw new IllegalArgumentException(alreadyExistMessage("serviceCollie"))
-    if (this.metricsServiceURL != null) this.k8sClient.k8sMetricsAPIServerURL(metricsServiceURL)
     this.k8sClient = Objects.requireNonNull(k8sClient)
+    if (this.metricsServiceURL != null) this.k8sClient.k8sMetricsAPIServerURL(metricsServiceURL)
     this
   }
 
