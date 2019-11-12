@@ -338,6 +338,7 @@ object Configurator {
   private[configurator] val FOLDER_KEY = "--folder"
   private[configurator] val HOSTNAME_KEY = "--hostname"
   private[configurator] val K8S_NAMESPACE_KEY = "--k8s-namespace"
+  private[configurator] val K8S_METRICS_SERVICE_KEY = "--k8s-metrics-service"
   private[configurator] val K8S_KEY = "--k8s"
   private[configurator] val FAKE_KEY = "--fake"
   private[configurator] val PORT_KEY = "--port"
@@ -352,11 +353,12 @@ object Configurator {
     val configuratorBuilder = Configurator.builder
     try {
       args.sliding(2, 2).foreach {
-        case Array(FOLDER_KEY, value)        => configuratorBuilder.homeFolder(value)
-        case Array(HOSTNAME_KEY, value)      => configuratorBuilder.hostname(value)
-        case Array(PORT_KEY, value)          => configuratorBuilder.port(value.toInt)
-        case Array(K8S_NAMESPACE_KEY, value) => configuratorBuilder.k8sNamespace(value)
-        case Array(K8S_KEY, value)           => configuratorBuilder.k8sApiServer(value)
+        case Array(FOLDER_KEY, value)              => configuratorBuilder.homeFolder(value)
+        case Array(HOSTNAME_KEY, value)            => configuratorBuilder.hostname(value)
+        case Array(PORT_KEY, value)                => configuratorBuilder.port(value.toInt)
+        case Array(K8S_NAMESPACE_KEY, value)       => configuratorBuilder.k8sNamespace(value)
+        case Array(K8S_METRICS_SERVICE_KEY, value) => configuratorBuilder.k8sMetricsServiceURL(value)
+        case Array(K8S_KEY, value)                 => configuratorBuilder.k8sApiServer(value)
         case Array(FAKE_KEY, value) =>
           if (value.toBoolean) configuratorBuilder.fake()
         case _ =>
