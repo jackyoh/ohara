@@ -87,7 +87,10 @@ private[ohara] class K8SServiceCollieImpl(dataCollie: DataCollie, k8sClient: K8S
     k8sClient
       .resources()
       .flatMap(k8sNodeResource =>
-        dataCollie.values[Node]().map { _.map(node => (node -> k8sNodeResource(node.hostname))) })
-      .map(_.toMap)
+        dataCollie.values[Node]().map {
+          _.map(node =>
+            if (k8sNodeResource.contains(node.hostname)) Seq(node -> k8sNodeResource(node.hostname))
+            else Seq.empty).flatten.toMap
+      })
   }
 }

@@ -69,5 +69,21 @@ class TestK8SServiceCollieImpl extends OharaTest {
     node1Resource(1).value shouldBe 1024 * 1024 * 1024 * 100
   }
 
+  @Test
+  def testEmptyResource(): Unit = {
+    val nodeCache = (1 to 3).map(x => Node(s"node${x}", None, None, None, Seq.empty, 0L, None, Seq.empty, Map.empty))
+    val dataCollie = DataCollie(nodeCache)
+
+    val k8sClient = new FakeK8SClient(false, None, "container1") {
+      override def resources()(
+        implicit executionContext: ExecutionContext): Future[Map[String, Seq[NodeApi.Resource]]] =
+        Future.successful(Map.empty)
+    }
+
+    val k8sServiceCollieImpl = new K8SServiceCollieImpl(dataCollie, k8sClient)
+    val resource: Map[Node, Seq[Resource]] = result(k8sServiceCollieImpl.resources())
+    resource.size shouldBe 0
+  }
+
   private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
 }

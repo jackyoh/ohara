@@ -279,6 +279,161 @@ class TestK8SClient extends OharaTest {
     } finally s.close()
   }
 
+  @Test
+  def testNotSettingMetricsURL(): Unit = {
+    val s = nodes()
+    try {
+      val k8sClient = K8SClient(s.url)
+      val result = Await.result(k8sClient.resources(), 5 seconds)
+      result.size shouldBe 0
+      result.isEmpty shouldBe true
+    } finally s.close()
+  }
+
+  @Test
+  def testK8SMetricsResource(): Unit = {
+    val s = resources()
+    try {
+      val k8sClient = K8SClient(s.url)
+      k8sClient.k8sMetricsAPIServerURL(s.url)
+      val resource = Await.result(k8sClient.resources(), 5 seconds)
+      val nodes: Seq[String] = resource.map(x => x._1).toSeq
+      nodes(0) shouldBe "ohara-jenkins-it-00"
+
+      val node1Resource = resource.map(x => (x._1, x._2)).filter(_._1 == "ohara-jenkins-it-00").map(_._2).head
+      node1Resource(0).name shouldBe "CPU"
+      node1Resource(0).unit shouldBe "cores"
+      node1Resource(0).value shouldBe 8.0
+      node1Resource(0).used.get > 0.04 shouldBe true
+
+      node1Resource(1).name shouldBe "Memory"
+      node1Resource(1).unit shouldBe "MB"
+      node1Resource(1).used.get > 0.08 shouldBe true
+
+    } finally s.close()
+
+  }
+
+  @Test
+  def testEmptyMetricsResource(): Unit = {
+    val s = emptyResources()
+    try {
+      val k8sClient = K8SClient(s.url)
+      k8sClient.k8sMetricsAPIServerURL(s.url)
+      val resource = Await.result(k8sClient.resources(), 5 seconds)
+      val nodes: Seq[String] = resource.map(x => x._1).toSeq
+      nodes(0) shouldBe "ohara-jenkins-it-00"
+
+      val node1Resource = resource.map(x => (x._1, x._2)).filter(_._1 == "ohara-jenkins-it-00").map(_._2).head
+      node1Resource.size shouldBe 0
+
+    } finally s.close()
+
+  }
+
+  private[this] def emptyResources(): SimpleServer = {
+    val nodeMetrics: String = s"""
+                                 |{
+                                 |   "items":[]
+                                 |}
+       """.stripMargin
+    val nodes: String = s"""
+                           |{
+                           |   "items":[
+                           |      {
+                           |         "metadata":{
+                           |            "name":"ohara-jenkins-it-00"
+                           |         },
+                           |         "status":{
+                           |            "addresses":[
+                           |               {
+                           |                  "type":"InternalIP",
+                           |                  "address":"10.2.0.8"
+                           |               }
+                           |            ],
+                           |            "images":[],
+                           |            "conditions":[],
+                           |            "allocatable":{
+                           |               "cpu":"8",
+                           |               "memory":"30612932Ki"
+                           |            }
+                           |         }
+                           |      }
+                           |   ]
+                           |}
+       """.stripMargin
+
+    toServer {
+      path("metrics.k8s.io" / "v1beta1" / "nodes") {
+        get {
+          complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, nodeMetrics)))
+        }
+      } ~
+        path("nodes") {
+          get {
+            complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, nodes)))
+          }
+        }
+    }
+
+  }
+
+  private[this] def resources(): SimpleServer = {
+    val nodeMetrics: String = s"""
+         |{
+         |   "items":[
+         |      {
+         |         "metadata":{
+         |            "name":"ohara-jenkins-it-00"
+         |         },
+         |         "usage":{
+         |            "cpu":"332859630n",
+         |            "memory":"2512480Ki"
+         |         }
+         |      }
+         |   ]
+         |}
+       """.stripMargin
+    val nodes: String = s"""
+         |{
+         |   "items":[
+         |      {
+         |         "metadata":{
+         |            "name":"ohara-jenkins-it-00"
+         |         },
+         |         "status":{
+         |            "addresses":[
+         |               {
+         |                  "type":"InternalIP",
+         |                  "address":"10.2.0.8"
+         |               }
+         |            ],
+         |            "images":[],
+         |            "conditions":[],
+         |            "allocatable":{
+         |               "cpu":"8",
+         |               "memory":"30612932Ki"
+         |            }
+         |         }
+         |      }
+         |   ]
+         |}
+       """.stripMargin
+
+    toServer {
+      path("metrics.k8s.io" / "v1beta1" / "nodes") {
+        get {
+          complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, nodeMetrics)))
+        }
+      } ~
+        path("nodes") {
+          get {
+            complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, nodes)))
+          }
+        }
+    }
+  }
+
   private[this] def nodes(): SimpleServer = {
     val response: String = s"""
          |{"items": [

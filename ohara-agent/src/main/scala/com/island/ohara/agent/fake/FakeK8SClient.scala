@@ -23,6 +23,8 @@ import com.island.ohara.client.configurator.v0.{BrokerApi, ContainerApi, NodeApi
 import scala.concurrent.{ExecutionContext, Future}
 
 class FakeK8SClient(isK8SNode: Boolean, k8sStatusInfo: Option[K8SStatusInfo], containerName: String) extends K8SClient {
+  private[this] var metricsAPIServerURL: String = _
+
   override def images(nodeName: String)(implicit executionContext: ExecutionContext): Future[Seq[String]] =
     Future.successful {
       Seq(ZookeeperApi.IMAGE_NAME_DEFAULT, BrokerApi.IMAGE_NAME_DEFAULT, WorkerApi.IMAGE_NAME_DEFAULT)
@@ -74,4 +76,8 @@ class FakeK8SClient(isK8SNode: Boolean, k8sStatusInfo: Option[K8SStatusInfo], co
 
   override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[NodeApi.Resource]]] =
     throw new UnsupportedOperationException("FakeK8SClient not support resources function")
+
+  override def k8sMetricsAPIServerURL(metricsAPIServerURL: String): Unit = {
+    this.metricsAPIServerURL = metricsAPIServerURL
+  }
 }
