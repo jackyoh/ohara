@@ -848,7 +848,6 @@ How to use Kubernetes in Ohara?
    server, you can set metrics server URL to monitor your Kubernetes node
    resource. Example: ``--k8s-metrics-server http://ohara-kubernetes:8080/apis``
 
-
    ``--k8s``: Assignment your K8S API server HTTP URL
 
 -  Use Ohara configurator to create a zookeeper and broker in Kubernetes

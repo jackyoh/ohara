@@ -75,7 +75,7 @@ class FakeK8SClient(isK8SNode: Boolean, k8sStatusInfo: Option[K8SStatusInfo], co
     throw new UnsupportedOperationException("FakeK8SClient not support force nodes function")
 
   override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[NodeApi.Resource]]] =
-    throw new UnsupportedOperationException("FakeK8SClient not support resources function")
+    Future.successful(Map.empty)
 
   override def k8sMetricsAPIServerURL(metricsAPIServerURL: String): Unit = {
     this.metricsAPIServerURL = metricsAPIServerURL
