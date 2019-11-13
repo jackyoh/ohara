@@ -338,7 +338,7 @@ object Configurator {
   private[configurator] val FOLDER_KEY = "--folder"
   private[configurator] val HOSTNAME_KEY = "--hostname"
   private[configurator] val K8S_NAMESPACE_KEY = "--k8s-namespace"
-  private[configurator] val K8S_METRICS_SERVICE_KEY = "--k8s-metrics-service"
+  private[configurator] val K8S_METRICS_SERVICE_KEY = "--k8s-metrics-server"
   private[configurator] val K8S_KEY = "--k8s"
   private[configurator] val FAKE_KEY = "--fake"
   private[configurator] val PORT_KEY = "--port"
