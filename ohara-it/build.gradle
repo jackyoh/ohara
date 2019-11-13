@@ -123,6 +123,7 @@ class OharaTest extends Test {
           "ohara.it.k8s",
           "ohara.it.k8s.namespace",
           "ohara.it.k8s.nodename",
+          "ohara.it.k8s.metrics.server",
           // set the prefix to all containers
           "ohara.it.container.prefix",
           // set database setting

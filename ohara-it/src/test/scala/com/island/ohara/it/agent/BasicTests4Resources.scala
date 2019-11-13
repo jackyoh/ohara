@@ -22,11 +22,11 @@ import com.island.ohara.common.util.Releasable
 import com.island.ohara.configurator.Configurator
 import com.island.ohara.it.IntegrationTest
 import org.junit.{After, Test}
-import org.scalatest.Matchers
+import org.scalatest.Matchers._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-abstract class BasicTests4Resources extends IntegrationTest with Matchers {
+abstract class BasicTests4Resources extends IntegrationTest {
   protected def nodes: Seq[Node]
   protected def configurator: Configurator
   protected def nameHolder: ClusterNameHolder

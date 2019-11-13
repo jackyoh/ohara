@@ -28,6 +28,7 @@ import org.junit.AssumptionViolatedException
 object EnvTestingUtils {
 
   val K8S_MASTER_KEY: String = "ohara.it.k8s"
+  private[this] val K8S_METRICS_SERVER_URL = "ohara.it.k8s.metrics.server"
   private[this] val K8S_NODES_KEY: String = "ohara.it.k8s.nodename"
   private[this] val K8S_NAMESPACE_KEY: String = "ohara.it.k8s.namespace"
   private[this] val CONFIGURATOR_HOSTNAME_KEY: String = "ohara.it.hostname"
@@ -46,6 +47,14 @@ object EnvTestingUtils {
     sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!")),
     sys.env.getOrElse(K8S_NAMESPACE_KEY, K8SClient.NAMESPACE_DEFAULT_VALUE)
   )
+
+  def k8sClientWithMetricsServer(): K8SClient = {
+    val client = k8sClient()
+    client.k8sMetricsAPIServerURL(
+      sys.env.getOrElse(K8S_METRICS_SERVER_URL,
+                        throw new AssumptionViolatedException(s"$K8S_METRICS_SERVER_URL does not exists!!!")))
+    client
+  }
 
   def k8sNodes(): Seq[Node] = sys.env
     .get(K8S_NODES_KEY)
