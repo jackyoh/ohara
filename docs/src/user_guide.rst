@@ -844,6 +844,11 @@ How to use Kubernetes in Ohara?
    you can assign the --k8s-namespace argument to set other the Kubernetes namespace.
    Kubernetes namespace default value is "default" string
 
+   ``--k8s-metrics-server``: If you have installed the Kubernetes metrics
+   server, you can set metrics server URL to monitor your Kubernetes node
+   resource. Example: ``--k8s-metrics-server http://ohara-kubernetes:8080/apis``
+
+
    ``--k8s``: Assignment your K8S API server HTTP URL
 
 -  Use Ohara configurator to create a zookeeper and broker in Kubernetes
