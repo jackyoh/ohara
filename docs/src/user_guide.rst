@@ -909,6 +909,25 @@ How to use Kubernetes in Ohara?
 
    # kubectl get pods
 
+How to install K8S metrics server?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- You must install the git command to pull the Kubernetes metrics server source
+  code from the repository to deploy metrics server, below is sample command:
+
+.. code-block:: console
+
+   # yum install -y git
+
+- After complete install git, you can pull the K8S metrics server source code,
+  below is sample command:
+
+.. code-block:: console
+
+   # git clone https://github.com/kubernetes-sigs/metrics-server.git
+
+- Below yaml file to override the deploy/1.8+/metrics-server-deployment.yaml path file
+
 How to revert K8S environment setting?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
