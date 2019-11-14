@@ -390,7 +390,13 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
     this
   }
 
-  private[configurator] def k8sMetricsServiceURL(metricsServiceURL: String): ConfiguratorBuilder = {
+  /**
+    * Set a k8s metrics server api url
+    * @param metricsServiceURL metrics server api url
+    * @return this builder
+    */
+  @Optional("default value is null")
+  private[configurator] def k8sMetricsServerURL(metricsServiceURL: String): ConfiguratorBuilder = {
     this.metricsServiceURL = metricsServiceURL
     this
   }

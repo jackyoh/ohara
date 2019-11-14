@@ -357,7 +357,7 @@ object Configurator {
         case Array(HOSTNAME_KEY, value)            => configuratorBuilder.hostname(value)
         case Array(PORT_KEY, value)                => configuratorBuilder.port(value.toInt)
         case Array(K8S_NAMESPACE_KEY, value)       => configuratorBuilder.k8sNamespace(value)
-        case Array(K8S_METRICS_SERVICE_KEY, value) => configuratorBuilder.k8sMetricsServiceURL(value)
+        case Array(K8S_METRICS_SERVICE_KEY, value) => configuratorBuilder.k8sMetricsServerURL(value)
         case Array(K8S_KEY, value)                 => configuratorBuilder.k8sApiServer(value)
         case Array(FAKE_KEY, value) =>
           if (value.toBoolean) configuratorBuilder.fake()
