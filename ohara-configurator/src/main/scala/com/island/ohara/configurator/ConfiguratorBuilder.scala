@@ -44,6 +44,7 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   private[this] var homeFolder: String = _
   private[this] var store: DataStore = _
   private[this] var serviceCollie: ServiceCollie = _
+  private[this] var k8sApiServer: String = _
   private[this] var k8sClient: K8SClient = _
   private[this] var metricsServiceURL: String = _
   private[this] var k8sNamespace: String = K8SClient.NAMESPACE_DEFAULT_VALUE
@@ -400,16 +401,8 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
     * @return this builder
     */
   @Optional("default value is null")
-  private[configurator] def k8sApiServer(url: String): ConfiguratorBuilder = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    val client = K8SClient(url, k8sNamespace)
-    try if (Await.result(client.nodeNameIPInfo(), 30 seconds).isEmpty)
-      throw new IllegalArgumentException("your k8s clusters is empty!!!")
-    catch {
-      case e: Throwable =>
-        throw new IllegalArgumentException(s"unable to access k8s cluster:$url", e)
-    }
-    this.k8sClient(client)
+  private[configurator] def k8sApiServer(k8sApiServer: String): ConfiguratorBuilder = {
+    this.k8sApiServer = k8sApiServer
     this
   }
 
@@ -423,11 +416,25 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
     }
   }
 
-  override def build(): Configurator = doOrReleaseObjects(
-    new Configurator(hostname = getOrCreateHostname(), port = getOrCreatePort())(store = getOrCreateStore(),
-                                                                                 dataCollie = createCollie(),
-                                                                                 serviceCollie = getOrCreateCollie(),
-                                                                                 k8sClient = Option(k8sClient)))
+  override def build(): Configurator = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    if (this.k8sApiServer != null) {
+      val client = K8SClient(this.k8sApiServer, k8sNamespace)
+      try if (Await.result(client.nodeNameIPInfo(), 30 seconds).isEmpty)
+        throw new IllegalArgumentException("your k8s clusters is empty!!!")
+      catch {
+        case e: Throwable =>
+          throw new IllegalArgumentException(s"unable to access k8s cluster:${this.k8sApiServer}", e)
+      }
+      this.k8sClient(client)
+    }
+
+    doOrReleaseObjects(
+      new Configurator(hostname = getOrCreateHostname(), port = getOrCreatePort())(store = getOrCreateStore(),
+                                                                                   dataCollie = createCollie(),
+                                                                                   serviceCollie = getOrCreateCollie(),
+                                                                                   k8sClient = Option(k8sClient)))
+  }
 
   private[this] def folder(prefix: String): String =
     new File(CommonUtils.requireNonEmpty(getOrCreateHomeFolder()), prefix).getCanonicalPath

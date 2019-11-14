@@ -27,6 +27,7 @@ import com.island.ohara.agent.k8s.K8SClient
 import com.island.ohara.client.configurator.v0.NodeApi.Node
 import com.island.ohara.common.rule.OharaTest
 import com.island.ohara.common.util.{CommonUtils, Releasable}
+import com.island.ohara.configurator.Configurator.Mode
 import org.junit.Test
 import org.scalatest.Matchers._
 import org.scalatest.mockito.MockitoSugar
@@ -213,6 +214,14 @@ class TestConfiguratorBuilder extends OharaTest {
         Await.result(system.terminate(), 30 seconds)
       }
     }
+  }
+
+  @Test
+  def testBuild(): Unit = {
+    val apiServer = k8sServer("default", "pod", "log")
+    val configuratorBuilder = Configurator.builder
+    val configurator = configuratorBuilder.k8sApiServer(apiServer.url).k8sNamespace("default").build()
+    configurator.mode shouldBe Mode.K8S
   }
 
   private[this] def k8sServer(namespace: String, podName: String, logMessage: String): SimpleServer = {
