@@ -926,7 +926,72 @@ How to install K8S metrics server?
 
    # git clone https://github.com/kubernetes-sigs/metrics-server.git
 
-- Below yaml file to override the deploy/1.8+/metrics-server-deployment.yaml path file
+- Below is YAML file to override the deploy/1.8+/metrics-server-deployment.yaml path file
+
+.. code-block:: console
+
+   ---
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: metrics-server
+     namespace: kube-system
+   ---
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: metrics-server
+     namespace: kube-system
+     labels:
+       k8s-app: metrics-server
+   spec:
+     selector:
+       matchLabels:
+         k8s-app: metrics-server
+     template:
+       metadata:
+         name: metrics-server
+         labels:
+           k8s-app: metrics-server
+       spec:
+         serviceAccountName: metrics-server
+         volumes:
+         # mount in tmp so we can safely use from-scratch images and/or read-only containers
+         - name: tmp-dir
+           emptyDir: {}
+         containers:
+         - name: metrics-server
+           command:
+           - /metrics-server
+           - --kubelet-preferred-address-types=InternalIP
+           - --kubelet-insecure-tls
+           image: k8s.gcr.io/metrics-server-amd64:v0.3.6
+           args:
+             - --cert-dir=/tmp
+             - --secure-port=4443
+           ports:
+           - name: main-port
+             containerPort: 4443
+             protocol: TCP
+           imagePullPolicy: Always
+           volumeMounts:
+           - name: tmp-dir
+             mountPath: /tmp
+
+- Deploy the Kubernetes metrics server, below is the command:
+
+.. code-block:: console
+
+   # kubectl apply -f deploy/1.8+
+
+- Confirm the Kubernetes metrics service is installed complete, you can input the
+  URL to the browser, below is the example:
+
+.. code-block:: console
+
+   http://${Your_Kubernetes_Master_HostName_OR_IP}:8080/apis/metrics.k8s.io/v1beta1/nodes
+
+You maybe wait seconds time to receive the Kubernetes node metrics data.
 
 How to revert K8S environment setting?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
