@@ -337,7 +337,7 @@ public final class CommonUtils {
   }
 
   public static double randomDouble() {
-    return Math.abs(new Random().nextDouble());
+    return new Random().nextDouble();
   }
 
   /**

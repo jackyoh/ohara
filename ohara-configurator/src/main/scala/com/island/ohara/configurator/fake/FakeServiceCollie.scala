@@ -78,10 +78,13 @@ private[configurator] class FakeServiceCollie(dataCollie: DataCollie,
         nodes =>
           nodes
             .map(node => {
-              val cpuResource = Resource.cpu(32, Option(CommonUtils.randomDouble()))
-              val memoryResource = Resource.memory(137438953472L, Option(CommonUtils.randomDouble()))
+              val cpuResource = Resource.cpu(32, Option(positiveValue(CommonUtils.randomDouble())))
+              val memoryResource = Resource.memory(137438953472L, Option(positiveValue(CommonUtils.randomDouble())))
               (node, Seq(cpuResource, memoryResource))
             })
             .toMap
       )
+
+  private[this] def positiveValue(value: Double): Double =
+    if (value < 0) value * -1 else value
 }
