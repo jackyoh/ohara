@@ -197,18 +197,15 @@ object K8SClient {
                   nodeResourceUsage.map {
                     resourceUsage =>
                       val nodeName: String = nodeResource._1
-                      val cpuValue: Int = nodeResource._2.getOrElse("0").toInt
-                      val memoryValue: Long = nodeResource._3.getOrElse("0").replace("Ki", "").toLong
+                      val cpuValueCore: Int = nodeResource._2.getOrElse("0").toInt
+                      val memoryValueKB: Long = nodeResource._3.getOrElse("0").replace("Ki", "").toLong
                       if (resourceUsage.contains(nodeName)) {
-                        val cpuUsage: Option[Double] =
-                          Option(
-                            resourceUsage(nodeName).cpu.replace("n", "").toLong / (1000.0 * 1000.0 * 1000.0 * cpuValue))
+                        val cpuUsed: Option[Double] = Option(cpuUsedCalc(resourceUsage(nodeName).cpu, cpuValueCore))
+                        val memoryUsed: Option[Double] =
+                          Option(memoryUsedCalc(resourceUsage(nodeName).memory, memoryValueKB))
 
-                        val memoryUsage: Option[Double] =
-                          Option(resourceUsage(nodeName).memory.replace("Ki", "").toDouble / memoryValue)
-
-                        nodeName -> Seq(Resource.cpu(cpuValue, cpuUsage),
-                                        Resource.memory(memoryValue * 1024, memoryUsage))
+                        nodeName -> Seq(Resource.cpu(cpuValueCore, cpuUsed),
+                                        Resource.memory(memoryValueKB * 1024, memoryUsed))
                       } else nodeName -> Seq.empty
                   }
               })
@@ -395,6 +392,36 @@ object K8SClient {
             Future.successful(container)
           })
     }
+  }
+
+  private[k8s] def cpuUsedCalc(usedValue: String, totalValue: Int): Double = {
+    //totalValue vairable value unit is core
+    if (usedValue.endsWith("n"))
+      usedValue.replace("n", "").toLong / (1000000000.0 * totalValue) // 1 core = 1000*1000*1000 nanocores
+    else if (usedValue.endsWith("u"))
+      usedValue.replace("u", "").toLong / (1000000.0 * totalValue) // 1 core = 1000*1000 u
+    else if (usedValue.endsWith("m"))
+      usedValue.replace("m", "").toLong / (1000.0 * totalValue) // 1 core = 1000 millicores
+    else
+      throw new IllegalArgumentException(s"The cpu used value ${usedValue} doesn't converter long type")
+  }
+
+  private[k8s] def memoryUsedCalc(usedValue: String, totalValue: Long): Double = {
+    //totalValue variable value unit is KB
+    if (usedValue.endsWith("Ki"))
+      usedValue.replace("Ki", "").toDouble / totalValue
+    else if (usedValue.endsWith("Mi"))
+      usedValue.replace("Mi", "").toDouble * 1024 / totalValue // 1 Mi = 2^10 Ki
+    else if (usedValue.endsWith("Gi"))
+      usedValue.replace("Gi", "").toDouble * 1024 * 1024 / totalValue // 1 Gi = 2^20 Ki
+    else if (usedValue.endsWith("Ti"))
+      usedValue.replace("Ti", "").toDouble * 1024 * 1024 * 1024 / totalValue // 1 Ti = 2^30 Ki
+    else if (usedValue.endsWith("Pi"))
+      usedValue.replace("Pi", "").toDouble * 1024 * 1024 * 1024 * 1024 / totalValue // 1 Pi = 2^40 Ki
+    else if (usedValue.endsWith("Ei"))
+      usedValue.replace("Ei", "").toDouble * 1024 * 1024 * 1024 * 1024 * 1024 / totalValue // 1 Ei = 2^50 Ei
+    else
+      throw new IllegalArgumentException(s"The memory used value ${usedValue} doesn't converter double type")
   }
 
   trait ContainerCreator extends com.island.ohara.common.pattern.Creator[Future[Option[ContainerInfo]]] {

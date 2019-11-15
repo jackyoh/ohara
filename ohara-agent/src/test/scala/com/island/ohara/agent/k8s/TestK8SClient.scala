@@ -331,6 +331,38 @@ class TestK8SClient extends OharaTest {
 
   }
 
+  @Test
+  def testCPUUsedCalc(): Unit = {
+    K8SClient.cpuUsedCalc("160527031n", 8) shouldBe 0.020065878875
+    K8SClient.cpuUsedCalc("149744u", 8) shouldBe 0.018718
+    K8SClient.cpuUsedCalc("338m", 8) shouldBe 0.04225
+  }
+
+  @Test
+  def testCPUUsedCalcError(): Unit = {
+    an[IllegalArgumentException] should be thrownBy {
+      K8SClient.cpuUsedCalc("338000a", 8)
+    }
+  }
+
+  @Test
+  def testMemoryUsedCalc(): Unit = {
+    // 31457280 KB = 30 GB
+    K8SClient.memoryUsedCalc("3706620Ki", 31457280) > 0.11 shouldBe true
+    K8SClient.memoryUsedCalc("3619Mi", 31457280) > 0.11 shouldBe true
+    K8SClient.memoryUsedCalc("16Gi", 31457280) > 0.53 shouldBe true
+    K8SClient.memoryUsedCalc("0.0156Ti", 31457280) > 0.53 shouldBe true
+    K8SClient.memoryUsedCalc("0.000015259Pi", 31457280) > 0.53 shouldBe true
+    K8SClient.memoryUsedCalc("0.000000015Ei", 31457280) > 0.53 shouldBe true
+  }
+
+  @Test
+  def testMemoryUsedCalcError(): Unit = {
+    an[IllegalArgumentException] should be thrownBy {
+      K8SClient.memoryUsedCalc("338000Fi", 8)
+    }
+  }
+
   private[this] def emptyResources(): SimpleServer = {
     val nodeMetrics: String = s"""
                                  |{
