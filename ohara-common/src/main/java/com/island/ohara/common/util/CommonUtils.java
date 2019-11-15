@@ -336,6 +336,10 @@ public final class CommonUtils {
     return new Random().nextInt();
   }
 
+  public static double randomDouble() {
+    return new Random().nextDouble();
+  }
+
   /**
    * @param s string
    * @return true if s is null or empty. otherwise false
