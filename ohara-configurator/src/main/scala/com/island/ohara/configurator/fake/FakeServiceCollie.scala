@@ -71,7 +71,7 @@ private[configurator] class FakeServiceCollie(dataCollie: DataCollie,
   override def logs()(implicit executionContext: ExecutionContext): Future[Map[ContainerName, String]] =
     Future.successful(Map.empty)
 
-  override def resources()(implicit executionContext: ExecutionContext): Future[Map[Node, Seq[Resource]]] = {
+  override def resources()(implicit executionContext: ExecutionContext): Future[Map[Node, Seq[Resource]]] =
     dataCollie
       .values[Node]()
       .map(
@@ -84,5 +84,4 @@ private[configurator] class FakeServiceCollie(dataCollie: DataCollie,
             })
             .toMap
       )
-  }
 }
