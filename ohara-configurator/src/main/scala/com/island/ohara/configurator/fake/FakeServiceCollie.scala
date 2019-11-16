@@ -85,6 +85,5 @@ private[configurator] class FakeServiceCollie(dataCollie: DataCollie,
             .toMap
       )
 
-  private[this] def positiveValue(value: Double): Double =
-    if (value < 0) value * -1 else value
+  private[this] def positiveValue(value: Double): Double = Math.abs(value)
 }
