@@ -200,10 +200,11 @@ object K8SClient {
                       val cpuValueCore: Int = nodeResource._2.getOrElse("0").toInt
                       val memoryValueKB: Long = nodeResource._3.getOrElse("0").replace("Ki", "").toLong
                       if (resourceUsage.contains(nodeName)) {
+                        // List all resource unit for Kubernetes metrics server, Please refer the source code:
+                        // https://github.com/kubernetes/apimachinery/blob/ed135c5b96450fd24e5e981c708114fbbd950697/pkg/api/resource/suffix.go
                         val cpuUsed: Option[Double] = Option(cpuUsedCalc(resourceUsage(nodeName).cpu, cpuValueCore))
                         val memoryUsed: Option[Double] =
                           Option(memoryUsedCalc(resourceUsage(nodeName).memory, memoryValueKB))
-
                         nodeName -> Seq(Resource.cpu(cpuValueCore, cpuUsed),
                                         Resource.memory(memoryValueKB * 1024, memoryUsed))
                       } else nodeName -> Seq.empty
