@@ -27,6 +27,8 @@ import org.junit.experimental.categories.Category
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.Matchers._
+
+// For QA Environment Test
 @Category(Array(classOf[K8sConfiguratorGroup]))
 class TestK8SCollie extends BasicTests4Collie {
 
