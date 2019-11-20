@@ -164,9 +164,12 @@ trait StreamCollie extends Collie[StreamClusterStatus] {
       new StreamClusterStatus(
         group = key.group(),
         name = key.name(),
-        // Currently, docker and k8s has same naming rule for "Running",
-        // it is ok that we use the containerState.RUNNING here.
-        aliveNodes = containers.filter(_.state == ContainerState.RUNNING.name).map(_.nodeName).toSet,
+        // Currently, docker naming rule for "Running" and Kubernetes naming rule for "PENDING"
+        // it is ok that we use the containerState.RUNNING or containerState.PENDING here.
+        aliveNodes = containers
+          .filter(c => c.state == ContainerState.RUNNING.name || c.state == ContainerState.PENDING.name)
+          .map(_.nodeName)
+          .toSet,
         state = toClusterState(containers).map(_.name),
         error = None
       ))
