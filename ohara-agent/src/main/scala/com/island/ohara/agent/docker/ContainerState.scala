@@ -22,6 +22,8 @@ import com.island.ohara.client.Enum
   */
 abstract sealed class ContainerState(val name: String)
 object ContainerState extends Enum[ContainerState] {
+  case object PENDING extends ContainerState("PENDING")
+
   case object CREATED extends ContainerState("CREATED")
 
   case object RESTARTING extends ContainerState("RESTARTING")

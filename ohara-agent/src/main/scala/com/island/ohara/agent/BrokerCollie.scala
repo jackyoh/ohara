@@ -225,9 +225,12 @@ trait BrokerCollie extends Collie[BrokerClusterStatus] {
         name = key.name(),
         // TODO: we should check the supported arguments by the running broker images
         topicDefinition = BrokerApi.TOPIC_DEFINITION,
-        // Currently, docker and k8s has same naming rule for "Running",
-        // it is ok that we use the containerState.RUNNING here.
-        aliveNodes = containers.filter(_.state == ContainerState.RUNNING.name).map(_.nodeName).toSet,
+        // Currently, docker naming rule for "Running" and Kubernetes naming rule for "PENDING"
+        // it is ok that we use the containerState.RUNNING or containerState.PENDING here.
+        aliveNodes = containers
+          .filter(c => c.state == ContainerState.RUNNING.name || c.state == ContainerState.PENDING.name)
+          .map(_.nodeName)
+          .toSet,
         state = toClusterState(containers).map(_.name),
         // TODO how could we fetch the error?...by Sam
         error = None
