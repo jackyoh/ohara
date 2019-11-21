@@ -44,21 +44,63 @@ trait K8SClient {
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
   def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]]
   def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]]
-  def k8sMetricsAPIServerURL(metricsAPIServerURL: String): Unit
 }
 
 object K8SClient {
+  def builder: K8SClientBuilder = new K8SClientBuilder()
+
+  private[k8s] class K8SClientBuilder {
+    private[this] var k8sApiServerURL: String        = _
+    private[this] var k8sNamespace: String           = "default"
+    private[this] var k8sMetricsApiServerURL: String = _
+
+    /**
+      * You must set the Kubernetes API server url, default value is null
+      * @param k8sApiServerURL Kubernetes API Server URL
+      * @return K8SClientBuilder object
+      */
+    def apiServerURL(k8sApiServerURL: String): K8SClientBuilder = {
+      this.k8sApiServerURL = k8sApiServerURL
+      this
+    }
+
+    /**
+      * You can set other namespace name for Kubrnetes, default value is default
+      * @param k8sNamespace Kubenretes namespace name
+      * @return K8SClientBuilder object
+      */
+    def namespace(k8sNamespace: String): K8SClientBuilder = {
+      this.k8sNamespace = k8sNamespace
+      this
+    }
+
+    /**
+      * Set K8S metrics server URL
+      * @param k8sMetricsApiServerURL for set Kubernetes metrics api server url, default value is null
+      * @return K8SClientBuilder object
+      */
+    def metricsApiServerURL(k8sMetricsApiServerURL: String): K8SClientBuilder = {
+      this.k8sMetricsApiServerURL = k8sMetricsApiServerURL
+      this
+    }
+
+    /**
+      * Return the K8SClient object to operate Kubernetes api server
+      * @return K8SClient object
+      */
+    def build(): K8SClient = {
+      K8SClient(k8sApiServerURL, k8sNamespace, k8sMetricsApiServerURL)
+    }
+  }
+
   val NAMESPACE_DEFAULT_VALUE: String = "default"
+  private[agent] val K8S_KIND_NAME    = "K8S"
 
-  private[agent] val K8S_KIND_NAME = "K8S"
-
-  def apply(k8sApiServerURL: String): K8SClient = apply(k8sApiServerURL, NAMESPACE_DEFAULT_VALUE)
-
-  def apply(k8sApiServerURL: String, namespace: String): K8SClient = {
+  private[k8s] def apply(k8sApiServerURL: String, namespace: String, k8sMetricsApiServerURL: String): K8SClient = {
     if (k8sApiServerURL.isEmpty) throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")
 
     new K8SClient() with SprayJsonSupport {
-      private[this] var metricsAPIServerURL: String = _
+      private[this] var metricsAPIServerURL: String = k8sMetricsApiServerURL
 
       override def containers()(implicit executionContext: ExecutionContext): Future[Seq[ContainerInfo]] =
         HttpExecutor.SINGLETON
@@ -204,14 +246,6 @@ object K8SClient {
         HttpExecutor.SINGLETON
           .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
           .map(nodeInfo => nodeInfo.items.map(item => K8SNodeReport(item.metadata.name)))
-      }
-
-      /**
-        * Set K8S metrics server URL
-        * @param metricsAPIServerURL metrics api server url to get K8S node informat
-        */
-      override def k8sMetricsAPIServerURL(metricsAPIServerURL: String): Unit = {
-        this.metricsAPIServerURL = metricsAPIServerURL
       }
 
       override def containerCreator()(implicit executionContext: ExecutionContext): ContainerCreator =

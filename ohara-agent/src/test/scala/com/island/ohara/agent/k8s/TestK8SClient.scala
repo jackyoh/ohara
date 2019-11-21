@@ -38,6 +38,15 @@ class TestK8SClient extends OharaTest {
   private[this] val namespace: String = K8SClient.NAMESPACE_DEFAULT_VALUE
 
   @Test
+  def test(): Unit = {
+    K8SClient.builder
+      .apiServerURL("http://ohara-jenkins-it-00:8080/api/v1")
+      .namespace("default")
+      .metricsApiServerURL("")
+      .build()
+  }
+
+  @Test
   def testCreatorEnumator(): Unit = {
     ImagePullPolicy.ALWAYS.toString shouldBe "Always"
     ImagePullPolicy.IFNOTPRESENT.toString shouldBe "IfNotPresent"
@@ -54,7 +63,7 @@ class TestK8SClient extends OharaTest {
     val podName  = "container1"
     val s        = imagePolicyURL(nodeName, podName, ImagePullPolicy.IFNOTPRESENT)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -80,7 +89,7 @@ class TestK8SClient extends OharaTest {
     val podName  = "container1"
     val s        = imagePolicyURL(nodeName, podName, ImagePullPolicy.IFNOTPRESENT)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -106,7 +115,7 @@ class TestK8SClient extends OharaTest {
     val podName  = "container1"
     val s        = imagePolicyURL(nodeName, podName, ImagePullPolicy.ALWAYS)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -132,7 +141,7 @@ class TestK8SClient extends OharaTest {
     val podName  = "container1"
     val s        = imagePolicyURL(nodeName, podName, ImagePullPolicy.NEVER)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -158,7 +167,7 @@ class TestK8SClient extends OharaTest {
     val podName  = "container1"
     val s        = imagePolicyURL(nodeName, podName, ImagePullPolicy.IFNOTPRESENT)
     try {
-      val client = K8SClient(s.url)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
       val result: Option[ContainerInfo] = Await.result(
         client
           .containerCreator()
@@ -214,7 +223,7 @@ class TestK8SClient extends OharaTest {
       }
     }
     try {
-      val client           = K8SClient(s.url)
+      val client           = K8SClient.builder.apiServerURL(s.url).build()
       val imagesFromServer = Await.result(client.images(node), 30 seconds)
       imagesFromServer shouldBe images
     } finally s.close()
@@ -222,10 +231,10 @@ class TestK8SClient extends OharaTest {
 
   @Test
   def testForceRemovePod(): Unit = {
-    val s         = forceRemovePodURL("k8soccl-057aac6a97-bk-c720992")
-    val k8sClient = K8SClient(s.url)
+    val s      = forceRemovePodURL("k8soccl-057aac6a97-bk-c720992")
+    val client = K8SClient.builder.apiServerURL(s.url).build()
     try {
-      val result: ContainerInfo = Await.result(k8sClient.forceRemove("k8soccl-057aac6a97-bk-c720992"), 30 seconds)
+      val result: ContainerInfo = Await.result(client.forceRemove("k8soccl-057aac6a97-bk-c720992"), 30 seconds)
       result.name shouldBe "k8soccl-057aac6a97-bk-c720992"
       result.hostname shouldBe "k8soccl-057aac6a97-bk-c720992-ohara-jenkins-it-00"
       result.nodeName shouldBe "ohara-jenkins-it-00"
@@ -237,8 +246,8 @@ class TestK8SClient extends OharaTest {
     val podName = "broker-pod"
     val s       = log(podName)
     try {
-      val k8sClient      = K8SClient(s.url)
-      val result: String = Await.result(k8sClient.log(podName, None), 5 seconds)
+      val client         = K8SClient.builder.apiServerURL(s.url).build()
+      val result: String = Await.result(client.log(podName, None), 5 seconds)
       result shouldBe "start pods ......."
     } finally s.close()
   }
@@ -247,10 +256,10 @@ class TestK8SClient extends OharaTest {
   def testCreatePodFailed(): Unit = {
     val s = createFailedPod()
     try {
-      val k8sClient = K8SClient(s.url)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
       intercept[IllegalArgumentException] {
         Await.result(
-          k8sClient
+          client
             .containerCreator()
             .name("is-land.hsinchu")
             .imageName("hello world")
@@ -269,8 +278,8 @@ class TestK8SClient extends OharaTest {
   def testNodes(): Unit = {
     val s = nodes()
     try {
-      val k8sClient                 = K8SClient(s.url)
-      val nodes: Seq[K8SNodeReport] = Await.result(k8sClient.nodes, 5 seconds)
+      val client                    = K8SClient.builder.apiServerURL(s.url).build()
+      val nodes: Seq[K8SNodeReport] = Await.result(client.nodes, 5 seconds)
       nodes.size shouldBe 3
       nodes(0).nodeName shouldBe "ohara-jenkins-it-00"
       nodes(1).nodeName shouldBe "ohara-jenkins-it-01"
@@ -282,8 +291,8 @@ class TestK8SClient extends OharaTest {
   def testNotSettingMetricsURL(): Unit = {
     val s = nodes()
     try {
-      val k8sClient = K8SClient(s.url)
-      val result    = Await.result(k8sClient.resources(), 5 seconds)
+      val client = K8SClient.builder.apiServerURL(s.url).build()
+      val result = Await.result(client.resources(), 5 seconds)
       result.size shouldBe 0
       result.isEmpty shouldBe true
     } finally s.close()
@@ -293,8 +302,7 @@ class TestK8SClient extends OharaTest {
   def testK8SMetricsResource(): Unit = {
     val s = resources()
     try {
-      val k8sClient = K8SClient(s.url)
-      k8sClient.k8sMetricsAPIServerURL(s.url)
+      val k8sClient          = K8SClient.builder.apiServerURL(s.url).metricsApiServerURL(s.url).build()
       val resource           = Await.result(k8sClient.resources(), 5 seconds)
       val nodes: Seq[String] = resource.map(x => x._1).toSeq
       nodes(0) shouldBe "ohara-jenkins-it-00"
@@ -315,8 +323,7 @@ class TestK8SClient extends OharaTest {
   def testEmptyMetricsResource(): Unit = {
     val s = emptyResources()
     try {
-      val k8sClient = K8SClient(s.url)
-      k8sClient.k8sMetricsAPIServerURL(s.url)
+      val k8sClient          = K8SClient.builder.apiServerURL(s.url).metricsApiServerURL(s.url).build()
       val resource           = Await.result(k8sClient.resources(), 5 seconds)
       val nodes: Seq[String] = resource.map(x => x._1).toSeq
       nodes(0) shouldBe "ohara-jenkins-it-00"
