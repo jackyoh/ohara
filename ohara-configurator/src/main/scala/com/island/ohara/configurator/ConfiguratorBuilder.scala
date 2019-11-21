@@ -416,10 +416,11 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   override def build(): Configurator = {
     import scala.concurrent.ExecutionContext.Implicits.global
     if (this.k8sApiServer != null) {
-      val k8sClientBuilder = K8SClient.builder.apiServerURL(this.k8sApiServer)
-      if (this.k8sNamespace != null) k8sClientBuilder.namespace(k8sNamespace)
-      if (this.metricsServiceURL != null) k8sClientBuilder.metricsApiServerURL(metricsServiceURL)
-      val client = k8sClientBuilder.build()
+      val client: K8SClient = K8SClient.builder
+        .apiServerURL(this.k8sApiServer)
+        .namespace(k8sNamespace)
+        .metricsApiServerURL(metricsServiceURL)
+        .build()
 
       try if (Await.result(client.nodeNameIPInfo(), 30 seconds).isEmpty)
         throw new IllegalArgumentException("your k8s clusters is empty!!!")

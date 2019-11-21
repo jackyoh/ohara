@@ -93,6 +93,7 @@ object K8SClient {
     def build(): K8SClient = {
       if (k8sApiServerURL == null || k8sApiServerURL.isEmpty)
         throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")
+      if (k8sNamespace == null) k8sNamespace = NAMESPACE_DEFAULT_VALUE
 
       new K8SClient() with SprayJsonSupport {
         override def containers()(implicit executionContext: ExecutionContext): Future[Seq[ContainerInfo]] =
