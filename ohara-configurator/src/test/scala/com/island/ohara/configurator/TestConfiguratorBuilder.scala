@@ -111,7 +111,7 @@ class TestConfiguratorBuilder extends OharaTest {
 
   @Test
   def testK8SClientNamespaceDefault(): Unit = {
-    val namespace  = K8SClient.K8S_NAMESPACE_DEFAULT_VALUE
+    val namespace  = "default"
     val podName    = "pod1"
     val logMessage = "start pods ......."
     val apiServer  = k8sServer(namespace, podName, logMessage)
@@ -135,7 +135,7 @@ class TestConfiguratorBuilder extends OharaTest {
 
   @Test
   def testK8SClientNamespaceNone(): Unit = {
-    val namespace  = K8SClient.K8S_NAMESPACE_DEFAULT_VALUE
+    val namespace  = "default"
     val podName    = "pod1"
     val logMessage = "start pods ......."
     val apiServer  = k8sServer(namespace, podName, logMessage)

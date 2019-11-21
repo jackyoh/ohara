@@ -47,8 +47,7 @@ trait K8SClient {
 }
 
 object K8SClient {
-  val K8S_NAMESPACE_DEFAULT_VALUE = NAMESPACE_DEFAULT_VALUE
-  def builder: K8SClientBuilder   = new K8SClientBuilder()
+  def builder: K8SClientBuilder = new K8SClientBuilder()
 
   private[k8s] class K8SClientBuilder {
     private[this] var k8sApiServerURL: String        = _
@@ -60,9 +59,8 @@ object K8SClient {
       * @param k8sApiServerURL Kubernetes API Server URL
       * @return K8SClientBuilder object
       */
-    @Optional("default value is null")
     def apiServerURL(k8sApiServerURL: String): K8SClientBuilder = {
-      this.k8sApiServerURL = k8sApiServerURL
+      this.k8sApiServerURL = CommonUtils.requireNonEmpty(k8sApiServerURL)
       this
     }
 
@@ -101,12 +99,10 @@ object K8SClient {
 
   private[agent] val K8S_KIND_NAME = "K8S"
 
-  private[k8s] def apply(k8sApiServerURL: String, namespace: String, k8sMetricsApiServerURL: String): K8SClient = {
+  private def apply(k8sApiServerURL: String, namespace: String, k8sMetricsApiServerURL: String): K8SClient = {
     if (k8sApiServerURL.isEmpty) throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")
 
     new K8SClient() with SprayJsonSupport {
-      private[this] var metricsAPIServerURL: String = k8sMetricsApiServerURL
-
       override def containers()(implicit executionContext: ExecutionContext): Future[Seq[ContainerInfo]] =
         HttpExecutor.SINGLETON
           .get[PodList, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$namespace/pods")
@@ -195,11 +191,11 @@ object K8SClient {
           )
 
       override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]] = {
-        if (metricsAPIServerURL == null) Future.successful(Map.empty)
+        if (k8sMetricsApiServerURL == null) Future.successful(Map.empty)
         else {
           // Get K8S metrics
           val nodeResourceUsage: Future[Map[String, K8SJson.K8SMetricsUsage]] = HttpExecutor.SINGLETON
-            .get[K8SMetrics, K8SErrorResponse](s"$metricsAPIServerURL/metrics.k8s.io/v1beta1/nodes")
+            .get[K8SMetrics, K8SErrorResponse](s"$k8sMetricsApiServerURL/metrics.k8s.io/v1beta1/nodes")
             .map(metrics => {
               metrics.items
                 .flatMap(nodeMetricsInfo => {
