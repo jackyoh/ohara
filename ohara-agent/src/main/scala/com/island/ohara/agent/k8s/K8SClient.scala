@@ -26,8 +26,8 @@ import com.island.ohara.client.configurator.v0.NodeApi.Resource
 import com.island.ohara.client.{Enum, HttpExecutor}
 import com.island.ohara.common.annotations.Optional
 import com.island.ohara.common.util.CommonUtils
-
 import scala.concurrent.{ExecutionContext, Future}
+import com.island.ohara.common.pattern.Builder
 
 case class K8SStatusInfo(isHealth: Boolean, message: String)
 case class K8SNodeReport(nodeName: String)
@@ -49,7 +49,7 @@ trait K8SClient {
 object K8SClient {
   def builder: K8SClientBuilder = new K8SClientBuilder()
 
-  private[K8SClient] class K8SClientBuilder {
+  private[K8SClient] class K8SClientBuilder extends Builder[K8SClient] {
     private[this] var k8sApiServerURL: String        = _
     private[this] var k8sMetricsApiServerURL: String = _
     private[this] var k8sNamespace: String           = NAMESPACE_DEFAULT_VALUE
