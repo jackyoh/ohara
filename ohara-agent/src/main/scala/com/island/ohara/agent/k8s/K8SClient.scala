@@ -71,7 +71,8 @@ object K8SClient {
       */
     @Optional("default value is default")
     def namespace(k8sNamespace: String): K8SClientBuilder = {
-      this.k8sNamespace = k8sNamespace
+      if (k8sNamespace == null || k8sNamespace.isEmpty) this.k8sNamespace = NAMESPACE_DEFAULT_VALUE
+      else this.k8sNamespace = k8sNamespace
       this
     }
 
@@ -82,7 +83,7 @@ object K8SClient {
       */
     @Optional("default value is null")
     def metricsApiServerURL(k8sMetricsApiServerURL: String): K8SClientBuilder = {
-      this.k8sMetricsApiServerURL = k8sMetricsApiServerURL
+      this.k8sMetricsApiServerURL = CommonUtils.requireNonEmpty(k8sMetricsApiServerURL)
       this
     }
 
