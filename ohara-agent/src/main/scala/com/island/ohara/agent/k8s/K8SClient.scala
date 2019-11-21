@@ -83,7 +83,7 @@ object K8SClient {
       */
     @Optional("default value is null")
     def metricsApiServerURL(k8sMetricsApiServerURL: String): K8SClientBuilder = {
-      this.k8sMetricsApiServerURL = CommonUtils.requireNonEmpty(k8sMetricsApiServerURL)
+      this.k8sMetricsApiServerURL = k8sMetricsApiServerURL
       this
     }
 
