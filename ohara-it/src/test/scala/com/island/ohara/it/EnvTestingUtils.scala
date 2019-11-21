@@ -50,14 +50,14 @@ object EnvTestingUtils {
   def k8sClient(): K8SClient = {
     val k8sApiServer =
       sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!"))
-    val namespace = sys.env.getOrElse(K8S_NAMESPACE_KEY, K8SClient.NAMESPACE_DEFAULT_VALUE)
+    val namespace = sys.env.getOrElse(K8S_NAMESPACE_KEY, K8SClient.K8S_NAMESPACE_DEFAULT_VALUE)
     K8SClient.builder.apiServerURL(k8sApiServer).namespace(namespace).build()
   }
 
   def k8sClientWithMetricsServer(): K8SClient = {
     val k8sApiServer =
       sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!"))
-    val namespace = sys.env.getOrElse(K8S_NAMESPACE_KEY, K8SClient.NAMESPACE_DEFAULT_VALUE)
+    val namespace = sys.env.getOrElse(K8S_NAMESPACE_KEY, K8SClient.K8S_NAMESPACE_DEFAULT_VALUE)
     val k8sMetricsServerURL = sys.env.getOrElse(
       K8S_METRICS_SERVER_URL,
       throw new AssumptionViolatedException(s"$K8S_METRICS_SERVER_URL does not exists!!!")

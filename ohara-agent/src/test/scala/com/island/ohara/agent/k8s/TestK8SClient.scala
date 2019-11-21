@@ -35,15 +35,44 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 class TestK8SClient extends OharaTest {
-  private[this] val namespace: String = K8SClient.NAMESPACE_DEFAULT_VALUE
+  private[this] val namespace: String = NAMESPACE_DEFAULT_VALUE
 
   @Test
-  def test(): Unit = {
+  def testApiServerURLNull(): Unit = {
+    an[IllegalArgumentException] should be thrownBy {
+      K8SClient.builder
+        .namespace("default")
+        .build()
+    }
+  }
+
+  @Test
+  def testApiServerURLEmpty(): Unit = {
+    an[IllegalArgumentException] should be thrownBy {
+      K8SClient.builder
+        .apiServerURL("")
+        .namespace("default")
+        .build()
+    }
+  }
+
+  @Test
+  def testApiServerURLNotNull(): Unit = {
     K8SClient.builder
-      .apiServerURL("http://ohara-jenkins-it-00:8080/api/v1")
+      .apiServerURL("http://localhost:8080/api/v1")
       .namespace("default")
-      .metricsApiServerURL("")
       .build()
+      .isInstanceOf[K8SClient] shouldBe true
+  }
+
+  @Test
+  def testK8SClientBuildPattern(): Unit = {
+    K8SClient.builder
+      .namespace("default")
+      .metricsApiServerURL("http://localhost:8080/apis")
+      .apiServerURL("http://localhsot:8080/api/v1")
+      .build()
+      .isInstanceOf[K8SClient] shouldBe true
   }
 
   @Test

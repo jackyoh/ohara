@@ -47,18 +47,20 @@ trait K8SClient {
 }
 
 object K8SClient {
-  def builder: K8SClientBuilder = new K8SClientBuilder()
+  val K8S_NAMESPACE_DEFAULT_VALUE = NAMESPACE_DEFAULT_VALUE
+  def builder: K8SClientBuilder   = new K8SClientBuilder()
 
   private[k8s] class K8SClientBuilder {
     private[this] var k8sApiServerURL: String        = _
-    private[this] var k8sNamespace: String           = "default"
     private[this] var k8sMetricsApiServerURL: String = _
+    private[this] var k8sNamespace: String           = NAMESPACE_DEFAULT_VALUE
 
     /**
       * You must set the Kubernetes API server url, default value is null
       * @param k8sApiServerURL Kubernetes API Server URL
       * @return K8SClientBuilder object
       */
+    @Optional("default value is null")
     def apiServerURL(k8sApiServerURL: String): K8SClientBuilder = {
       this.k8sApiServerURL = k8sApiServerURL
       this
@@ -69,6 +71,7 @@ object K8SClient {
       * @param k8sNamespace Kubenretes namespace name
       * @return K8SClientBuilder object
       */
+    @Optional("default value is default")
     def namespace(k8sNamespace: String): K8SClientBuilder = {
       this.k8sNamespace = k8sNamespace
       this
@@ -79,6 +82,7 @@ object K8SClient {
       * @param k8sMetricsApiServerURL for set Kubernetes metrics api server url, default value is null
       * @return K8SClientBuilder object
       */
+    @Optional("default value is null")
     def metricsApiServerURL(k8sMetricsApiServerURL: String): K8SClientBuilder = {
       this.k8sMetricsApiServerURL = k8sMetricsApiServerURL
       this
@@ -89,12 +93,13 @@ object K8SClient {
       * @return K8SClient object
       */
     def build(): K8SClient = {
+      if (k8sApiServerURL == null || k8sApiServerURL.isEmpty)
+        throw new IllegalArgumentException("You must set value for the apiServerURL function")
       K8SClient(k8sApiServerURL, k8sNamespace, k8sMetricsApiServerURL)
     }
   }
 
-  val NAMESPACE_DEFAULT_VALUE: String = "default"
-  private[agent] val K8S_KIND_NAME    = "K8S"
+  private[agent] val K8S_KIND_NAME = "K8S"
 
   private[k8s] def apply(k8sApiServerURL: String, namespace: String, k8sMetricsApiServerURL: String): K8SClient = {
     if (k8sApiServerURL.isEmpty) throw new IllegalArgumentException(s"invalid kubernetes api:$k8sApiServerURL")

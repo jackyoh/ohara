@@ -47,7 +47,7 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   private[this] var k8sApiServer: String         = _
   private[this] var k8sClient: K8SClient         = _
   private[this] var metricsServiceURL: String    = _
-  private[this] var k8sNamespace: String         = K8SClient.NAMESPACE_DEFAULT_VALUE
+  private[this] var k8sNamespace: String         = _
 
   @Optional("default is random folder")
   def homeFolder(homeFolder: String): ConfiguratorBuilder = doOrReleaseObjects {
@@ -416,8 +416,8 @@ class ConfiguratorBuilder private[configurator] extends Builder[Configurator] {
   override def build(): Configurator = {
     import scala.concurrent.ExecutionContext.Implicits.global
     if (this.k8sApiServer != null) {
-      val k8sClientBuilder = K8SClient.builder.apiServerURL(this.k8sApiServer).namespace(k8sNamespace)
-
+      val k8sClientBuilder = K8SClient.builder.apiServerURL(this.k8sApiServer)
+      if (this.k8sNamespace != null) k8sClientBuilder.namespace(k8sNamespace)
       if (this.metricsServiceURL != null) k8sClientBuilder.metricsApiServerURL(metricsServiceURL)
       val client = k8sClientBuilder.build()
 

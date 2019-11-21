@@ -32,4 +32,6 @@ package object k8s {
   private[k8s] val K8S_DOMAIN_NAME: String = "default"
 
   private[k8s] val OHARA_LABEL: String = "ohara"
+
+  private[k8s] val NAMESPACE_DEFAULT_VALUE: String = "default"
 }
