@@ -16,7 +16,7 @@
 
 package com.island.ohara.configurator
 
-import java.util.concurrent.{ExecutionException, Executors, TimeUnit}
+import java.util.concurrent.{ExecutionException, Executors, ScheduledExecutorService, TimeUnit}
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -66,8 +66,8 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
     value
   }
 
-  private[this] val threadPool       = Executors.newFixedThreadPool(threadMax)
-  private[this] val checkK8SNodePool = Executors.newSingleThreadExecutor()
+  private[this] val threadPool                                 = Executors.newFixedThreadPool(threadMax)
+  private[this] var checkK8SNodePool: ScheduledExecutorService = _
 
   private[this] implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
@@ -189,36 +189,42 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
   }
 
   private[configurator] def executeAddK8SNodes[T](timeout: Long): Unit = {
-    checkK8SNodePool.execute(loopRunning(addK8SNodes(), timeout))
+    checkK8SNodePool = Executors.newSingleThreadScheduledExecutor()
+    val ckeckNodeExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(checkK8SNodePool)
+    checkK8SNodePool.scheduleWithFixedDelay(
+      loopRunning(addK8SNodes(ckeckNodeExecutionContext), timeout),
+      0,
+      timeout,
+      TimeUnit.SECONDS
+    )
+    if (checkK8SNodePool.awaitTermination(terminateTimeout.toMillis, TimeUnit.MILLISECONDS))
+      log.info("Terminate the check kubernetes new node.")
   }
 
-  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
+  private[configurator] def addK8SNodes(ckeckNodeExecutionContext: ExecutionContext): Future[Seq[NodeApi.Node]] = {
     log.info("Running check Kubernetes node")
     val nodeApi           = NodeApi.access.hostname(hostname).port(port)
     val client: K8SClient = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
     client
-      .nodes()
+      .nodes()(ckeckNodeExecutionContext)
       .flatMap(
         nodes =>
           Future.sequence(nodes.map { k8sNode =>
             nodeApi
-              .list()
+              .list()(ckeckNodeExecutionContext)
               .map(
                 nodes =>
                   if (nodes.map(_.hostname).contains(k8sNode.nodeName)) Seq.empty
-                  else Seq(nodeApi.request.hostname(k8sNode.nodeName).create())
-              )
-          })
-      )
-      .flatMap(x => Future.sequence(x.flatten))
+                  else Seq(nodeApi.request.hostname(k8sNode.nodeName).create()(ckeckNodeExecutionContext))
+              )(ckeckNodeExecutionContext)
+          })(implicitly, ckeckNodeExecutionContext)
+      )(ckeckNodeExecutionContext)
+      .flatMap(x => Future.sequence(x.flatten)(implicitly, ckeckNodeExecutionContext))(ckeckNodeExecutionContext)
   }
 
   private[this] def loopRunning(future: => Unit, timeout: Long): Runnable = new Runnable() {
     def run(): Unit = {
-      while (true) {
-        TimeUnit.SECONDS.sleep(timeout)
-        future
-      }
+      future
     }
   }
 
