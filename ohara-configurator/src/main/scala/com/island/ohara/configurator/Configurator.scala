@@ -46,6 +46,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.TimeoutException
 
+import scala.util.control.Breaks._
+
 /**
   * A simple impl from Configurator. This impl maintains all subclass from ohara data in a single ohara store.
   * NOTED: there are many route requiring the implicit variables so we make them be implicit in construction.
@@ -67,8 +69,12 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
     value
   }
 
-  private[this] val threadPool                        = Executors.newFixedThreadPool(threadMax)
-  private[this] var checkK8SNodePool: ExecutorService = _
+  private[this] val threadPool = Executors.newFixedThreadPool(threadMax)
+  private[this] val checkK8SNodePool: ExecutorService =
+    if (k8sClient.nonEmpty) Executors.newSingleThreadExecutor()
+    else null
+
+  if (checkK8SNodePool != null) checkK8SNodePool.execute(loopRunning(addK8SNodes()))
 
   private[this] implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
@@ -189,11 +195,6 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
       .build
   }
 
-  private[configurator] def executeAddK8SNodes[T](timeout: Long): Unit = {
-    checkK8SNodePool = Executors.newSingleThreadExecutor()
-    checkK8SNodePool.execute(loopRunning(addK8SNodes(), timeout))
-  }
-
   private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
     log.info("Running check Kubernetes node")
     val nodeApi           = NodeApi.access.hostname(hostname).port(port)
@@ -215,21 +216,22 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
       .flatMap(x => Future.sequence(x.flatten))
   }
 
-  private[this] def loopRunning(future: => Future[Seq[NodeApi.Node]], timeout: Long): Runnable = new Runnable() {
+  private[this] def loopRunning(future: => Future[Seq[NodeApi.Node]]): Runnable = new Runnable() {
     def run(): Unit = {
       while (!Thread.currentThread().isInterrupted()) {
         try {
-          TimeUnit.SECONDS.sleep(timeout)
+          TimeUnit.SECONDS.sleep(5)
           Await.result(future, 5 seconds)
         } catch {
           case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
           case interrupException: InterruptedException => {
-            Thread.currentThread().interrupt()
             log.error("interrup exception", interrupException)
+            break
           }
           case e: Throwable => throw e
         }
       }
+      return
     }
   }
 
@@ -382,10 +384,6 @@ object Configurator {
         s"start a configurator built on hostname:${GLOBAL_CONFIGURATOR.hostname} and port:${GLOBAL_CONFIGURATOR.port}"
       )
       LOG.info("enter ctrl+c to terminate the configurator")
-
-      val intervalAddK8SNodeTime = 5
-      if (GLOBAL_CONFIGURATOR.k8sClient.nonEmpty)
-        GLOBAL_CONFIGURATOR.executeAddK8SNodes(intervalAddK8SNodeTime)
 
       while (!GLOBAL_CONFIGURATOR_SHOULD_CLOSE) {
         TimeUnit.SECONDS.sleep(2)
