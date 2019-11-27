@@ -16,15 +16,12 @@
 
 package com.island.ohara.configurator
 
-import java.util.concurrent.Executors
-
 import com.island.ohara.agent.fake.FakeK8SClient
 import com.island.ohara.agent.k8s.K8SNodeReport
 import com.island.ohara.client.configurator.v0.NodeApi
 import com.island.ohara.common.rule.OharaTest
 import org.junit.Test
 import org.scalatest.Matchers._
-
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -42,9 +39,7 @@ class TestConfigurator extends OharaTest {
     val createNode = Await.result(nodeApi.request.hostname("node1").create(), 15 seconds)
     createNode.hostname shouldBe "node1"
 
-    val checkK8SNodePool                            = Executors.newFixedThreadPool(1)
-    val ckeckNodeExecutionContext: ExecutionContext = ExecutionContext.fromExecutorService(checkK8SNodePool)
-    val nodes                                       = Await.result(configurator.addK8SNodes(ckeckNodeExecutionContext), 15 seconds)
+    val nodes = Await.result(configurator.addK8SNodes(), 15 seconds)
     nodes.size shouldBe 2
     nodes(0).hostname shouldBe "node2"
     nodes(1).hostname shouldBe "node3"
