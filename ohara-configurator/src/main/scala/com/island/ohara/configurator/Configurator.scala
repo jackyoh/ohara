@@ -16,7 +16,7 @@
 
 package com.island.ohara.configurator
 
-import java.util.concurrent.{ExecutionException, ExecutorService, Executors, TimeUnit}
+import java.util.concurrent.{ExecutionException, Executors, TimeUnit}
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -70,11 +70,27 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
   }
 
   private[this] val threadPool = Executors.newFixedThreadPool(threadMax)
-  private[this] val checkK8SNodePool: ExecutorService =
-    if (k8sClient.nonEmpty) Executors.newSingleThreadExecutor()
-    else null
 
-  if (checkK8SNodePool != null) checkK8SNodePool.execute(loopRunning(addK8SNodes()))
+  private[this] val loopOfUpdatingNode: Releasable = {
+    val pool = if (k8sClient.nonEmpty) Executors.newSingleThreadExecutor() else null
+    if (pool != null) pool.execute(() => {
+      while (!Thread.currentThread().isInterrupted()) {
+        try {
+          TimeUnit.SECONDS.sleep(5)
+          Await.result(addK8SNodes(), 5 seconds)
+        } catch {
+          case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
+          case interrupException: InterruptedException => {
+            log.error("interrup exception", interrupException)
+            break
+          }
+          case e: Throwable => throw e
+        }
+      }
+    })
+
+    () => if (pool != null) pool.shutdownNow()
+  }
 
   private[this] implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
@@ -216,25 +232,6 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
       .flatMap(x => Future.sequence(x.flatten))
   }
 
-  private[this] def loopRunning(future: => Future[Seq[NodeApi.Node]]): Runnable = new Runnable() {
-    def run(): Unit = {
-      while (!Thread.currentThread().isInterrupted()) {
-        try {
-          TimeUnit.SECONDS.sleep(5)
-          Await.result(future, 5 seconds)
-        } catch {
-          case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
-          case interrupException: InterruptedException => {
-            log.error("interrup exception", interrupException)
-            break
-          }
-          case e: Throwable => throw e
-        }
-      }
-      return
-    }
-  }
-
   /**
     * the version of APIs supported by Configurator.
     * We are not ready to support multiples version APIs so it is ok to make a constant string.
@@ -313,11 +310,8 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
       if (!threadPool.awaitTermination(terminateTimeout.toMillis, TimeUnit.MILLISECONDS))
         log.error("failed to terminate all running threads!!!")
     }
-    if (checkK8SNodePool != null) {
-      checkK8SNodePool.shutdownNow()
-      if (!checkK8SNodePool.awaitTermination(terminateTimeout.toMillis, TimeUnit.MILLISECONDS))
-        log.error("failed to terminate a running threads!!!")
-    }
+
+    Releasable.close(loopOfUpdatingNode)
     Releasable.close(serviceCollie)
     Releasable.close(store)
     Releasable.close(adminCleaner)
