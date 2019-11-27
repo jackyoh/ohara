@@ -1,0 +1,58 @@
+FROM centos:7.7.1908 as deps
+
+# install tools
+RUN yum install -y \
+  wget \
+  net-tools \
+  git
+
+# export JAVA_HOME
+ENV JAVA_HOME=/usr/lib/jvm/jre
+
+# download hadoop.tar.gz file
+ARG HADOOP_DIR=/opt/hadoop
+ARG HADOOP_VERSION=2.7.0
+RUN wget https://archive.apache.org/dist/hadoop/core/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
+RUN mkdir ${HADOOP_DIR}
+RUN tar -zxvf hadoop-${HADOOP_VERSION}.tar.gz -C ${HADOOP_DIR}
+RUN rm -f hadoop-${HADOOP_VERSION}.tar.gz
+
+# set environment variable
+
+FROM centos:7.7.1908
+
+# install openjdk-1.8
+RUN yum install -y \
+  java-1.8.0-openjdk \
+  which
+
+ENV JAVA_HOME=/usr/lib/jvm/jre
+
+# change user from root to ohara
+ARG USER=ohara
+RUN groupadd $USER
+RUN useradd -ms /bin/bash -g $USER $USER
+
+COPY --from=deps /opt/hadoop /home/$USER
+RUN ln -s $(find "/home/$USER" -maxdepth 1 -type d -name "hadoop-*") /home/$USER/default
+
+RUN mkdir -p /home/$USER/default/config
+RUN chown -R ohara:ohara /home/$USER/default/config
+
+COPY hdfs-site.sh /home/$USER/default/bin
+COPY datanode.sh /home/$USER/default/bin
+
+ENV HADOOP_HOME=/home/$USER/default
+ENV HADOOP_CONF_DIR=/home/$USER/default/config
+ENV HADOOP_DATANODE_FOLDER=/tmp/hadoop
+ENV PATH=$PATH:$HADOOP_HOME/bin
+RUN chmod +x /home/$USER/default/bin/hdfs-site.sh
+RUN chmod +x /home/$USER/default/bin/datanode.sh
+
+# copy Tini
+COPY --from=oharastream/ohara:deps /tini /tini
+RUN chmod +x /tini
+
+USER $USER
+
+ENTRYPOINT ["/tini", "--", "datanode.sh"]
