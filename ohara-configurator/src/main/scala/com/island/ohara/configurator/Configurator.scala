@@ -16,7 +16,7 @@
 
 package com.island.ohara.configurator
 
-import java.util.concurrent.{ExecutionException, Executors, TimeUnit}
+import java.util.concurrent.{ExecutionException, ExecutorService, Executors, TimeUnit}
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -44,6 +44,7 @@ import spray.json.DeserializationException
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.TimeoutException
 
 /**
   * A simple impl from Configurator. This impl maintains all subclass from ohara data in a single ohara store.
@@ -66,8 +67,8 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
     value
   }
 
-  private[this] val threadPool       = Executors.newFixedThreadPool(threadMax)
-  private[this] val checkK8SNodePool = Executors.newSingleThreadExecutor()
+  private[this] val threadPool                        = Executors.newFixedThreadPool(threadMax)
+  private[this] var checkK8SNodePool: ExecutorService = _
 
   private[this] implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
@@ -189,6 +190,7 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
   }
 
   private[configurator] def executeAddK8SNodes[T](timeout: Long): Unit = {
+    checkK8SNodePool = Executors.newSingleThreadExecutor()
     checkK8SNodePool.execute(loopRunning(addK8SNodes(), timeout))
   }
 
@@ -213,11 +215,20 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
       .flatMap(x => Future.sequence(x.flatten))
   }
 
-  private[this] def loopRunning(future: => Unit, timeout: Long): Runnable = new Runnable() {
+  private[this] def loopRunning(future: => Future[Seq[NodeApi.Node]], timeout: Long): Runnable = new Runnable() {
     def run(): Unit = {
-      while (true) {
-        TimeUnit.SECONDS.sleep(timeout)
-        future
+      while (!Thread.currentThread().isInterrupted()) {
+        try {
+          TimeUnit.SECONDS.sleep(timeout)
+          Await.result(future, 5 seconds)
+        } catch {
+          case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
+          case interrupException: InterruptedException => {
+            Thread.currentThread().interrupt()
+            log.error("interrup exception", interrupException)
+          }
+          case e: Throwable => throw e
+        }
       }
     }
   }
