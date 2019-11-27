@@ -407,19 +407,19 @@ object K8SClient {
 
         private[this] def removePod(name: String, isForce: Boolean)(
           implicit executionContext: ExecutionContext
-        ): Future[ContainerInfo] =
+        ): Future[ContainerInfo] = {
+          val isForceRemovePod: String = if (isForce) "?gracePeriodSeconds=0" else ""
           container(name)
-            .flatMap(container => {
-              if (isForce)
-                HttpExecutor.SINGLETON.delete[K8SErrorResponse](
-                  s"$k8sApiServerURL/namespaces/$k8sNamespace/pods/${container.name}?gracePeriodSeconds=0"
-                )
-              else
+            .flatMap(
+              container => {
                 HttpExecutor.SINGLETON
-                  .delete[K8SErrorResponse](s"$k8sApiServerURL/namespaces/$k8sNamespace/pods/${container.name}")
-
-              Future.successful(container)
-            })
+                  .delete[K8SErrorResponse](
+                    s"$k8sApiServerURL/namespaces/$k8sNamespace/pods/${container.name}${isForceRemovePod}"
+                  )
+                  .map(_ => container)
+              }
+            )
+        }
       }
     }
   }

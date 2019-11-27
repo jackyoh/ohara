@@ -759,7 +759,12 @@ class TestK8SClient extends OharaTest {
         get {
           complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, podsInfo)))
         }
-      }
+      } ~
+        path("namespaces" / namespace / "pods" / podName) {
+          delete {
+            complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, podsInfo)))
+          }
+        }
     }
   }
 
