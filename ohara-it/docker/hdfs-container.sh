@@ -50,26 +50,29 @@ if [ -z "${nameNode}" ] && ([ "$start_all" == "true" ] || [ "$start_datanode" ==
   exit 1
 fi
 
+nameNodeImageName="oharastream/ohara:hdfs-namenode"
+dataNodeImageName="oharastream/ohara:hdfs-datanode"
+
 nameNodeContainerName="namenode"
 dataNodeContainerName="datanode_${HOSTNAME}"
 
 if [ "$start_all" == "true" ];
 then
   echo "Start HDFS container"
-  docker run -d -it --name ${nameNodeContainerName} --net host oharastream/ohara:hadoop-namenode
-  docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode} --net host oharastream/ohara:hadoop-datanode
+  docker run -d -it --name ${nameNodeContainerName} --net host ${nameNodeImageName}
+  docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode} --net host ${dataNodeImageName}
 fi
 
 if [ "$start_namenode" == "true" ];
 then
   echo "Start HDFS Namenode container"
-  docker run -d -it --name ${nameNodeContainerName} --net host oharastream/ohara:hadoop-namenode
+  docker run -d -it --name ${nameNodeContainerName} --net host ${nameNodeImageName}
 fi
 
 if [ "$start_datanode" == "true" ];
 then
   echo "Start HDFS Datanode container"
-  docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode} --net host oharastream/ohara:hadoop-datanode
+  docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode} --net host ${dataNodeImageName}
 fi
 
 if [ "$stop_all" == "true" ];

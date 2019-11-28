@@ -3,8 +3,8 @@
 * Please follow below command to build namenode and data docker image:
 
 ```
-# docker build -f namenode.dockerfile -t oharastream/ohara:hadoop-namenode .
-# docker build -f datanode.dockerfile -t oharastream/ohara:hadoop-datanode .
+# docker build -f namenode.dockerfile -t oharastream/ohara:hdfs-namenode .
+# docker build -f datanode.dockerfile -t oharastream/ohara:hdfs-datanode .
 ```
 
 ### How to running the namenode docker container?
@@ -16,7 +16,7 @@ DNS Server to resolve datanode hostname
 * Please follow below command to run namenode container:
 
 ```
-# docker run --net host -it oharastream/ohara:hadoop-namenode
+# docker run --net host -it oharastream/ohara:hdfs-namenode
 ```
 
 ### How to running the datanode docker container?
@@ -28,7 +28,7 @@ DNS Server toresolve namenode hostname
 * Please follow below command to run datanode container:
 
 ```
-# docker run -it --env HADOOP_NAMENODE=${NAMENODE_HOST_NAME}:9000 --net host oharastream/ohara:hadoop-datanode
+# docker run -it --env HADOOP_NAMENODE=${NAMENODE_HOST_NAME}:9000 --net host oharastream/ohara:hdfs-datanode
 ```
 
 ### How to use the shell script to run the HDFS container?
