@@ -17,6 +17,6 @@ echo "    <value>${HADOOP_DATANODE_FOLDER}</value>"
 echo '  </property>'
 echo '  <property>'
 echo '    <name>dfs.namenode.rpc-address</name>'
-echo "    <value>${HADOOP_NAMENODE_HOST}</value>"
+echo "    <value>${HADOOP_NAMENODE}</value>"
 echo '  </property>'
 echo '</configuration>'
