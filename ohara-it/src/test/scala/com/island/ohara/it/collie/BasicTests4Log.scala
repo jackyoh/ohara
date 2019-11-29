@@ -32,7 +32,7 @@ abstract class BasicTests4Log extends IntegrationTest {
 
   @Test
   def test(): Unit = {
-    val lastLine = log(None).split("/n").last
+    val lastLine = log(None).split("\n").last
     TimeUnit.SECONDS.sleep(3)
     log(Some(1)) should not include lastLine
     log(Some(10)) should include(lastLine)

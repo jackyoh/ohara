@@ -242,7 +242,11 @@ object DockerClient {
     ): Future[(ContainerName, String)] =
       containerName(name).flatMap { containerName =>
         agent(containerName.nodeName)
-          .map(_.execute(s"docker container logs ${containerName.id}"))
+          .map(
+            _.execute(
+              s"docker container logs ${containerName.id} ${sinceSeconds.map(seconds => s"--since=${seconds}s").getOrElse("")}"
+            )
+          )
           .map(_.getOrElse(throw new IllegalArgumentException(s"no response from $name")))
           .map(containerName -> _)
       }
