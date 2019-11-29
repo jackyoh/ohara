@@ -210,24 +210,23 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
       .build
   }
 
-  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
-    log.info("Running check Kubernetes node")
-    val nodeApi   = NodeApi.access.hostname(hostname).port(port)
-    val client    = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
-    val confNodes = nodeApi.list()
-
-    client
-      .nodes()
-      .flatMap { kns =>
-        confNodes.flatMap { nodes =>
-          Future.sequence(
-            kns
-              .filterNot(kn => nodes.map(_.hostname).contains(kn.nodeName))
-              .map(newK8sNode => nodeApi.request.hostname(newK8sNode.nodeName).create())
-          )
-        }
+  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] =
+    this.k8sClient
+      .map {
+        log.info("Running check Kubernetes node")
+        val nodeApi = NodeApi.access.hostname(hostname).port(port)
+        _.nodes()
+          .flatMap { kns =>
+            nodeApi.list().flatMap { nodes =>
+              Future.sequence(
+                kns
+                  .filterNot(kn => nodes.map(_.hostname).contains(kn.nodeName))
+                  .map(newK8sNode => nodeApi.request.hostname(newK8sNode.nodeName).create())
+              )
+            }
+          }
       }
-  }
+      .getOrElse(Future.successful(Seq.empty))
 
   /**
     * the version of APIs supported by Configurator.
