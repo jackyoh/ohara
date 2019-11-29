@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-
 if [ $# -lt 1 ];
 then
   echo "USAGE: $0 [start-all|start-namenode|start-datanode|stop-all|stop-namenode|stop-datanode]" arg1 arg2 ...
@@ -48,12 +47,17 @@ case $COMMAND in
     stop_datanode="true"
     shift
     ;;
+  --help)
+    help="true"
+    shift
+    ;;
   *)
-    echo "USAGE: $0 [start-all|start-namenode|start-datanode|stop-all|stop-namenode|stop-datanode]" arg1 arg2 ...
+    echo "USAGE: $0 [start-all|start-namenode|start-datanode|stop-all|stop-namenode|stop-datanode|--help]" arg1 arg2 ...
+    exit 1
     ;;
 esac
 
-while getopts n: option
+while getopts n:h: option
 do
  case "${option}"
  in
@@ -61,7 +65,17 @@ do
  esac
 done
 
-if [ -z "${nameNode}" ] && ([ "$start_all" == "true" ] || [ "$start_datanode" == "true" ]);then
+if [ "${help}" == "true" ];
+then
+  echo "USAGE: $0 [start-all|start-namenode|start-datanode|stop-all|stop-namenode|stop-datanode]" arg1 arg2 ...
+  echo "Argument             Description"
+  echo "--------             -----------"
+  echo "-n                   Set HDFS namenode hostname and port to start the datanode. example: -n host1:9000"
+  exit 1
+fi
+
+if [ -z "${nameNode}" ] && ([ "$start_all" == "true" ] || [ "$start_datanode" == "true" ]);
+then
   echo 'Please setting the -n ${NAMENODE_HOST_AND_PORT} argument'
   exit 1
 fi
