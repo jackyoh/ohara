@@ -27,7 +27,7 @@ import akka.http.scaladsl.{Http, server}
 import akka.stream.ActorMaterializer
 import com.island.ohara.agent._
 import com.island.ohara.agent.docker.ServiceCollieImpl
-import com.island.ohara.agent.k8s.{K8SClient, K8SNodeReport}
+import com.island.ohara.agent.k8s.K8SClient
 import com.island.ohara.client.HttpExecutor
 import com.island.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
 import com.island.ohara.client.configurator.v0.MetricsApi.Meter
@@ -212,20 +212,21 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
 
   private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = {
     log.info("Running check Kubernetes node")
-    val nodeApi                              = NodeApi.access.hostname(hostname).port(port)
-    val client: K8SClient                    = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
-    val k8sNodes: Future[Seq[K8SNodeReport]] = client.nodes()
-    val confNodes: Future[Seq[NodeApi.Node]] = nodeApi.list()
+    val nodeApi   = NodeApi.access.hostname(hostname).port(port)
+    val client    = this.k8sClient.getOrElse(throw new RuntimeException("K8SClient object isn't exist"))
+    val confNodes = nodeApi.list()
 
-    k8sNodes.flatMap { kns =>
-      confNodes.flatMap { nodes =>
-        Future.sequence(
-          kns
-            .filter(kn => !nodes.map(_.hostname).contains(kn.nodeName))
-            .map(newK8sNode => nodeApi.request.hostname(newK8sNode.nodeName).create())
-        )
+    client
+      .nodes()
+      .flatMap { kns =>
+        confNodes.flatMap { nodes =>
+          Future.sequence(
+            kns
+              .filterNot(kn => nodes.map(_.hostname).contains(kn.nodeName))
+              .map(newK8sNode => nodeApi.request.hostname(newK8sNode.nodeName).create())
+          )
+        }
       }
-    }
   }
 
   /**
