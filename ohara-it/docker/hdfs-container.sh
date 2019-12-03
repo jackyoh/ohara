@@ -68,10 +68,9 @@ then
   userName="ohara"
 fi
 
-if [[ -z "${nameNode}" ]] && [[ "$start" == "true" ]];
+if [[ -z "${nameNode}" ]];
 then
-  echo 'Please setting the -n ${NAMENODE_HOST_AND_PORT} argument'
-  exit 1
+  nameNode="${HOSTNAME}"
 fi
 
 nameNodeImageName="oharastream/ohara:hdfs-namenode"
@@ -85,12 +84,12 @@ if [ "$start" == "true" ];
 then
   echo "Starting HDFS container"
   echo "Starting ${HOSTNAME} node namenode......"
-  docker run -d -it --name ${nameNodeContainerName} --net host ${nameNodeImageName}
+  ssh ${userName}@${nameNode} docker run -d -it --name ${nameNodeContainerName} --net host ${nameNodeImageName}
 
   for dataNode in $dataNodes;
   do
     echo "Starting ${dataNode} node datanode......"
-    ssh ${userName}@$dataNode docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode} --net host ${dataNodeImageName}
+    ssh ${userName}@${dataNode} docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${dataNodeImageName}
   done
 fi
 
@@ -100,8 +99,8 @@ then
     for dataNode in $dataNodes;
     do
       echo "Stoping ${dataNode} node datanode......"
-      ssh ${userName}@$dataNode docker rm -f ${dataNodeContainerName}
+      ssh ${userName}@${dataNode} docker rm -f ${dataNodeContainerName}
     done
-    echo "Stoping ${HOSTNAME} node namenode......"
-    docker rm -f ${nameNodeContainerName}
+    echo "Stoping ${nameNode} node namenode......"
+    ssh ${userName}@${nameNode} docker rm -f ${nameNodeContainerName}
 fi
