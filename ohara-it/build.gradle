@@ -140,6 +140,9 @@ class OharaTest extends Test {
           "ohara.it.smb.username",
           "ohara.it.smb.password",
           "ohara.it.smb.shareName",
+          // set hdfs setting
+          "ohara.it.hdfs.url",
+          "ohara.it.hdfs.topicDir",
           // assign "true" to this false to keep all containers created by IT
           "ohara.it.keep.containers"
   ]
