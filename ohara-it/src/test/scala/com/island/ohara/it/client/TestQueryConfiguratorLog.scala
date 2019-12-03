@@ -38,10 +38,10 @@ class TestQueryConfiguratorLog extends WithRemoteConfigurator {
     log.logs.head.value.length should not be 0
 
     val logOf1Second = result(LogApi.access.hostname(configuratorHostname).port(configuratorPort).log4Configurator(1)).logs.head.value
-    TimeUnit.SECONDS.sleep(3)
-    val logOf3Second = result(LogApi.access.hostname(configuratorHostname).port(configuratorPort).log4Configurator(3)).logs.head.value
-    withClue(s"logOf1Second:$logOf1Second\nlogOf3Second:$logOf3Second") {
-      logOf1Second.length should be < logOf3Second.length
+    TimeUnit.SECONDS.sleep(6)
+    val logOf6Second = result(LogApi.access.hostname(configuratorHostname).port(configuratorPort).log4Configurator(6)).logs.head.value
+    withClue(s"logOf1Second:$logOf1Second\nlogOf6Second:$logOf6Second") {
+      logOf1Second.length should be < logOf6Second.length
     }
   }
 }
