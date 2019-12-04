@@ -26,8 +26,8 @@ import org.junit.{AssumptionViolatedException, Test}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Hdfs extends BasicTestPerformance {
-  private[this] val HDFS_URL_KEY: String  = "ohara.it.hdfs.url"
-  private[this] val TOPIC_DIR_KEY: String = "ohara.it.hdfs.topicDir"
+  private[this] val HDFS_URL_KEY: String = "ohara.it.hdfs.url"
+  private[this] val DATA_DIR_KEY: String = "ohara.it.hdfs.dataDir"
 
   private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
@@ -37,9 +37,9 @@ class TestPerformance4Hdfs extends BasicTestPerformance {
     throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
   )
 
-  private[this] val topicDir: String = sys.env.getOrElse(
-    TOPIC_DIR_KEY,
-    throw new AssumptionViolatedException(s"$TOPIC_DIR_KEY does not exists!!!")
+  private[this] val dataDir: String = sys.env.getOrElse(
+    DATA_DIR_KEY,
+    throw new AssumptionViolatedException(s"$DATA_DIR_KEY does not exists!!!")
   )
 
   @Test
@@ -52,7 +52,7 @@ class TestPerformance4Hdfs extends BasicTestPerformance {
       settings = Map(
         com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
         com.island.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(2000),
-        com.island.ohara.connector.hdfs.sink.TOPICS_DIR_KEY -> JsString(topicDir)
+        com.island.ohara.connector.hdfs.sink.TOPICS_DIR_KEY -> JsString(dataDir)
       )
     )
     sleepUntilEnd()
