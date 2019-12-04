@@ -22,7 +22,7 @@ import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
-import org.junit.{AssumptionViolatedException, Before, Test}
+import org.junit.{AssumptionViolatedException, Test}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Hdfs extends BasicTestPerformance {
@@ -32,17 +32,15 @@ class TestPerformance4Hdfs extends BasicTestPerformance {
   private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
-  @Before
-  def setup(): Unit = {
-    sys.env.getOrElse(
-      HDFS_URL_KEY,
-      throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
-    )
-    sys.env.getOrElse(
-      TOPIC_DIR_KEY,
-      throw new AssumptionViolatedException(s"$TOPIC_DIR_KEY does not exists!!!")
-    )
-  }
+  private[this] val hdfsURL: String = sys.env.getOrElse(
+    HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
+  )
+
+  private[this] val topicDir: String = sys.env.getOrElse(
+    TOPIC_DIR_KEY,
+    throw new AssumptionViolatedException(s"$TOPIC_DIR_KEY does not exists!!!")
+  )
 
   @Test
   def test(): Unit = {
@@ -52,9 +50,9 @@ class TestPerformance4Hdfs extends BasicTestPerformance {
       topicKey = topicKey,
       className = classOf[HDFSSink].getName(),
       settings = Map(
-        com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString("hdfs://ohara-jenkins-it-02:9000"),
+        com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
         com.island.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(2000),
-        com.island.ohara.connector.hdfs.sink.TOPICS_DIR_KEY -> JsString("/topics")
+        com.island.ohara.connector.hdfs.sink.TOPICS_DIR_KEY -> JsString(topicDir)
       )
     )
     sleepUntilEnd()
