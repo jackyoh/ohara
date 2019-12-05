@@ -62,8 +62,8 @@ class TestPerformance4Hdfs extends BasicTestPerformance {
   def deleteData(): Unit = {
     if (needDeleteData) {
       val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
-      fileSystem.delete(s"$dataDir/${topicKey.topicNameOnKafka}", true)
-      Releasable.close(fileSystem)
+      try fileSystem.delete(s"${dataDir}/${topicKey.topicNameOnKafka}", true)
+      finally Releasable.close(fileSystem)
     }
   }
 }
