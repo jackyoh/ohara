@@ -23,7 +23,7 @@ import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
-import org.junit.{AssumptionViolatedException, Test}
+import org.junit.{After, AssumptionViolatedException, Test}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Hdfs extends BasicTestPerformance {
@@ -43,25 +43,27 @@ class TestPerformance4Hdfs extends BasicTestPerformance {
 
   @Test
   def test(): Unit = {
-    try {
-      setupTopic(topicKey)
-      setupConnector(
-        connectorKey = connectorKey,
-        topicKey = topicKey,
-        className = classOf[HDFSSink].getName(),
-        settings = Map(
-          com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
-          com.island.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(2000),
-          com.island.ohara.connector.hdfs.sink.TOPICS_DIR_KEY -> JsString(dataDir)
-        )
+    println(s"Topic name is ${topicKey.topicNameOnKafka}")
+    setupTopic(topicKey)
+    setupConnector(
+      connectorKey = connectorKey,
+      topicKey = topicKey,
+      className = classOf[HDFSSink].getName(),
+      settings = Map(
+        com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
+        com.island.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(2000),
+        com.island.ohara.connector.hdfs.sink.TOPICS_DIR_KEY -> JsString(dataDir)
       )
-      sleepUntilEnd()
-    } finally {
-      if (needDeleteData) {
-        val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
-        fileSystem.delete(s"$dataDir/${topicKey.topicNameOnKafka}", true)
-        Releasable.close(fileSystem)
-      }
+    )
+    sleepUntilEnd()
+  }
+
+  @After
+  def deleteData(): Unit = {
+    if (needDeleteData) {
+      val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
+      fileSystem.delete(s"$dataDir/${topicKey.topicNameOnKafka}", true)
+      Releasable.close(fileSystem)
     }
   }
 }
