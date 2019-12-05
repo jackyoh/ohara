@@ -90,10 +90,13 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
         .nodeNames(nodeNames.toSet)
         .freePort(CommonUtils.availablePort())
         .routes(routes)
+        .sharedJarKeys(sharedJars)
         .create()
         .map(_.key)
         .flatMap(wkApi.start)
     )
     await(() => result(wkApi.get(wkKey)).state.isDefined)
   }
+
+  protected[performance] def sharedJars(): Set[ObjectKey] = Set.empty
 }
