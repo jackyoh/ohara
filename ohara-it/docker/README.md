@@ -37,3 +37,10 @@ DNS Server toresolve namenode hostname
 ```
 $ bash hdfs-container.sh [start-all|start-namenode|start-datanode|stop-all|stop-namenode|stop-datanode] arg1 ...
 ```
+
+### How to use the shell script to run the Oracle database container?
+* You can follow below command to run oracle database container:
+
+```
+$ bash oracle-container.sh start --user ${USERNAME} --password ${PASSWORD}
+```
