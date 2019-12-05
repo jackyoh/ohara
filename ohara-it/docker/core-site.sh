@@ -27,8 +27,4 @@ echo '  <property>'
 echo '    <name>hadoop.tmp.dir</name>'
 echo "    <value>${HADOOP_NAMENODE_FOLDER}</value>"
 echo '  </property>'
-echo '  <property>'
-echo '    <name>dfs.permissions</name>'
-echo '    <value>false</value>'
-echo '  </property>'
 echo '</configuration>'

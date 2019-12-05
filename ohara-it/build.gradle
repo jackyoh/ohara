@@ -142,6 +142,7 @@ class OharaTest extends Test {
           "ohara.it.smb.shareName",
           // set hdfs setting
           "ohara.it.hdfs.url",
+          "ohara.it.hdfs.needDeleteData",
           // assign "true" to this false to keep all containers created by IT
           "ohara.it.keep.containers"
   ]

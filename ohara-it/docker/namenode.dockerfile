@@ -56,11 +56,13 @@ RUN mkdir -p /home/$USER/default/config
 RUN chown -R ohara:ohara /home/$USER/default/config
 
 COPY core-site.sh /home/$USER/default/bin
+COPY hdfs-site.sh /home/$USER/default/bin
 COPY namenode.sh /home/$USER/default/bin
 
 ENV HADOOP_HOME=/home/$USER/default
 ENV HADOOP_CONF_DIR=/home/$USER/default/config
 ENV HADOOP_NAMENODE_FOLDER=/tmp/hadoop
+ENV HADOOP_DATANODE_FOLDER=/tmp/hadoop
 ENV PATH=$PATH:$HADOOP_HOME/bin
 
 RUN chmod +x /home/$USER/default/bin/core-site.sh
