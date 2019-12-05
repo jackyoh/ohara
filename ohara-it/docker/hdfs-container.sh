@@ -84,12 +84,12 @@ if [ "$start" == "true" ];
 then
   echo "Starting HDFS container"
   echo "Starting ${HOSTNAME} node namenode......"
-  ssh ${userName}@${nameNode} docker run -d -it --name ${nameNodeContainerName} --net host ${nameNodeImageName}
+  ssh ${userName}@${nameNode} docker pull ${nameNodeContainerName};docker run -d -it --name ${nameNodeContainerName} --net host ${nameNodeImageName}
 
   for dataNode in $dataNodes;
   do
     echo "Starting ${dataNode} node datanode......"
-    ssh ${userName}@${dataNode} docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${dataNodeImageName}
+    ssh ${userName}@${dataNode} docker pull ${dataNodeContainerName};docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${dataNodeImageName}
   done
 fi
 
