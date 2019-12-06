@@ -52,7 +52,7 @@ then
   echo "--password           Set oracle database password"
   echo "--port               Set connection port for client"
   echo "--sid                Set connection sid"
-  echo "--deploy             Set host name to remote deploy the oracle database container"
+  echo "--host             Set host name to remote host the oracle database container"
   exit 1
 fi
 
@@ -60,7 +60,7 @@ sid="xe"
 port="1521"
 containerName="oracle-benchmark-test"
 
-ARGUMENT_LIST=("user" "password" "port" "sid" "deploy")
+ARGUMENT_LIST=("user" "password" "port" "sid" "host")
 
 opts=$(getopt \
     --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
@@ -88,8 +88,8 @@ while [[ $# -gt 0 ]]; do
       sid=$2
       shift 2
       ;;
-    --deploy)
-      deploy=$2
+    --host)
+      host=$2
       shift 2
       ;;
     *)
@@ -110,9 +110,9 @@ then
   exit 1
 fi
 
-if [[ -z ${deploy} ]] && [[ "${start}" == "true" ]];
+if [[ -z ${host} ]] && [[ "${start}" == "true" ]];
 then
-  echo 'Please set the --deploy ${REMOTE_HOSTNAME} argument to deploy oracle database container'
+  echo 'Please set the --host ${REMOTE_HOSTNAME} argument to deploy oracle database container'
   exit 1
 fi
 
@@ -120,9 +120,9 @@ if [[ "${start}" == "true" ]];
 then
 echo "Starting oracle database container"
 echo "Port is ${port}"
-ssh ohara@${deploy} docker run -d -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
+ssh ohara@${host} docker run -d -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 sleep 3m
-ssh ohara@${deploy} << EOF
+ssh ohara@${host} << EOF
 docker exec -i $containerName bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
 EOF
 echo "Start oracle database complete. User name is ${user}"
