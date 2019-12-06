@@ -19,10 +19,7 @@ package com.island.ohara.it.performance
 import java.io.File
 import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
-
 import com.island.ohara.common.util.Releasable
-//import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
-
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
@@ -36,19 +33,35 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Jdbc extends BasicTestPerformance {
-  private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
-  private[this] val jarFolderPath: String  = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
-  private[this] val url: String            = "jdbc:oracle:thin:@//ohara-jenkins-it-02:1521/xe.localdomain"
-  private[this] val user: String           = "user3"
-  private[this] val password: String       = "123456"
-  private[this] val client                 = DatabaseClient.builder.url(url).user(user).password(password).build
+  private[this] val JAR_FOLDER_KEY: String      = "ohara.it.jar.folder"
+  private[this] val jarFolderPath: String       = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
+  private[this] val url: String                 = "jdbc:oracle:thin:@//ohara-jenkins-it-02:1521/xe.localdomain"
+  private[this] val user: String                = "user3"
+  private[this] val password: String            = "123456"
+  private[this] val timestampColumnName: String = "column0"
+  private[this] val client                      = DatabaseClient.builder.url(url).user(user).password(password).build
+
+  /*private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
+   */
 
   @Test
   def test(): Unit = {
-    val (tableName, count, totalBytes) = setupTableData()
-    
+    val (tableName, _, _) = setupTableData()
+    log.info(s"Oracle databse table name is ${tableName} for JDBC performance test")
 
-
+    /*setupConnector(
+      connectorKey = connectorKey,
+      topicKey = topicKey,
+      className = classOf[JDBCSourceConnector].getName(),
+      settings = Map(
+        com.island.ohara.connector.jdbc.source.DB_URL       -> JsString(url),
+        com.island.ohara.connector.jdbc.source.DB_USERNAME  -> JsString(user),
+        com.island.ohara.connector.jdbc.source.DB_PASSWORD  -> JsString(password),
+        com.island.ohara.connector.jdbc.source.DB_TABLENAME -> JsString(tableName),
+        com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName)
+      )
+    )*/
   }
 
   override protected def sharedJars(): Set[ObjectKey] = {
@@ -59,19 +72,20 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
 
   private[this] def setupTableData(): (String, Long, Long) = {
     val tableName: String = s"TABLE${CommonUtils.randomString().toUpperCase()}"
-    log.info(s"Oracle databse table name is ${tableName} for JDBC performance test")
-    val columnSize  = 5
-    val columnInfos = (0 until columnSize).map(c =>
-      if (c == 0) RdbColumn(s"COLUMN${c}", "VARCHAR(45)", true)
-      else RdbColumn(s"COLUMN${c}", "VARCHAR(45)", false)
+    val columnSize        = 5
+    val columnInfos = (0 until columnSize).map(
+      c =>
+        if (c == 0) RdbColumn(timestampColumnName, "TIMESTAMP", false)
+        else if (c == 1) RdbColumn("COLUMN1", "VARCHAR(45)", true)
+        else RdbColumn(s"COLUMN${c}", "VARCHAR(45)", false)
     )
     client.createTable(tableName, columnInfos)
 
     val numberOfProducerThread = 4
     val sizeOfInputData        = 1024L * 1024L * 100
 
-    val pool   = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed = new AtomicBoolean(false)
+    val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
+    val closed      = new AtomicBoolean(false)
     val count       = new LongAdder()
     val sizeInBytes = new LongAdder()
     try {
@@ -79,10 +93,12 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
         pool.execute(() => {
           val client = DatabaseClient.builder.url(url).user(user).password(password).build
           try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
-            val sql = s"INSERT INTO $tableName VALUES " + (0 until columnSize).map(_ => "?").mkString("(", ",", ")")
+            val sql = s"INSERT INTO $tableName VALUES (TO_TIMESTAMP('2018-09-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')" + (1 until columnSize)
+              .map(_ => "?")
+              .mkString(",", ",", ")")
             val preparedStatement = client.connection.prepareStatement(sql)
             try {
-              (1 to columnSize).foreach(i => {
+              (1 until columnSize).foreach(i => {
                 val value = s"${i}-${CommonUtils.randomString()}"
                 preparedStatement.setString(i, value)
                 sizeInBytes.add(value.length)
