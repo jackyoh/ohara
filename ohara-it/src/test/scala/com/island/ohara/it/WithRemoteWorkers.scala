@@ -98,5 +98,5 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
     await(() => result(wkApi.get(wkKey)).state.isDefined)
   }
 
-  protected[performance] def sharedJars(): Set[ObjectKey] = Set.empty
+  protected def sharedJars(): Set[ObjectKey] = Set.empty
 }
