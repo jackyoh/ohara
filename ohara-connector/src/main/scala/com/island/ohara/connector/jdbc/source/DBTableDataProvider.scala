@@ -41,27 +41,26 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
 
   private[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
 
+  private[this] val tableName: String           = jdbcSourceConnectorConfig.dbTableName
+  private[this] val timeStampColumnName: String = jdbcSourceConnectorConfig.timestampColumnName
+
+  private[this] val sql =
+    s"SELECT * FROM $tableName WHERE $timeStampColumnName > ? AND $timeStampColumnName < ? ORDER BY $timeStampColumnName"
+
+  private[this] val connection: Connection = client.connection
+  connection.setAutoCommit(false) //setAutoCommit must be set to false when setting the fetch size
+
+  private[this] val preparedStatement: PreparedStatement = connection.prepareStatement(sql)
+  preparedStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
+
   private[this] var queryFlag: Boolean = true
 
   private[this] var resultSet: ResultSet = _
 
   private[this] val rdbColumnInfo = columns(jdbcSourceConnectorConfig.dbTableName)
 
-  private[source] def executeQuery(
-    tableName: String,
-    timeStampColumnName: String,
-    tsOffset: Timestamp
-  ): QueryResultIterator = {
+  private[source] def executeQuery(tsOffset: Timestamp): QueryResultIterator = {
     if (queryFlag) {
-      val sql =
-        s"SELECT * FROM $tableName WHERE $timeStampColumnName > ? AND $timeStampColumnName < ? ORDER BY $timeStampColumnName"
-
-      val connection: Connection = client.connection
-      connection.setAutoCommit(false) //setAutoCommit must be set to false when setting the fetch size
-
-      val preparedStatement: PreparedStatement = connection.prepareStatement(sql)
-      preparedStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
-
       val currentTimestamp: Timestamp = dbCurrentTime(DateTimeUtils.CALENDAR)
       preparedStatement.setTimestamp(1, tsOffset, DateTimeUtils.CALENDAR)
       preparedStatement.setTimestamp(2, currentTimestamp, DateTimeUtils.CALENDAR)
@@ -76,7 +75,6 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
 
   private[source] def releaseResultSet(queryFlag: Boolean): Unit = {
     logger.debug("close ResultSet ........")
-    Releasable.close(resultSet.getStatement())
     Releasable.close(resultSet)
     resultSet = null
     // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
@@ -115,6 +113,7 @@ class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) 
     * Do what you want to do when calling closing.
     */
   override def doClose(): Unit = {
+    Releasable.close(preparedStatement)
     Releasable.close(client)
   }
 }

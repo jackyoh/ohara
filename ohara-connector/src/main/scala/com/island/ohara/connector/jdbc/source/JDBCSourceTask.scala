@@ -72,7 +72,7 @@ class JDBCSourceTask extends RowSourceTask {
         var topicOffset                 = topicOffsets.readOffset()
         val resultSet: QueryResultIterator =
           dbTableDataProvider
-            .executeQuery(tableName, timestampColumnName, Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
+            .executeQuery(Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
 
         var recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
 
