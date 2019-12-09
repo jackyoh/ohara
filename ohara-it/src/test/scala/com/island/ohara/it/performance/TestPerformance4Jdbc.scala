@@ -19,19 +19,17 @@ package com.island.ohara.it.performance
 import java.io.File
 import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
-
 import com.island.ohara.common.util.Releasable
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.setting.{ConnectorKey, ObjectKey, TopicKey}
 import com.island.ohara.common.util.CommonUtils
-import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.{After, Test}
 import org.junit.experimental.categories.Category
-import spray.json.{JsNumber, JsString}
+import spray.json.JsString
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -53,31 +51,20 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
     val (tableName, _, _) = setupTableData()
     log.info(s"Oracle databse table name is ${tableName} for JDBC performance test")
 
-    setupTopic1(topicKey)
     setupConnector(
       connectorKey = connectorKey,
       topicKey = topicKey,
       className = classOf[JDBCSourceConnector].getName(),
       settings = Map(
-        com.island.ohara.connector.jdbc.source.DB_URL       -> JsString(url),
-        com.island.ohara.connector.jdbc.source.DB_USERNAME  -> JsString(user),
-        com.island.ohara.connector.jdbc.source.DB_PASSWORD  -> JsString(password),
-        com.island.ohara.connector.jdbc.source.DB_TABLENAME -> JsString(tableName),
-        com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName)
+        com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
+        com.island.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
+        com.island.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
+        com.island.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
+        com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
+        com.island.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
+        com.island.ohara.connector.jdbc.source.JDBC_FREQUENCE_TIME   -> JsString("50 seconds")
       )
     )
-
-    setupConnector(
-      connectorKey = connectorKey,
-      topicKey = topicKey,
-      className = classOf[HDFSSink].getName(),
-      settings = Map(
-        com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString("hdfs://ohara-jenkins-it-02:9000"),
-        com.island.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(2000),
-        com.island.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString("/tmp1")
-      )
-    )
-
     sleepUntilEnd()
   }
 
@@ -132,20 +119,6 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
       closed.set(true)
     }
     (tableName, count.longValue(), sizeInBytes.longValue())
-  }
-
-  protected def setupTopic1(topicKey: TopicKey) = {
-    result(
-      topicApi.request
-        .key(topicKey)
-        .brokerClusterKey(brokerClusterInfo.key)
-        .numberOfPartitions(numberOfPartitions)
-        .create()
-    )
-    await(() => {
-      result(topicApi.start(topicKey))
-      true
-    }, true)
   }
 
   @After
