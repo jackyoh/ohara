@@ -30,7 +30,7 @@ import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.{After, AssumptionViolatedException, Test}
 import org.junit.experimental.categories.Category
-import spray.json.JsString
+import spray.json.{JsNumber, JsString}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -50,7 +50,7 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val password: String =
     sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
 
-  private[this] val timestampColumnName: String = "column0"
+  private[this] val timestampColumnName: String = "COLUMN0"
   private[this] val client                      = DatabaseClient.builder.url(url).user(user).password(password).build
 
   private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
@@ -58,26 +58,32 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
 
   private[this] val numberOfProducerThread = 4
 
+  private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.jdbc.needDeleteTable"
+  private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
+
   @Test
   def test(): Unit = {
+    createTopic(topicKey)
     val (tableName, _, _) = setupTableData()
     log.info(s"Oracle databse table name is ${tableName} for JDBC performance test")
-    createTopic(topicKey)
-    setupConnector(
-      connectorKey = connectorKey,
-      topicKey = topicKey,
-      className = classOf[JDBCSourceConnector].getName(),
-      settings = Map(
-        com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
-        com.island.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
-        com.island.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
-        com.island.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
-        com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
-        com.island.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
-        com.island.ohara.connector.jdbc.source.JDBC_FREQUENCE_TIME   -> JsString("50 seconds")
+    try {
+      setupConnector(
+        connectorKey = connectorKey,
+        topicKey = topicKey,
+        className = classOf[JDBCSourceConnector].getName(),
+        settings = Map(
+          com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
+          com.island.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
+          com.island.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
+          com.island.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
+          com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
+          com.island.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
+          com.island.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
+          com.island.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
+        )
       )
-    )
-    sleepUntilEnd()
+      sleepUntilEnd()
+    } finally if (needDeleteData) client.dropTable(tableName)
   }
 
   override protected def sharedJars(): Set[ObjectKey] = {
@@ -124,7 +130,7 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
       }
     } finally {
       pool.shutdown()
-      pool.awaitTermination(60, TimeUnit.SECONDS)
+      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
       closed.set(true)
     }
     (tableName, count.longValue(), sizeInBytes.longValue())
