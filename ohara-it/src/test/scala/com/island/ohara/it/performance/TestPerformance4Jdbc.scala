@@ -19,6 +19,7 @@ package com.island.ohara.it.performance
 import java.io.File
 import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
+
 import com.island.ohara.common.util.Releasable
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
@@ -27,7 +28,7 @@ import com.island.ohara.common.setting.{ConnectorKey, ObjectKey, TopicKey}
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 import com.island.ohara.it.category.PerformanceGroup
-import org.junit.{After, Test}
+import org.junit.{After, AssumptionViolatedException, Test}
 import org.junit.experimental.categories.Category
 import spray.json.JsString
 
@@ -35,22 +36,33 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Jdbc extends BasicTestPerformance {
-  private[this] val JAR_FOLDER_KEY: String      = "ohara.it.jar.folder"
-  private[this] val jarFolderPath: String       = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
-  private[this] val url: String                 = "jdbc:oracle:thin:@//ohara-jenkins-it-02:1521/xe.localdomain"
-  private[this] val user: String                = "user3"
-  private[this] val password: String            = "123456"
+  private[this] val JAR_FOLDER_KEY: String   = "ohara.it.jar.folder"
+  private[this] val DB_URL_KEY: String       = "ohara.it.oracle.db.url"
+  private[this] val DB_USER_NAME_KEY: String = "ohara.it.oracle.db.username"
+  private[this] val DB_PASSWORD_KEY: String  = "ohara.it.oracle.db.password"
+
+  private[this] val jarFolderPath: String = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
+
+  private[this] val url: String =
+    sys.env.getOrElse(DB_URL_KEY, throw new AssumptionViolatedException(s"$DB_URL_KEY does not exists!!!"))
+  private[this] val user: String =
+    sys.env.getOrElse(DB_USER_NAME_KEY, throw new AssumptionViolatedException(s"$DB_USER_NAME_KEY does not exists!!!"))
+  private[this] val password: String =
+    sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
+
   private[this] val timestampColumnName: String = "column0"
   private[this] val client                      = DatabaseClient.builder.url(url).user(user).password(password).build
 
   private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
+  private[this] val numberOfProducerThread = 4
+
   @Test
   def test(): Unit = {
     val (tableName, _, _) = setupTableData()
     log.info(s"Oracle databse table name is ${tableName} for JDBC performance test")
-
+    createTopic(topicKey)
     setupConnector(
       connectorKey = connectorKey,
       topicKey = topicKey,
@@ -84,9 +96,6 @@ class TestPerformance4Jdbc extends BasicTestPerformance {
         else RdbColumn(s"COLUMN${c}", "VARCHAR(45)", false)
     )
     client.createTable(tableName, columnInfos)
-
-    val numberOfProducerThread = 4
-    val sizeOfInputData        = 1024L * 1024L * 100
 
     val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed      = new AtomicBoolean(false)
