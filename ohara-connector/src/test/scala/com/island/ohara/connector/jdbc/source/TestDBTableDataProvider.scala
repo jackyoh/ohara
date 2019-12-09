@@ -140,7 +140,7 @@ class TestDBTableDataProvider extends OharaTest {
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
         DB_SCHEMA_PATTERN     -> "schema1",
-        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
+        TIMESTAMP_COLUMN_NAME -> "column1"
       )
     JDBCSourceConnectorConfig(TaskSetting.of(map.asJava))
   }
