@@ -110,7 +110,7 @@ then
   exit 1
 fi
 
-if [[ -z ${host} ]] && [[ "${start}" == "true" ]];
+if [[ -z ${host} ]];
 then
   echo 'Please set the --host ${DEPLOY_ORACLE_DATABASE_CONTAINER_HOSTNAME} argument to deploy oracle database container. example: --host host1'
   exit 1
@@ -131,5 +131,5 @@ fi
 if [[ "${stop}" == "true" ]];
 then
   echo "Stoping oracle database container"
-  docker rm -f $containerName
+  ssh ohara@${host} docker rm -f $containerName
 fi
