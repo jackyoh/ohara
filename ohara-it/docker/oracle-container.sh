@@ -112,7 +112,7 @@ fi
 
 if [[ -z ${host} ]] && [[ "${start}" == "true" ]];
 then
-  echo 'Please set the --host ${REMOTE_HOSTNAME} argument to deploy oracle database container'
+  echo 'Please set the --host ${DEPLOY_ORACLE_DATABASE_CONTAINER_HOSTNAME} argument to deploy oracle database container. example: --host host1'
   exit 1
 fi
 
