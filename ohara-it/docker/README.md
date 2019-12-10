@@ -44,3 +44,10 @@ $ bash hdfs-container.sh [start-all|start-namenode|start-datanode|stop-all|stop-
 ```
 $ bash oracle-container.sh start --user ${USERNAME} --password ${PASSWORD}
 ```
+
+### How to build the ftp server docker image?
+* You can follow below command to build the ftp server docker image
+
+```
+$ docker build -f ftp.dockerfile -t oharastream/ohara:ftp .
+```
