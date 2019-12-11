@@ -32,7 +32,9 @@ then
   FTP_USER_PASS="ohara"
 fi
 
-bash /opt/pureftpd/bin/pure-ftpd.sh > $pureFTPConfPath
+echo "PureDB                       /opt/pureftpd/etc/pureftpd.pdb
+PassivePortRange             30000 30009
+ForcePassiveIP               ${FORCE_PASSIVE_IP}" > $pureFTPConfPath
 
 pwdFile="/tmp/password.txt"
 echo "$FTP_USER_PASS

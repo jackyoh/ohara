@@ -42,7 +42,6 @@ RUN groupadd $USER
 RUN useradd -ms /bin/bash -g $USER $USER
 
 COPY ftpd.sh /usr/sbin
-COPY pure-ftpd.sh /opt/pureftpd/bin/pure-ftpd.sh
 RUN chmod +x /usr/sbin/ftpd.sh
 RUN chown -R ohara:ohara /opt/pureftpd
 
