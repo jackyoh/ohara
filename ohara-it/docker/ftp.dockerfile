@@ -2,12 +2,11 @@ FROM centos:7.7.1908
 RUN yum groupinstall -y "Development Tools"
 RUN yum install -y epel-release
 RUN yum install -y openssl-devel \
-   wget \
-   supervisor
-RUN wget https://download.pureftpd.org/pub/pure-ftpd/releases/pure-ftpd-1.0.47.tar.gz
+   wget
+RUN wget http://ftp.ntu.edu.tw/pure-ftpd/releases/pure-ftpd-1.0.47.tar.gz
 RUN tar zxvf pure-ftpd-1.0.47.tar.gz
 RUN cd pure-ftpd-* && ./configure \
-  --prefix=/usr/local/pureftpd \
+  --prefix=/opt/pureftpd \
   --without-inetd \
   --with-altlog \
   --with-puredb \
@@ -18,14 +17,20 @@ RUN cd pure-ftpd-* && ./configure \
   make && \
   make install
 
-RUN ln -s /usr/local/pureftpd/bin/* /usr/bin
-RUN ln -s /usr/local/pureftpd/sbin/* /usr/sbin
+RUN ln -s /opt/pureftpd/bin/* /usr/bin
+RUN ln -s /opt/pureftpd/sbin/* /usr/sbin
 
 # change user from root to ohara
 ARG USER=ohara
 RUN groupadd $USER
 RUN useradd -ms /bin/bash -g $USER $USER
 
-COPY ftpd.sh /home/$USER
-COPY pure-ftpd.conf /usr/local/pureftpd/etc/pure-ftpd.conf
-CMD ["/bin/bash", "/home/ohara/ftpd.sh"]
+COPY ftpd.sh /usr/sbin
+COPY pure-ftpd.conf /opt/pureftpd/etc/pure-ftpd.conf
+RUN chmod +x /usr/sbin/ftpd.sh
+RUN chown -R ohara:ohara /opt/pureftpd
+
+# copy Tini
+COPY --from=oharastream/ohara:deps /tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--", "ftpd.sh"]
