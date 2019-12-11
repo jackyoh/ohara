@@ -51,3 +51,9 @@ $ bash oracle-container.sh start --user ${USERNAME} --password ${PASSWORD}
 ```
 $ docker build -f ftp.dockerfile -t oharastream/ohara:ftp .
 ```
+### How to run the fpt server docker container?
+* You can follow below command to run the ftp docker container
+
+```
+$ docker run -d --env FTP_USER_NAME=${FTP_LOGIN_USER_NAME} --env FTP_USER_PASS=${FTP_LOGIN_PASSWORD} --env FORCE_PASSIVE_IP=${YOUR_HOST_IP} -p 21:21 -p 30000-30009:30000-30009 oharastream/ohara:ftp
+```
