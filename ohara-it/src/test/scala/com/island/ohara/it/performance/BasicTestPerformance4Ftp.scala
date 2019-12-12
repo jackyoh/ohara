@@ -22,8 +22,7 @@ import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit}
 
 import com.island.ohara.client.filesystem.ftp.FtpClient
 import com.island.ohara.common.util.{CommonUtils, Releasable}
-import com.island.ohara.testing.service.FtpServer
-import org.junit.{After, AssumptionViolatedException}
+import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
 
 import scala.collection.JavaConverters._
@@ -39,24 +38,6 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   override def routes: Map[String, String] = Map(ftpHostname -> CommonUtils.address(ftpHostname))
 
   /**
-    * TODO: we should use individual ftp server rather than embedded ftp
-    * (fix by https://github.com/oharastream/ohara/issues/3030)
-    */
-  private[this] val ftpServer = {
-    val key         = "ohara.it.performance.public.ports"
-    val publicPorts = value(key).map(_.split(",").map(_.toInt).toSet).getOrElse(Set.empty)
-    if (publicPorts.size < 2)
-      throw new AssumptionViolatedException(s"$key is required, and the size of ports must be bigger than 2")
-
-    FtpServer
-      .builder()
-      .advertisedHostname(ftpHostname)
-      .controlPort(publicPorts.head)
-      .dataPorts(publicPorts.slice(1, publicPorts.size).map(new Integer(_)).toSeq.asJava)
-      .build()
-  }
-
-  /**
     * generate the default settings according to the ftp server. It includes
     * 1) hostname
     * 2) port
@@ -66,9 +47,9 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   protected val ftpSettings: Map[String, JsValue] = Map(
     // convert the hostname to IP address
     com.island.ohara.connector.ftp.FTP_HOSTNAME_KEY  -> JsString(ftpHostname),
-    com.island.ohara.connector.ftp.FTP_PORT_KEY      -> JsNumber(ftpServer.port()),
-    com.island.ohara.connector.ftp.FTP_USER_NAME_KEY -> JsString(ftpServer.user()),
-    com.island.ohara.connector.ftp.FTP_PASSWORD_KEY  -> JsString(ftpServer.password())
+    com.island.ohara.connector.ftp.FTP_PORT_KEY      -> JsNumber(21),
+    com.island.ohara.connector.ftp.FTP_USER_NAME_KEY -> JsString("ohara"),
+    com.island.ohara.connector.ftp.FTP_PASSWORD_KEY  -> JsString("island123")
   )
 
   private[this] val csvInputFolderKey       = "ohara.it.performance.csv.input"
@@ -80,10 +61,10 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] def ftpClient() =
     FtpClient
       .builder()
-      .hostname(ftpServer.hostname())
-      .port(ftpServer.port())
-      .user(ftpServer.user())
-      .password(ftpServer.password())
+      .hostname(ftpHostname)
+      .port(21)
+      .user("ohara")
+      .password("island123")
       .build
 
   protected def setupInputData(): (String, Long, Long) = {
@@ -93,7 +74,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       * if the number of threads is bigger than the number of data ports, it produces the error since no available data
       * port for extra threads :(
       */
-    val numberOfProducerThread = ftpServer.dataPorts().size()
+    val numberOfProducerThread = 2
     val numberOfRowsToFlush    = 1000
     val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed                 = new AtomicBoolean(false)
@@ -148,7 +129,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     * @param path file path on the remote ftp server
     */
   protected def removeFtpFolder(path: String): Unit = {
-    val count     = ftpServer.dataPorts().size()
+    val count     = 2
     val executors = Executors.newFixedThreadPool(4)
     val client    = ftpClient()
     try {
@@ -177,7 +158,4 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       else throw new IllegalArgumentException(s"failed to remove folder:$path due to timeout")
     } finally Releasable.close(client)
   }
-
-  @After
-  def closeFtpServer(): Unit = Releasable.close(ftpServer)
 }

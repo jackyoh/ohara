@@ -126,7 +126,7 @@ then
   echo "Pull FTP server docker image"
   ssh ohara@${host} docker pull $ftpDockerImageName
   echo "Starting FTP server container. user name is $user"
-  ssh ohara@${host} docker run -d --name $containerName --env FTP_USER_NAME=$user --env FTP_USER_PASS=$password --env FORCE_PASSIVE_IP=$ip -p $port:21 -p 30000-30009:30000-30009 $ftpDockerImageName
+  ssh ohara@${host} docker run -d --name $containerName --env FTP_USER_NAME=$user --env FTP_USER_PASS=$password --env FORCE_PASSIVE_IP=$ip -p $port:21 -p 30000-30100:30000-30100 $ftpDockerImageName
 fi
 
 if [[ "${stop}" == "true" ]];

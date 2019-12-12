@@ -33,7 +33,7 @@ then
 fi
 
 echo "PureDB                       /opt/pureftpd/etc/pureftpd.pdb
-PassivePortRange             30000 30009
+PassivePortRange             30000 30100
 ForcePassiveIP               ${FORCE_PASSIVE_IP}" > $pureFTPConfPath
 
 pwdFile="/tmp/password.txt"
