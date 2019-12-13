@@ -55,6 +55,7 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
     result(
       containerClient.containerCreator
         .nodeName(configuratorHostname)
+        .hostname(configuratorHostname)
         .imageName(imageName)
         .portMappings(Map(configuratorPort -> configuratorPort))
         .command(s"--port $configuratorPort --hostname $configuratorHostname")
