@@ -19,7 +19,7 @@ package com.island.ohara.it.performance
 import java.io.File
 
 import com.island.ohara.common.util.Releasable
-import org.junit.Before
+import org.junit.{After, AssumptionViolatedException, Before, Test}
 import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
 
@@ -29,32 +29,41 @@ import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.setting.{ConnectorKey, ObjectKey, TopicKey}
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
-import org.junit.{After, Test}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import spray.json.{JsNumber, JsString}
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
+  private[this] val DB_URL_KEY: String = "ohara.it.performance.jdbc.url"
+  private[this] val url: String =
+    sys.env.getOrElse(DB_URL_KEY, throw new AssumptionViolatedException(s"$DB_URL_KEY does not exists!!!"))
+
+  private[this] val DB_USER_NAME_KEY: String = "ohara.it.performance.jdbc.username"
+  private[this] val user: String =
+    sys.env.getOrElse(DB_USER_NAME_KEY, throw new AssumptionViolatedException(s"$DB_USER_NAME_KEY does not exists!!!"))
+
+  private[this] val DB_PASSWORD_KEY: String = "ohara.it.performance.jdb.password"
+  private[this] val password: String =
+    sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
+
   private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
   private[this] val jarFolderPath: String  = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
 
   private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.jdbc.needDeleteTable"
   private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
-  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val numberOfProducerThread     = 4
+  private[this] val connectorKey: ConnectorKey  = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val numberOfProducerThread      = 4
+  private[this] val timestampColumnName: String = "COLUMN0"
+  private[this] val columnNamePrefix: String    = "COLUMN"
 
-  protected def url: String
-  protected def user: String
-  protected def password: String
-  protected def jarName: String
   protected def productName: String
   protected def tableName: String
-  protected def columnNamePrefix: String
-  protected def timestampColumnName: String
+
   protected def insertTimestampValue: String
-  private[this] var client: DatabaseClient = _
+  protected def isColumnNameUpperCase: Boolean = true
+  private[this] var client: DatabaseClient     = _
 
   @Before
   final def setup(): Unit = {
@@ -64,9 +73,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     createTopic(topicKey)
-    log.info(s"$productName databse table name is $tableName for JDBC performance test ...1")
     setupTableData(tableName)
-    log.info(s"$productName databse table name is $tableName for JDBC performance test ...2")
     try {
       setupConnector(
         connectorKey = connectorKey,
@@ -89,18 +96,31 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   override protected def sharedJars(): Set[ObjectKey] = {
     val jarApi: FileInfoApi.Access = FileInfoApi.access.hostname(configuratorHostname).port(configuratorPort)
-    val jar                        = new File(CommonUtils.path(jarFolderPath, jarName))
-    Set(result(jarApi.request.file(jar).upload()).key)
+    val localFiles                 = new File(jarFolderPath)
+    localFiles.list
+      .map(fileName => {
+        val jar = new File(CommonUtils.path(jarFolderPath, fileName))
+        result(jarApi.request.file(jar).upload()).key
+      })
+      .toSet
   }
 
   private[this] def setupTableData(tableName: String): (Long, Long) = {
     val columnSize = 5
-    val columnInfos = (0 until columnSize).map(
-      c =>
-        if (c == 0) RdbColumn(timestampColumnName, "TIMESTAMP", false)
-        else if (c == 1) RdbColumn(s"${columnNamePrefix}1", "VARCHAR(45)", true)
-        else RdbColumn(s"${columnNamePrefix}${c}", "VARCHAR(45)", false)
-    )
+    val columnInfos = (0 until columnSize)
+      .map { i =>
+        if (i == 0) timestampColumnName
+        else s"${columnNamePrefix}${i}"
+      }
+      .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
+      .zipWithIndex
+      .map {
+        case (columnName, index) =>
+          if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
+          else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
+          else RdbColumn(columnName, "VARCHAR(45)", false)
+      }
+
     client.createTable(tableName, columnInfos)
 
     val pool        = Executors.newFixedThreadPool(numberOfProducerThread)

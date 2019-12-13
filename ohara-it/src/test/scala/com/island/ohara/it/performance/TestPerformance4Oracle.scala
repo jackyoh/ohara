@@ -18,34 +18,14 @@ package com.island.ohara.it.performance
 
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.it.category.PerformanceGroup
-import org.junit.AssumptionViolatedException
 import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
-  private[this] val DB_URL_KEY: String       = "ohara.it.oracle.db.url"
-  private[this] val DB_USER_NAME_KEY: String = "ohara.it.oracle.db.username"
-  private[this] val DB_PASSWORD_KEY: String  = "ohara.it.oracle.db.password"
-
-  override protected[performance] def url: String =
-    sys.env.getOrElse(DB_URL_KEY, throw new AssumptionViolatedException(s"$DB_URL_KEY does not exists!!!"))
-
-  override protected[performance] def user: String =
-    sys.env.getOrElse(DB_USER_NAME_KEY, throw new AssumptionViolatedException(s"$DB_USER_NAME_KEY does not exists!!!"))
-
-  override protected[performance] def password: String =
-    sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
-
-  override protected val timestampColumnName: String = "COLUMN0"
-
   override protected val tableName: String =
     s"TABLE${CommonUtils.randomString().toUpperCase()}"
 
-  override protected val jarName: String = "ojdbc8.jar"
-
   override protected val productName: String = "Oracle"
-
-  override protected val columnNamePrefix: String = "COLUMN"
 
   override protected val insertTimestampValue: String =
     "TO_TIMESTAMP('2018-09-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')"
