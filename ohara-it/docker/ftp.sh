@@ -26,7 +26,8 @@ fi
 
 if [[ -z "${PASSIVE_PORT_RANGE}" ]];
 then
-  PASSIVE_PORT_RANGE="30000-30004"
+  echo 'Please setting the ${PASSIVE_PORT_RANGE} evnvironment variable'
+  exit 1
 fi
 
 if [[ -z "${FTP_USER_NAME}" ]];

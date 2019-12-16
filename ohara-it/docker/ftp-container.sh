@@ -115,7 +115,8 @@ fi
 
 if [[ -z ${dataPortRnage} ]] && [[ "${start}" == "true" ]];
 then
-  dataPortRnage="30000-30004"
+  echo 'Please set the --dataPortRange argument. example: --dataPortRange 30000-30004'
+  exit 1
 fi
 
 if [[ -z ${host} ]];
