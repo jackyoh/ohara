@@ -52,13 +52,14 @@ then
   echo "--port               Set FTP server port"
   echo "--host               Set host name to remote host the FTP server container"
   echo "--ip                 Set ftp server ip for passive mode"
+  echo "--dataPortRange      Set ftp server data port range. example: --dataPortRange 30000-30004
   exit 1
 fi
 
 port="21"
 containerName="ftp-benchmark-test"
 
-ARGUMENT_LIST=("user" "password" "port" "host" "ip")
+ARGUMENT_LIST=("user" "password" "port" "host" "ip" "dataPortRange")
 
 opts=$(getopt \
     --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
@@ -90,6 +91,10 @@ while [[ $# -gt 0 ]]; do
       ip=$2
       shift 2
       ;;
+    --dataPortRange)
+      dataPortRnage=$2
+      shift 2
+      ;;
     *)
       break
       ;;
@@ -106,6 +111,11 @@ if [[ -z ${password} ]] && [[ "${start}" == "true" ]];
 then
   echo 'Please set the --password ${PASSWORD} argument'
   exit 1
+fi
+
+if [[ -z ${dataPortRnage} ]] && [[ "${start}" == "true" ]];
+then
+  dataPortRnage="30000-30004"
 fi
 
 if [[ -z ${host} ]];
@@ -126,7 +136,7 @@ then
   echo "Pull FTP server docker image"
   ssh ohara@${host} docker pull $ftpDockerImageName
   echo "Starting FTP server container. user name is $user"
-  ssh ohara@${host} docker run -d --name $containerName --env FTP_USER_NAME=$user --env FTP_USER_PASS=$password --env FORCE_PASSIVE_IP=$ip -p $port:21 -p 30000-30009:30000-30009 $ftpDockerImageName
+  ssh ohara@${host} docker run -d --name $containerName --env FTP_USER_NAME=$user --env FTP_USER_PASS=$password --env FORCE_PASSIVE_IP=$ip --env PASSIVE_PORT_RANGE=$dataPortRnage -p $port:21 -p ${dataPortRnage}:${dataPortRnage} $ftpDockerImageName
 fi
 
 if [[ "${stop}" == "true" ]];

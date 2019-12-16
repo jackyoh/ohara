@@ -14,38 +14,55 @@
 # limitations under the License.
 #
 
-FROM centos:7.7.1908
-RUN yum groupinstall -y "Development Tools"
-RUN yum install -y epel-release
-RUN yum install -y openssl-devel \
-   wget
-RUN wget http://ftp.ntu.edu.tw/pure-ftpd/releases/pure-ftpd-1.0.47.tar.gz
-RUN tar zxvf pure-ftpd-1.0.47.tar.gz
-RUN cd pure-ftpd-* && ./configure \
-  --prefix=/opt/pureftpd \
-  --without-inetd \
-  --with-altlog \
-  --with-puredb \
-  --with-throttling \
-  --with-peruserlimits \
-  --with-tls \
-  --without-capabilitie && \
-  make && \
-  make install
+FROM centos:7.7.1908 as deps
 
-RUN ln -s /opt/pureftpd/bin/* /usr/bin
-RUN ln -s /opt/pureftpd/sbin/* /usr/sbin
+# install tools
+RUN yum install -y \
+  wget \
+  net-tools
+
+# export JAVA_HOME
+ENV JAVA_HOME=/usr/lib/jvm/jre
+
+# download ftpserver.tar.gz file
+ARG FTPSERVER_DIR=/opt/ftpserver
+ARG FTPSERVER_VERSION=1.1.1
+RUN wget http://ftp.tc.edu.tw/pub/Apache/mina/ftpserver/${FTPSERVER_VERSION}/dist/apache-ftpserver-${FTPSERVER_VERSION}.tar.gz
+RUN mkdir ${FTPSERVER_DIR}
+RUN tar -zxvf apache-ftpserver-${FTPSERVER_VERSION}.tar.gz -C ${FTPSERVER_DIR}
+RUN rm -f apache-ftpserver-${FTPSERVER_VERSION}.tar.gz
+
+FROM centos:7.7.1908
+
+# install openjdk-1.8
+RUN yum install -y \
+  java-1.8.0-openjdk \
+  which
+
+ENV JAVA_HOME=/usr/lib/jvm/jre
 
 # change user from root to ohara
 ARG USER=ohara
 RUN groupadd $USER
 RUN useradd -ms /bin/bash -g $USER $USER
 
-COPY ftpd.sh /usr/sbin
-RUN chmod +x /usr/sbin/ftpd.sh
-RUN chown -R ohara:ohara /opt/pureftpd
+
+COPY --from=deps /opt/ftpserver /home/$USER
+RUN chown ohara:ohara -R /home/$USER/*ftpserver-*
+RUN ln -s $(find "/home/$USER" -maxdepth 1 -type d -name "*ftpserver-*") /home/$USER/default
+RUN chown ohara:ohara -R /home/$USER/default
+
+COPY ftp.sh /home/$USER/default/bin
+ENV FTPSERVER_HOME=/home/$USER/default
+ENV PATH=$PATH:$FTPSERVER_HOME/bin
+
+
+RUN chmod +x /home/$USER/default/bin/ftp.sh
 
 # copy Tini
 COPY --from=oharastream/ohara:deps /tini /tini
 RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--", "ftpd.sh"]
+
+USER $USER
+
+ENTRYPOINT ["/tini", "--", "ftp.sh"]
