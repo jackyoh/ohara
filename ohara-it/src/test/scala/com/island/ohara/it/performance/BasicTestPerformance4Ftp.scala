@@ -48,8 +48,8 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     // convert the hostname to IP address
     com.island.ohara.connector.ftp.FTP_HOSTNAME_KEY  -> JsString(ftpHostname),
     com.island.ohara.connector.ftp.FTP_PORT_KEY      -> JsNumber(21),
-    com.island.ohara.connector.ftp.FTP_USER_NAME_KEY -> JsString("ohara"),
-    com.island.ohara.connector.ftp.FTP_PASSWORD_KEY  -> JsString("island123")
+    com.island.ohara.connector.ftp.FTP_USER_NAME_KEY -> JsString("admin"),
+    com.island.ohara.connector.ftp.FTP_PASSWORD_KEY  -> JsString("admin")
   )
 
   private[this] val csvInputFolderKey       = "ohara.it.performance.csv.input"
@@ -63,8 +63,8 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .builder()
       .hostname(ftpHostname)
       .port(21)
-      .user("ohara")
-      .password("island123")
+      .user("admin")
+      .password("admin")
       .build
 
   protected def setupInputData(): (String, Long, Long) = {
