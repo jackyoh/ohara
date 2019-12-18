@@ -221,13 +221,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       (0 until numberOfProducerThread).foreach { _ =>
         pool.execute(() => {
           while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
-            (0 until numberOfRowsToFlush).map { _ =>
+            val rows = (0 until numberOfRowsToFlush).map { _ =>
               val content = cellNames.map(_ => CommonUtils.randomString()).mkString(",")
               count.increment()
               sizeInBytes.add(content.length)
               content
             }
-            //TODO abstract function for impletement storage
+            writeToStorage(rows)
           }
         })
       }
@@ -238,6 +238,9 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     }
     (count.longValue(), sizeInBytes.longValue())
   }
+
+  protected def writeToStorage(rows: Seq[String]): Unit
+
   //------------------------------[core functions]------------------------------//
 
   @After
