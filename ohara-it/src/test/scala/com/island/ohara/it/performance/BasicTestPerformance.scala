@@ -206,7 +206,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     (topicInfo, count.longValue(), sizeInBytes.longValue())
   }
 
-  protected def setupInputData2(): (Long, Long) = {
+  protected def setupInputData(): (String, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
     val threadSize             = 4
 
@@ -216,18 +216,18 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     val closed                 = new AtomicBoolean(false)
     val count                  = new LongAdder()
     val sizeInBytes            = new LongAdder()
-
+    val storageInfo            = preCreateStorage(cellNames)
     try {
       (0 until numberOfProducerThread).foreach { _ =>
         pool.execute(() => {
           while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
-            val rows = (0 until numberOfRowsToFlush).map { _ =>
-              val content = cellNames.map(_ => CommonUtils.randomString()).mkString(",")
+            val rows: Seq[Seq[String]] = (0 until numberOfRowsToFlush).map { _ =>
+              val content: Seq[String] = cellNames.map(_ => CommonUtils.randomString()).toSeq
               count.increment()
-              sizeInBytes.add(content.length)
+              sizeInBytes.add(content.mkString("").length)
               content
             }
-            writeToStorage(rows)
+            writeToStorage(cellNames, rows)
           }
         })
       }
@@ -236,10 +236,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
       closed.set(true)
     }
-    (count.longValue(), sizeInBytes.longValue())
+    (storageInfo, count.longValue(), sizeInBytes.longValue())
   }
 
-  protected def writeToStorage(rows: Seq[String]): Unit
+  protected def preCreateStorage(cellNames: Set[String]): String = null
+
+  protected def writeToStorage(cellNames: Set[String], rows: Seq[Seq[String]]): Unit = {
+    //Nothing
+  }
 
   //------------------------------[core functions]------------------------------//
 

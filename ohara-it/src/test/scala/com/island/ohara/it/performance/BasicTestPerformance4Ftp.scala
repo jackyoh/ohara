@@ -17,7 +17,6 @@
 package com.island.ohara.it.performance
 
 import java.io.{BufferedWriter, OutputStreamWriter}
-import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
 import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit}
 
 import com.island.ohara.client.filesystem.ftp.FtpClient
@@ -79,48 +78,29 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .password(ftpPassword)
       .build
 
-  protected def setupInputData(): (String, Long, Long) = {
-    val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
-    val numberOfRowsToFlush    = 1000
-    val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed                 = new AtomicBoolean(false)
-    val count                  = new LongAdder()
-    val sizeInBytes            = new LongAdder()
-
+  override protected def preCreateStorage(cellNames: Set[String]): String = {
     val client = ftpClient()
-    try if (client.exist(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
-    else client.mkdir(csvOutputFolder)
-    finally Releasable.close(client)
-
     try {
-      (0 until numberOfProducerThread).foreach { _ =>
-        pool.execute(() => {
-          val client = ftpClient()
-          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
-            val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
-            val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
-            try {
-              writer
-                .append(cellNames.mkString(","))
-                .append("\n")
-              (0 until numberOfRowsToFlush).foreach { _ =>
-                val content = cellNames.map(_ => CommonUtils.randomString()).mkString(",")
-                count.increment()
-                sizeInBytes.add(content.length)
-                writer
-                  .append(content)
-                  .append("\n")
-              }
-            } finally Releasable.close(writer)
-          } finally Releasable.close(client)
-        })
-      }
-    } finally {
-      pool.shutdown()
-      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      closed.set(true)
-    }
-    (csvOutputFolder, count.longValue(), sizeInBytes.longValue())
+      if (client.exist(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
+      else client.mkdir(csvOutputFolder)
+      csvOutputFolder
+    } finally Releasable.close(client)
+  }
+
+  override protected def writeToStorage(cellNames: Set[String], rows: Seq[Seq[String]]): Unit = {
+    val client = ftpClient()
+    val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
+    try {
+      val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
+      try {
+        rows.foreach { row =>
+          val content = row.mkString(",")
+          writer
+            .append(content)
+            .append("\n")
+        }
+      } finally Releasable.close(writer)
+    } finally Releasable.close(client)
   }
 
   protected def createFtpFolder(path: String): String = {

@@ -17,12 +17,10 @@
 package com.island.ohara.it.performance
 
 import java.io.File
+import java.sql.Timestamp
 
 import com.island.ohara.common.util.Releasable
 import org.junit.{After, AssumptionViolatedException, Before, Test}
-import java.util.concurrent.{Executors, TimeUnit}
-import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
-
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
@@ -54,7 +52,6 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   private[this] val connectorKey: ConnectorKey  = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val numberOfProducerThread      = 4
   private[this] val timestampColumnName: String = "COLUMN0"
   private[this] val columnNamePrefix: String    = "COLUMN"
 
@@ -73,7 +70,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     createTopic(topicKey)
-    setupTableData(tableName)
+    //setupTableData(tableName)
+    setupInputData()
     try {
       setupConnector(
         connectorKey = connectorKey,
@@ -105,55 +103,46 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       .toSet
   }
 
-  private[this] def setupTableData(tableName: String): (Long, Long) = {
-    val columnSize = 5
-    val columnInfos = (0 until columnSize)
-      .map { i =>
-        if (i == 0) timestampColumnName
-        else s"${columnNamePrefix}${i}"
-      }
-      .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
-      .zipWithIndex
-      .map {
-        case (columnName, index) =>
-          if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
-          else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
-          else RdbColumn(columnName, "VARCHAR(45)", false)
-      }
-
-    client.createTable(tableName, columnInfos)
-
-    val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed      = new AtomicBoolean(false)
-    val count       = new LongAdder()
-    val sizeInBytes = new LongAdder()
+  override protected def preCreateStorage(cellNames: Set[String]): String = {
+    val client = DatabaseClient.builder.url(url).user(user).password(password).build
     try {
-      (0 until numberOfProducerThread).foreach { x =>
-        pool.execute(() => {
-          val client = DatabaseClient.builder.url(url).user(user).password(password).build
-          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
-            val sql = s"INSERT INTO $tableName VALUES ($insertTimestampValue" + (1 until columnSize)
-              .map(_ => "?")
-              .mkString(",", ",", ")")
-            val preparedStatement = client.connection.prepareStatement(sql)
-            try {
-              (1 until columnSize).foreach(i => {
-                val value = s"${i}-${CommonUtils.randomString()}"
-                preparedStatement.setString(i, value)
-                sizeInBytes.add(value.length)
-              })
-              count.increment()
-              preparedStatement.executeUpdate()
-            } finally Releasable.close(preparedStatement)
-          } finally Releasable.close(client)
-        })
-      }
-    } finally {
-      pool.shutdown()
-      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      closed.set(true)
-    }
-    (count.longValue(), sizeInBytes.longValue())
+      val columnInfos = cellNames.zipWithIndex
+        .map {
+          case (columnName, index) =>
+            if (index == 0) timestampColumnName
+            else s"${columnNamePrefix}${index}"
+        }
+        .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
+        .zipWithIndex
+        .map {
+          case (columnName, index) =>
+            if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
+            else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
+            else RdbColumn(columnName, "VARCHAR(45)", false)
+        }
+      client.createTable(tableName, columnInfos.toSeq)
+      tableName
+    } finally Releasable.close(client)
+  }
+
+  override protected def writeToStorage(cellNames: Set[String], rows: Seq[Seq[String]]): Unit = {
+    val client = DatabaseClient.builder.url(url).user(user).password(password).build
+    try {
+      val sql = s"INSERT INTO $tableName VALUES (" + cellNames
+        .map(_ => "?")
+        .mkString(",", ",", ")")
+      val preparedStatement = client.connection.prepareStatement(sql)
+      try {
+        rows.foreach { row =>
+          row.zipWithIndex.foreach {
+            case (value, index) =>
+              if (index == 0) preparedStatement.setTimestamp(index + 1, new Timestamp(1576655465184L))
+              preparedStatement.setString(index + 1, value)
+          }
+          preparedStatement.executeUpdate()
+        }
+      } finally Releasable.close(preparedStatement)
+    } finally Releasable.close(client)
   }
 
   @After
