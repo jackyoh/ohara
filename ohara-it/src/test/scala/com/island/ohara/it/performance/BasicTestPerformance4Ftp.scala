@@ -41,9 +41,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val ftpPassword = value("ohara.it.performance.ftp.password")
     .getOrElse(throw new AssumptionViolatedException("ohara.it.performance.ftp.password is required"))
 
-  private[this] val ftpDataPortSize = value("ohara.it.performance.ftp.dataPortSize")
-    .getOrElse("2")
-    .toInt
+  private[this] val numberOfProducerThread = 2
 
   /**
     * add the route for ftp hostname to avoid the hostname error from remote services...
@@ -83,12 +81,6 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
 
   protected def setupInputData(): (String, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
-
-    /**
-      * if the number of threads is bigger than the number of data ports, it produces the error since no available data
-      * port for extra threads :(
-      */
-    val numberOfProducerThread = ftpDataPortSize
     val numberOfRowsToFlush    = 1000
     val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed                 = new AtomicBoolean(false)
@@ -143,7 +135,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     * @param path file path on the remote ftp server
     */
   protected def removeFtpFolder(path: String): Unit = {
-    val count     = ftpDataPortSize
+    val count     = numberOfProducerThread
     val executors = Executors.newFixedThreadPool(4)
     val client    = ftpClient()
     try {
