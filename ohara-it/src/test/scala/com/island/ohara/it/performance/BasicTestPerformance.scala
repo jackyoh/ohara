@@ -206,6 +206,38 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     (topicInfo, count.longValue(), sizeInBytes.longValue())
   }
 
+  protected def setupInputData2(): (Long, Long) = {
+    val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
+    val threadSize             = 4
+
+    val numberOfProducerThread = threadSize
+    val numberOfRowsToFlush    = 1000
+    val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
+    val closed                 = new AtomicBoolean(false)
+    val count                  = new LongAdder()
+    val sizeInBytes            = new LongAdder()
+
+    try {
+      (0 until numberOfProducerThread).foreach { _ =>
+        pool.execute(() => {
+          while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+            (0 until numberOfRowsToFlush).map { _ =>
+              val content = cellNames.map(_ => CommonUtils.randomString()).mkString(",")
+              count.increment()
+              sizeInBytes.add(content.length)
+              content
+            }
+            //TODO abstract function for impletement storage
+          }
+        })
+      }
+    } finally {
+      pool.shutdown()
+      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      closed.set(true)
+    }
+    (count.longValue(), sizeInBytes.longValue())
+  }
   //------------------------------[core functions]------------------------------//
 
   @After
