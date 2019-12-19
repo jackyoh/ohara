@@ -18,6 +18,10 @@ package com.island.ohara.it.performance
 
 import java.io.File
 import java.sql.Timestamp
+import java.util.concurrent.{Executors, TimeUnit}
+
+import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
+
 import com.island.ohara.common.util.Releasable
 import org.junit.{After, Before, Test}
 import com.island.ohara.client.configurator.v0.FileInfoApi
@@ -26,6 +30,7 @@ import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.setting.{ConnectorKey, ObjectKey, TopicKey}
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import spray.json.{JsNumber, JsString}
 import org.junit.AssumptionViolatedException
@@ -39,7 +44,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val user: String =
     sys.env.getOrElse(DB_USER_NAME_KEY, throw new AssumptionViolatedException(s"$DB_USER_NAME_KEY does not exists!!!"))
 
-  private[this] val DB_PASSWORD_KEY: String = "ohara.it.performance.jdb.password"
+  private[this] val DB_PASSWORD_KEY: String = "ohara.it.performance.jdbc.password"
   private[this] val password: String =
     sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
 
@@ -51,11 +56,12 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   private[this] val connectorKey: ConnectorKey  = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val timestampColumnName: String = "COLUMN0"
+  private[this] val timestampColumnName: String = rowData()._1.head
 
   protected def productName: String
   protected def tableName: String
   protected def isColumnNameUpperCase: Boolean = true
+  private[this] val numberOfProducerThread     = 2
   private[this] var client: DatabaseClient     = _
 
   @Before
@@ -66,7 +72,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     createTopic(topicKey)
-    setupInputData()
+    val (tableName, _, _) = setupTableData()
     try {
       setupConnector(
         connectorKey = connectorKey,
@@ -98,47 +104,52 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       .toSet
   }
 
-  override protected def preCreateStorage(cellNames: Seq[String]): String = {
-    val client = DatabaseClient.builder.url(url).user(user).password(password).build
-    try {
-      val columnInfos = cellNames.zipWithIndex
-        .map {
-          case (columnName, index) =>
-            if (index == 0) timestampColumnName
-            else columnName
-        }
-        .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
-        .zipWithIndex
-        .map {
-          case (columnName, index) =>
-            if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
-            else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
-            else RdbColumn(columnName, "VARCHAR(45)", false)
-        }
-      client.createTable(tableName, columnInfos)
-      tableName
-    } finally Releasable.close(client)
-  }
+  private[this] def setupTableData(): (String, Long, Long) = {
+    val columnInfos = rowData()._1
+      .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
+      .zipWithIndex
+      .map {
+        case (columnName, index) =>
+          if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
+          else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
+          else RdbColumn(columnName, "VARCHAR(45)", false)
+      }
 
-  override protected def writeToStorage(cellNames: Seq[String], rows: Seq[Seq[String]]): Unit = {
-    val client = DatabaseClient.builder.url(url).user(user).password(password).build
-    try {
-      val sql = s"INSERT INTO $tableName VALUES " + cellNames
-        .map(_ => "?")
-        .mkString("(", ",", ")")
+    client.createTable(tableName, columnInfos)
 
-      val preparedStatement = client.connection.prepareStatement(sql)
-      try {
-        rows.foreach { row =>
-          row.zipWithIndex.foreach {
-            case (value, index) =>
-              if (index == 0) preparedStatement.setTimestamp(index + 1, new Timestamp(value.toLong))
-              else preparedStatement.setString(index + 1, value)
-          }
-          preparedStatement.executeUpdate()
-        }
-      } finally Releasable.close(preparedStatement)
-    } finally Releasable.close(client)
+    val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
+    val closed      = new AtomicBoolean(false)
+    val count       = new LongAdder()
+    val sizeInBytes = new LongAdder()
+    try {
+      (0 until numberOfProducerThread).foreach { x =>
+        pool.execute(() => {
+          val client = DatabaseClient.builder.url(url).user(user).password(password).build
+          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+            val sql = s"INSERT INTO $tableName VALUES " + columnInfos
+              .map(_ => "?")
+              .mkString("(", ",", ")")
+            val preparedStatement = client.connection.prepareStatement(sql)
+            try {
+              rowData()._2.zipWithIndex.foreach {
+                case (value, index) => {
+                  val i = index + 1
+                  if (index == 0) preparedStatement.setTimestamp(i, new Timestamp(value.toLong))
+                  else preparedStatement.setString(i, value)
+                }
+              }
+              count.increment()
+              preparedStatement.executeUpdate()
+            } finally Releasable.close(preparedStatement)
+          } finally Releasable.close(client)
+        })
+      }
+    } finally {
+      pool.shutdown()
+      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      closed.set(true)
+    }
+    (tableName, count.longValue(), sizeInBytes.longValue())
   }
 
   @After

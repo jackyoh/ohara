@@ -206,47 +206,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     (topicInfo, count.longValue(), sizeInBytes.longValue())
   }
 
-  protected def setupInputData(): (String, Long, Long) = {
+  protected def rowData(): (Seq[String], Seq[String]) = {
     val cellNames: Seq[String] = (0 until 10).map(index => s"c$index")
-    val threadSize             = 4
-
-    val numberOfProducerThread = threadSize
-    val numberOfRowsToFlush    = 1000
-    val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed                 = new AtomicBoolean(false)
-    val count                  = new LongAdder()
-    val sizeInBytes            = new LongAdder()
-    val storageInfo            = preCreateStorage(cellNames)
-    try {
-      (0 until numberOfProducerThread).foreach { _ =>
-        pool.execute(() => {
-          while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
-            val rows: Seq[Seq[String]] = (0 until numberOfRowsToFlush).map { _ =>
-              val content: Seq[String] = cellNames.zipWithIndex.map {
-                case (_, index) =>
-                  if (index == 0) "1576655465184" //Timestamp value
-                  else CommonUtils.randomString()
-              }
-              count.increment()
-              sizeInBytes.add(content.mkString("").length)
-              content
-            }
-            writeToStorage(cellNames, rows)
-          }
-        })
-      }
-    } finally {
-      pool.shutdown()
-      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      closed.set(true)
+    val content: Seq[String] = cellNames.zipWithIndex.map {
+      case (_, index) =>
+        if (index == 0) "1576655465184" //Timestamp value
+        else CommonUtils.randomString()
     }
-    (storageInfo, count.longValue(), sizeInBytes.longValue())
-  }
-
-  protected def preCreateStorage(cellNames: Seq[String]): String = null
-
-  protected def writeToStorage(cellNames: Seq[String], rows: Seq[Seq[String]]): Unit = {
-    //Nothing
+    (cellNames, content)
   }
 
   //------------------------------[core functions]------------------------------//
