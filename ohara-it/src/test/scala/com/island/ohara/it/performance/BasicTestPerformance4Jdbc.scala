@@ -43,7 +43,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val DB_PASSWORD_KEY: String = "ohara.it.performance.jdb.password"
   private[this] val password: String =
     sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
-  */
+   */
   private[this] val url: String      = "jdbc:oracle:thin:@//ohara-jenkins-it-02:1521/xe.localdomain"
   private[this] val user: String     = "ohara"
   private[this] val password: String = "island123"
@@ -57,12 +57,9 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val connectorKey: ConnectorKey  = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val timestampColumnName: String = "COLUMN0"
-  private[this] val columnNamePrefix: String    = "COLUMN"
 
   protected def productName: String
   protected def tableName: String
-
-  protected def insertTimestampValue: String
   protected def isColumnNameUpperCase: Boolean = true
   private[this] var client: DatabaseClient     = _
 
@@ -113,7 +110,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         .map {
           case (columnName, index) =>
             if (index == 0) timestampColumnName
-            else s"${columnNamePrefix}${index}"
+            else columnName
         }
         .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
         .zipWithIndex
@@ -123,7 +120,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
             else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
             else RdbColumn(columnName, "VARCHAR(45)", false)
         }
-      client.createTable(tableName, columnInfos.toSeq)
+      client.createTable(tableName, columnInfos)
       tableName
     } finally Releasable.close(client)
   }
@@ -131,17 +128,16 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   override protected def writeToStorage(cellNames: Seq[String], rows: Seq[Seq[String]]): Unit = {
     val client = DatabaseClient.builder.url(url).user(user).password(password).build
     try {
-      val sql = s"INSERT INTO $tableName VALUES (?" + (0 until cellNames.size - 1)
+      val sql = s"INSERT INTO $tableName VALUES " + cellNames
         .map(_ => "?")
-        .mkString(",", ",", ")")
-      println(s"sql value is ${sql}")
+        .mkString("(", ",", ")")
 
       val preparedStatement = client.connection.prepareStatement(sql)
       try {
         rows.foreach { row =>
           row.zipWithIndex.foreach {
             case (value, index) =>
-              if (index == 0) preparedStatement.setTimestamp(index + 1, new Timestamp(1576655465184L))
+              if (index == 0) preparedStatement.setTimestamp(index + 1, new Timestamp(value.toLong))
               else preparedStatement.setString(index + 1, value)
           }
           preparedStatement.executeUpdate()

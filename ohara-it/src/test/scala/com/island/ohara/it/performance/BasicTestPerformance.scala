@@ -222,7 +222,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         pool.execute(() => {
           while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
             val rows: Seq[Seq[String]] = (0 until numberOfRowsToFlush).map { _ =>
-              val content: Seq[String] = cellNames.map(_ => CommonUtils.randomString()).toSeq
+              val content: Seq[String] = cellNames.zipWithIndex.map {
+                case (_, index) =>
+                  if (index == 0) "1576655465184" //Timestamp value
+                  else CommonUtils.randomString()
+              }
               count.increment()
               sizeInBytes.add(content.mkString("").length)
               content

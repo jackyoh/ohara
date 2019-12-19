@@ -26,7 +26,4 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
     s"TABLE${CommonUtils.randomString().toUpperCase()}"
 
   override protected val productName: String = "Oracle"
-
-  override protected val insertTimestampValue: String =
-    "TO_TIMESTAMP('?', 'YYYY-MM-DD HH24:MI:SS')"
 }
