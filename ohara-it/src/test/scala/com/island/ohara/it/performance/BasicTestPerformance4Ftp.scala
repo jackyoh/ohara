@@ -78,7 +78,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .password(ftpPassword)
       .build
 
-  override protected def preCreateStorage(cellNames: Set[String]): String = {
+  override protected def preCreateStorage(cellNames: Seq[String]): String = {
     val client = ftpClient()
     try {
       if (client.exist(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
@@ -87,7 +87,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     } finally Releasable.close(client)
   }
 
-  override protected def writeToStorage(cellNames: Set[String], rows: Seq[Seq[String]]): Unit = {
+  override protected def writeToStorage(cellNames: Seq[String], rows: Seq[Seq[String]]): Unit = {
     val client = ftpClient()
     val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
     try {

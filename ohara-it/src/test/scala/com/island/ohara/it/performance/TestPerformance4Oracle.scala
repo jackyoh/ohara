@@ -28,5 +28,5 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   override protected val productName: String = "Oracle"
 
   override protected val insertTimestampValue: String =
-    "TO_TIMESTAMP('2018-09-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')"
+    "TO_TIMESTAMP('?', 'YYYY-MM-DD HH24:MI:SS')"
 }

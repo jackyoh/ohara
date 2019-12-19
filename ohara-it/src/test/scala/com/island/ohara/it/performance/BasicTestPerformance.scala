@@ -207,7 +207,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   }
 
   protected def setupInputData(): (String, Long, Long) = {
-    val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
+    val cellNames: Seq[String] = (0 until 10).map(index => s"c$index")
     val threadSize             = 4
 
     val numberOfProducerThread = threadSize
@@ -239,9 +239,9 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     (storageInfo, count.longValue(), sizeInBytes.longValue())
   }
 
-  protected def preCreateStorage(cellNames: Set[String]): String = null
+  protected def preCreateStorage(cellNames: Seq[String]): String = null
 
-  protected def writeToStorage(cellNames: Set[String], rows: Seq[Seq[String]]): Unit = {
+  protected def writeToStorage(cellNames: Seq[String], rows: Seq[Seq[String]]): Unit = {
     //Nothing
   }
 
