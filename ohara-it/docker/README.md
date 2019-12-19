@@ -57,3 +57,17 @@ $ docker build -f ftp.dockerfile -t oharastream/ohara:ftp .
 ```
 $ docker run -d --env FTP_USER_NAME=${FTP_LOGIN_USER_NAME} --env FTP_USER_PASS=${FTP_LOGIN_PASSWORD} --env FORCE_PASSIVE_IP=${YOUR_HOST_IP} -p 21:21 -p 30000-30009:30000-30009 oharastream/ohara:ftp
 ```
+
+### How to build the samba server docker image?
+* You can follow below command to build the samba server docker images
+
+```
+$ docker build -f samba.dockerfile -t oharastream/ohara:samba .
+```
+
+### How to run the samba server docker container?
+* You can follow below command to run the samba docker container
+
+```
+$ docker run -d --env SAMBA_USER_NAME=${user} --env SAMBA_USER_PASS=${password} -p 139:139 -p 445:445 oharastream/ohara:samba
+```
