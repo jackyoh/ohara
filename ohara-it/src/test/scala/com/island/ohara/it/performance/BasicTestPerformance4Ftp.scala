@@ -24,8 +24,7 @@ import com.island.ohara.client.filesystem.ftp.FtpClient
 import com.island.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
-
-import scala.collection.JavaConverters._
+import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val ftpHostname = value("ohara.it.performance.ftp.hostname")
@@ -80,12 +79,13 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .build
 
   protected def setupInputData(): (String, Long, Long) = {
-    val cellNames: Set[String] = rowData()._1.toSet
-    val numberOfRowsToFlush    = 1000
-    val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed                 = new AtomicBoolean(false)
-    val count                  = new LongAdder()
-    val sizeInBytes            = new LongAdder()
+    val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
+
+    val numberOfRowsToFlush = 1000
+    val pool                = Executors.newFixedThreadPool(numberOfProducerThread)
+    val closed              = new AtomicBoolean(false)
+    val count               = new LongAdder()
+    val sizeInBytes         = new LongAdder()
 
     val client = ftpClient()
     try if (client.exist(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
@@ -104,7 +104,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
                 .append(cellNames.mkString(","))
                 .append("\n")
               (0 until numberOfRowsToFlush).foreach { _ =>
-                val content = rowData()._2.mkString(",")
+                val content = rowData().cells().asScala.map(_.value).mkString(",")
                 count.increment()
                 sizeInBytes.add(content.length)
                 writer

@@ -206,14 +206,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     (topicInfo, count.longValue(), sizeInBytes.longValue())
   }
 
-  protected def rowData(): (Seq[String], Seq[String]) = {
-    val cellNames: Seq[String] = (0 until 10).map(index => s"c$index")
-    val content: Seq[String] = cellNames.zipWithIndex.map {
-      case (_, index) =>
-        if (index == 0) "1576655465184" //Timestamp value
-        else CommonUtils.randomString()
-    }
-    (cellNames, content)
+  protected def rowData(): Row = {
+    Row.of(
+      (0 until 10).map(index => {
+        Cell.of(s"c$index", CommonUtils.randomString())
+      }): _*
+    )
   }
 
   //------------------------------[core functions]------------------------------//

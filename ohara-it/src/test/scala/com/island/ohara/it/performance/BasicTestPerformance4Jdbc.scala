@@ -34,6 +34,7 @@ import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 import scala.concurrent.ExecutionContext.Implicits.global
 import spray.json.{JsNumber, JsString}
 import org.junit.AssumptionViolatedException
+import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val DB_URL_KEY: String = "ohara.it.performance.jdbc.url"
@@ -56,7 +57,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   private[this] val connectorKey: ConnectorKey  = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val timestampColumnName: String = rowData()._1.head
+  private[this] val timestampColumnName: String = "COLUMN0"
 
   protected def productName: String
   protected def tableName: String
@@ -105,7 +106,9 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   }
 
   private[this] def setupTableData(): (String, Long, Long) = {
-    val columnInfos = rowData()._1
+    val columnNames: Seq[String] = Seq(timestampColumnName) ++ rowData().cells().asScala.map(_.name)
+
+    val columnInfos = columnNames
       .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
       .zipWithIndex
       .map {
@@ -131,15 +134,21 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
               .mkString("(", ",", ")")
             val preparedStatement = client.connection.prepareStatement(sql)
             try {
-              rowData()._2.zipWithIndex.foreach {
-                case (value, index) => {
-                  val i = index + 1
-                  if (index == 0) preparedStatement.setTimestamp(i, new Timestamp(value.toLong))
-                  else preparedStatement.setString(i, value)
+              val t = new Timestamp(1576655465184L)
+              preparedStatement.setTimestamp(1, t)
+              sizeInBytes.add(t.toString().length())
+
+              rowData().cells().asScala.zipWithIndex.foreach {
+                case (result, index) => {
+                  if (index > 0) {
+                    val value = result.value().toString()
+                    sizeInBytes.add(value.length)
+                    preparedStatement.setString(index + 1, value)
+                  }
                 }
               }
-              count.increment()
               preparedStatement.executeUpdate()
+              count.increment()
             } finally Releasable.close(preparedStatement)
           } finally Releasable.close(client)
         })
