@@ -32,41 +32,35 @@ DNS Server toresolve namenode hostname
 ```
 
 ### How to use the shell script to run the HDFS container?
-* You can follow below command to run HDFS container:
 
 ```
 $ bash hdfs-container.sh [start-all|start-namenode|start-datanode|stop-all|stop-namenode|stop-datanode] arg1 ...
 ```
 
 ### How to use the shell script to run the Oracle database container?
-* You can follow below command to run oracle database container:
 
 ```
 $ bash oracle-container.sh start --user ${USERNAME} --password ${PASSWORD}
 ```
 
 ### How to build the ftp server docker image?
-* You can follow below command to build the ftp server docker image
 
 ```
 $ docker build -f ftp.dockerfile -t oharastream/ohara:ftp .
 ```
 ### How to run the fpt server docker container?
-* You can follow below command to run the ftp docker container
 
 ```
 $ docker run -d --env FTP_USER_NAME=${FTP_LOGIN_USER_NAME} --env FTP_USER_PASS=${FTP_LOGIN_PASSWORD} --env FORCE_PASSIVE_IP=${YOUR_HOST_IP} -p 21:21 -p 30000-30009:30000-30009 oharastream/ohara:ftp
 ```
 
 ### How to build the samba server docker image?
-* You can follow below command to build the samba server docker images
 
 ```
 $ docker build -f samba.dockerfile -t oharastream/ohara:samba .
 ```
 
 ### How to run the samba server docker container?
-* You can follow below command to run the samba docker container
 
 ```
 $ docker run -d --env SAMBA_USER_NAME=${user} --env SAMBA_USER_PASS=${password} -p 139:139 -p 445:445 oharastream/ohara:samba
