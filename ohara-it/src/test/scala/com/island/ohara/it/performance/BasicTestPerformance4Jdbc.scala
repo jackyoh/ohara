@@ -59,7 +59,6 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val timestampColumnName: String = "COLUMN0"
 
-  protected def productName: String
   protected def tableName: String
   protected def isColumnNameUpperCase: Boolean = true
   private[this] val numberOfProducerThread     = 2

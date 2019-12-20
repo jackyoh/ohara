@@ -24,6 +24,4 @@ import org.junit.experimental.categories.Category
 class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   override protected val tableName: String =
     s"TABLE${CommonUtils.randomString().toUpperCase()}"
-
-  override protected val productName: String = "Oracle"
 }
