@@ -56,8 +56,6 @@ then
   exit 1
 fi
 
-sport=139
-dport=445
 containerName="samba-benchmark-test"
 
 ARGUMENT_LIST=("user" "password" "sport" "dport" "host")
@@ -107,6 +105,18 @@ fi
 if [[ -z ${password} ]] && [[ "${start}" == "true" ]];
 then
   echo 'Please set the --password ${PASSWORD} argument'
+  exit 1
+fi
+
+if [[ -z ${sport} ]] && [[ "${start}" == "true" ]];
+then
+  echo 'Please set the --sport ${port} argument'
+  exit 1
+fi
+
+if [[ -z ${dport} ]] && [[ "${start}" == "true" ]];
+then
+  echo 'Please set the --dport ${port} argument'
   exit 1
 fi
 
