@@ -132,6 +132,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
             val sql = s"INSERT INTO $tableName VALUES " + columnInfos
               .map(_ => "?")
               .mkString("(", ",", ")")
+
             val preparedStatement = client.connection.prepareStatement(sql)
             try {
               val t = new Timestamp(1576655465184L)
@@ -140,11 +141,9 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
               rowData().cells().asScala.zipWithIndex.foreach {
                 case (result, index) => {
-                  if (index > 0) {
-                    val value = result.value().toString()
-                    sizeInBytes.add(value.length)
-                    preparedStatement.setString(index + 1, value)
-                  }
+                  val value = result.value().toString()
+                  sizeInBytes.add(value.length)
+                  preparedStatement.setString(index + 2, value)
                 }
               }
               preparedStatement.executeUpdate()
