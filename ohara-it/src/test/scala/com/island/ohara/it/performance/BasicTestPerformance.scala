@@ -158,6 +158,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     result(connectorApi.get(connectorKey))
   }
 
+  protected def stopConnector(connectorKey: ConnectorKey): Unit = {
+    result(connectorApi.stop(connectorKey))
+  }
+
   protected def produce(topicInfo: TopicInfo): (TopicInfo, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
     val numberOfRowsToFlush    = 2000
@@ -214,6 +218,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     )
   }
 
+  /**
+    * When connector is running have used some resource such folder or file.
+    * for example: after running connector complete, can't delete the data.
+    *
+    * This function is after get metrics data, you can run other operating.
+    * example delete data.
+    */
+  protected def afterMetrics(): Unit = {}
+
   //------------------------------[core functions]------------------------------//
 
   @After
@@ -243,6 +256,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
     // record topic meters
     recordCsv(path("topic"), result(topicApi.list()).flatMap(_.metrics.meters))
+    afterMetrics()
   }
 
   private[this] def recordCsv(file: File, meters: Seq[Meter]): Unit =
