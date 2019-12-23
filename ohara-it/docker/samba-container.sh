@@ -48,11 +48,11 @@ then
   echo $usage
   echo "Argument             Description"
   echo "--------             -----------"
-  echo "--user               Set Samba server user name"
-  echo "--password           Set Samba server password"
-  echo "--sport              Set Samba server ssn port, default is 139"
-  echo "--dport              Set Samba server ds port, default is 445"
-  echo "--host               Set host name to remote host the Samba server container"
+  echo "--user               Set Samba server user name (required argument)"
+  echo "--password           Set Samba server password (required argument)"
+  echo "--sport              Set Samba server ssn port (required argument)"
+  echo "--dport              Set Samba server ds port (required argument)"
+  echo "--host               Set host name to remote host the Samba server container (required argument)"
   exit 1
 fi
 
