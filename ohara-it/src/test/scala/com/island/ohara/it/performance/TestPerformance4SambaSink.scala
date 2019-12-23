@@ -1,15 +1,31 @@
+/*
+ * Copyright 2019 is-land
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.island.ohara.it.performance
 
 //import com.island.ohara.client.filesystem.FileSystem
-/*import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
-import com.island.ohara.common.util.CommonUtils
-import com.island.ohara.connector.smb.SmbSink*/
+//import com.island.ohara.common.util.CommonUtils
+import com.island.ohara.common.setting.ConnectorKey
+import com.island.ohara.connector.smb.SmbSink
 import com.island.ohara.common.setting.TopicKey
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.{After, Test}
 import org.junit.experimental.categories.Category
-//import spray.json.{JsNumber, JsString}
+import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance {
@@ -38,20 +54,23 @@ class TestPerformance4SambaSink extends BasicTestPerformance {
       "445"
     )
     .toInt*/
+  private[this] val sambaHostname = "ohara-jenkins-it-02"
+  private[this] val sambaPort     = 445
+  private[this] val sambaUsername = "ohara"
+  private[this] val sambaPassword = "island123"
 
-  //private[this] val dataDir: String            = "/tmp"
-  //private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-
+  private[this] val dataDir: String            = "/tmp"
+  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   /*private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.samba.needDeleteData"
   private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
-  */
+   */
 
   @Test
   def test(): Unit = {
     produce(createTopic(topicKey))
-    /*setupConnector(
+    setupConnector(
       connectorKey = connectorKey,
       topicKey = topicKey,
       className = classOf[SmbSink].getName(),
@@ -60,15 +79,15 @@ class TestPerformance4SambaSink extends BasicTestPerformance {
         com.island.ohara.connector.smb.SMB_PORT_KEY       -> JsNumber(sambaPort),
         com.island.ohara.connector.smb.SMB_USER_KEY       -> JsString(sambaUsername),
         com.island.ohara.connector.smb.SMB_PASSWORD_KEY   -> JsString(sambaPassword),
-        com.island.ohara.connector.smb.SMB_SHARE_NAME_KEY -> JsString(sambaUsername)
+        com.island.ohara.connector.smb.SMB_SHARE_NAME_KEY -> JsString(sambaUsername),
+        "output.folder"                                   -> JsString(dataDir)
       )
     )
-    sleepUntilEnd()*/
+    sleepUntilEnd()
   }
 
   @After
   def deleteData(): Unit = {
-
     /*val fileSystem =
       FileSystem.smbBuilder
         .hostname(props.hostname)
@@ -77,6 +96,5 @@ class TestPerformance4SambaSink extends BasicTestPerformance {
         .password(props.password)
         .shareName(props.shareName)
         .build()*/
-
   }
 }
