@@ -49,8 +49,9 @@ import scala.concurrent.duration._
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger      = Logger(classOf[BasicTestPerformance])
-  private[this] val wholeTimeout = 1200
+  protected val log: Logger                    = Logger(classOf[BasicTestPerformance])
+  private[this] val wholeTimeout               = 1200
+  private[this] var connectorKey: ConnectorKey = _
 
   @Rule
   override def timeout: Timeout = Timeout.seconds(wholeTimeout) // 20 minutes
@@ -138,6 +139,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     className: String,
     settings: Map[String, JsValue]
   ): ConnectorInfo = {
+    this.connectorKey = connectorKey
     result(
       connectorApi.request
         .settings(settings)
@@ -156,10 +158,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       true
     )
     result(connectorApi.get(connectorKey))
-  }
-
-  protected def stopConnector(connectorKey: ConnectorKey): Unit = {
-    result(connectorApi.stop(connectorKey))
   }
 
   protected def produce(topicInfo: TopicInfo): (TopicInfo, Long, Long) = {
@@ -225,7 +223,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     * This function is after get metrics data, you can run other operating.
     * example delete data.
     */
-  protected def afterMetrics(): Unit = {}
+  protected def afterStoppingConnector(): Unit = {}
 
   //------------------------------[core functions]------------------------------//
 
@@ -256,7 +254,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
     // record topic meters
     recordCsv(path("topic"), result(topicApi.list()).flatMap(_.metrics.meters))
-    afterMetrics()
+    result(connectorApi.stop(this.connectorKey))
+    afterStoppingConnector()
   }
 
   private[this] def recordCsv(file: File, meters: Seq[Meter]): Unit =
