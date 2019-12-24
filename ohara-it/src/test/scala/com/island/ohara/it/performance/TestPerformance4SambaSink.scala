@@ -40,7 +40,7 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
       topicKey = topicKey,
       className = classOf[SmbSink].getName(),
       settings = sambaSettings
-        + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)))
+        + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)))
     )
     sleepUntilEnd()
   }
