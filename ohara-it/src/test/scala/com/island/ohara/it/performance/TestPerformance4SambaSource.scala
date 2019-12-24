@@ -16,10 +16,9 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.ConnectorKey
-import com.island.ohara.connector.smb.SmbSink
-import com.island.ohara.common.setting.TopicKey
+import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
 import com.island.ohara.common.util.CommonUtils
+import com.island.ohara.connector.smb.SmbSource
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.Test
@@ -27,26 +26,25 @@ import org.junit.experimental.categories.Category
 import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
-  private[this] val outputDir: String          = "output"
+class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
   private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
   private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   @Test
   def test(): Unit = {
-    produce(createTopic(topicKey))
-    setupConnector(
-      connectorKey = connectorKey,
-      topicKey = topicKey,
-      className = classOf[SmbSink].getName(),
-      settings = sambaSettings
-        + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)))
-    )
-    sleepUntilEnd()
-  }
-
-  override def afterMetrics(): Unit = {
-    stopConnector(connectorKey)
-    if (needDeleteData) removeSambaFolder(s"${outputDir}/${topicKey.topicNameOnKafka}")
+    createTopic(topicKey)
+    val (path, _, _) = setupInputData()
+    try {
+      setupConnector(
+        connectorKey = connectorKey,
+        topicKey = topicKey,
+        className = classOf[SmbSource].getName(),
+        settings = sambaSettings
+          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
+          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createSambaFolder("completed")))
+          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createSambaFolder("error")))
+      )
+      sleepUntilEnd()
+    } finally if (needDeleteData) removeSambaFolder(path)
   }
 }

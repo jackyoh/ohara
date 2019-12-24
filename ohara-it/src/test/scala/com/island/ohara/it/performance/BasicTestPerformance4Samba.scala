@@ -16,10 +16,15 @@
 
 package com.island.ohara.it.performance
 
+import java.io.{BufferedWriter, OutputStreamWriter}
+import java.util.concurrent.{Executors, TimeUnit}
+import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
+
 import com.island.ohara.client.filesystem.FileSystem
-import com.island.ohara.common.util.Releasable
+import com.island.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
+import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val SAMBA_HOSTNAME_KEY: String = "ohara.it.performance.samba.hostname"
@@ -44,12 +49,17 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val sambaPort: Int = sys.env
     .getOrElse(
       SAMBA_PORT_KEY,
-      "445"
+      throw new AssumptionViolatedException(s"$SAMBA_PORT_KEY does not exists!!!")
     )
     .toInt
 
+  private[this] val csvInputFolderKey       = "ohara.it.performance.csv.input"
+  private[this] val csvOutputFolder: String = value(csvInputFolderKey).getOrElse("input")
+
   private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.samba.needDeleteData"
-  private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
+  protected[this] val needDeleteData: Boolean    = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
+
+  private[this] val numberOfProducerThread = 2
 
   protected val sambaSettings: Map[String, JsValue] = Map(
     com.island.ohara.connector.smb.SMB_HOSTNAME_KEY   -> JsString(sambaHostname),
@@ -66,10 +76,55 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     path
   }
 
-  protected def deleteFolder(path: String): Unit = {
+  protected def removeSambaFolder(path: String): Unit = {
     val client = sambaClient()
-    try if (needDeleteData) client.delete(path, true)
+    try client.delete(path, true)
     finally Releasable.close(client)
+  }
+
+  protected def setupInputData(): (String, Long, Long) = {
+    val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
+
+    val numberOfRowsToFlush = 1000
+    val pool                = Executors.newFixedThreadPool(numberOfProducerThread)
+    val closed              = new AtomicBoolean(false)
+    val count               = new LongAdder()
+    val sizeInBytes         = new LongAdder()
+
+    val client = sambaClient()
+    try if (client.exists(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
+    else createSambaFolder(csvOutputFolder)
+    finally Releasable.close(client)
+
+    try {
+      (0 until numberOfProducerThread).foreach { _ =>
+        pool.execute(() => {
+          val client = sambaClient()
+          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+            val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
+            val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
+            try {
+              writer
+                .append(cellNames.mkString(","))
+                .append("\n")
+              (0 until numberOfRowsToFlush).foreach { _ =>
+                val content = rowData().cells().asScala.map(_.value).mkString(",")
+                count.increment()
+                sizeInBytes.add(content.length)
+                writer
+                  .append(content)
+                  .append("\n")
+              }
+            } finally Releasable.close(writer)
+          } finally Releasable.close(client)
+        })
+      }
+    } finally {
+      pool.shutdown()
+      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      closed.set(true)
+    }
+    (csvOutputFolder, count.longValue(), sizeInBytes.longValue())
   }
 
   private[this] def sambaClient(): FileSystem =
