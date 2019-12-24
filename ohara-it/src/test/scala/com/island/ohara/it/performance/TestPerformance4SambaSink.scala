@@ -45,8 +45,7 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
     sleepUntilEnd()
   }
 
-  override def afterMetrics(): Unit = {
-    stopConnector(connectorKey)
+  override def afterStoppingConnector(): Unit = {
     if (needDeleteData) removeSambaFolder(s"${outputDir}/${topicKey.topicNameOnKafka}")
   }
 }
