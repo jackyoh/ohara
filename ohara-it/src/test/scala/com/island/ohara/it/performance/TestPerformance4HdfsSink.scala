@@ -43,7 +43,6 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
 
   @Test
   def test(): Unit = {
-    println(s"Topic name is ${topicKey.topicNameOnKafka}")
     produce(createTopic(topicKey))
     setupConnector(
       connectorKey = connectorKey,

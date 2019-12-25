@@ -164,4 +164,14 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       else throw new IllegalArgumentException(s"failed to remove folder:$path due to timeout")
     } finally Releasable.close(client)
   }
+
+  /**
+    * Recursive remove all folder and file in the path
+    * @param path file path on the remote ftp server
+    */
+  protected def recursiveRemoveFolder(path: String): Unit = {
+    val client = ftpClient()
+    try if (client.exist(path)) client.delete(path, true)
+    finally Releasable.close(client)
+  }
 }

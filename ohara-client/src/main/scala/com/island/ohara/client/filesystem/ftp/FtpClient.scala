@@ -78,6 +78,8 @@ trait FtpClient extends Releasable {
 
   def delete(path: String): Unit
 
+  def delete(path: String, recursive: Boolean): Unit
+
   /**
     * append message to the end from file. If the file doesn't exist, it will create an new file.
     * @param path file path
@@ -289,19 +291,20 @@ object FtpClient {
           if (lastException != null) throw lastException
           else throw new IllegalArgumentException("still fail...but there is no root cause ...")
         }
-        override def listFileNames(dir: String): Seq[String]  = retry(() => client().listFileNames(dir))
-        override def open(path: String): InputStream          = retry(() => client().open(path))
-        override def create(path: String): OutputStream       = retry(() => client().create(path))
-        override def append(path: String): OutputStream       = retry(() => client().append(path))
-        override def moveFile(from: String, to: String): Unit = retry(() => client().moveFile(from, to))
-        override def mkdir(path: String): Unit                = retry(() => client().mkdir(path))
-        override def delete(path: String): Unit               = retry(() => client().delete(path))
-        override def tmpFolder(): String                      = client().tmpFolder()
-        override def exist(path: String): Boolean             = retry(() => client().exist(path))
-        override def fileType(path: String): FileType         = retry(() => client().fileType(path))
-        override def status(): String                         = retry(() => client().status())
-        override def workingFolder(): String                  = retry(() => client().workingFolder())
-        override def close(): Unit                            = client().close()
+        override def listFileNames(dir: String): Seq[String]        = retry(() => client().listFileNames(dir))
+        override def open(path: String): InputStream                = retry(() => client().open(path))
+        override def create(path: String): OutputStream             = retry(() => client().create(path))
+        override def append(path: String): OutputStream             = retry(() => client().append(path))
+        override def moveFile(from: String, to: String): Unit       = retry(() => client().moveFile(from, to))
+        override def mkdir(path: String): Unit                      = retry(() => client().mkdir(path))
+        override def delete(path: String): Unit                     = retry(() => client().delete(path))
+        override def delete(path: String, recursive: Boolean): Unit = retry(() => client().delete(path, recursive))
+        override def tmpFolder(): String                            = client().tmpFolder()
+        override def exist(path: String): Boolean                   = retry(() => client().exist(path))
+        override def fileType(path: String): FileType               = retry(() => client().fileType(path))
+        override def status(): String                               = retry(() => client().status())
+        override def workingFolder(): String                        = retry(() => client().workingFolder())
+        override def close(): Unit                                  = client().close()
       }
     }
 
@@ -452,6 +455,17 @@ object FtpClient {
           if (!client.removeDirectory(path))
             throw new IllegalStateException(s"failed to delete $path because from ${client.getReplyCode}")
         case FileType.NONEXISTENT => throw new IllegalStateException(s"$path doesn't exist")
+      }
+
+      override def delete(path: String, recursive: Boolean) = {
+        if (recursive) {
+          if (fileType(path) == FileType.FOLDER)
+            listFileNames(path).map(fileName => {
+              val child = CommonUtils.path(path, fileName)
+              delete(child, recursive)
+            })
+          delete(path)
+        } else delete(path)
       }
 
       override def tmpFolder(): String = {
