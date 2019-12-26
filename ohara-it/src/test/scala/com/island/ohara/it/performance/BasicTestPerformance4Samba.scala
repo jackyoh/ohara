@@ -53,6 +53,12 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     )
     .toInt
 
+  private[this] val SAMBA_SHARE_KEY: String = "ohara.it.performance.samba.sharename"
+  private[this] val sambaShare: String = sys.env.getOrElse(
+    SAMBA_SHARE_KEY,
+    throw new AssumptionViolatedException(s"$SAMBA_SHARE_KEY does not exists!!!")
+  )
+
   private[this] val csvInputFolderKey       = "ohara.it.performance.csv.input"
   private[this] val csvOutputFolder: String = value(csvInputFolderKey).getOrElse("input")
 
@@ -66,7 +72,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     com.island.ohara.connector.smb.SMB_PORT_KEY       -> JsNumber(sambaPort),
     com.island.ohara.connector.smb.SMB_USER_KEY       -> JsString(sambaUsername),
     com.island.ohara.connector.smb.SMB_PASSWORD_KEY   -> JsString(sambaPassword),
-    com.island.ohara.connector.smb.SMB_SHARE_NAME_KEY -> JsString(sambaUsername)
+    com.island.ohara.connector.smb.SMB_SHARE_NAME_KEY -> JsString(sambaShare)
   )
 
   protected def createSambaFolder(path: String): String = {
@@ -133,6 +139,6 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
       .port(sambaPort)
       .user(sambaUsername)
       .password(sambaPassword)
-      .shareName(sambaUsername)
+      .shareName(sambaShare)
       .build()
 }
