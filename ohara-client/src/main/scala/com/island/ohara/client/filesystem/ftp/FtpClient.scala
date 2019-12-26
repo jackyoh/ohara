@@ -460,7 +460,7 @@ object FtpClient {
       override def delete(path: String, recursive: Boolean) = {
         if (recursive) {
           if (fileType(path) == FileType.FOLDER)
-            listFileNames(path).map(fileName => {
+            listFileNames(path).foreach(fileName => {
               val child = CommonUtils.path(path, fileName)
               delete(child, recursive)
             })

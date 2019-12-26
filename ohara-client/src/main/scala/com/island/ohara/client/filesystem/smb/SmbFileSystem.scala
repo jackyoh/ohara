@@ -327,7 +327,7 @@ private[filesystem] object SmbFileSystem {
       override def delete(path: String, recursive: Boolean): Unit = connectShare { shareRoot =>
         if (recursive) {
           if (fileType(path) == FileType.FOLDER)
-            listFileNames(path, FileFilter.default).map(fileName => {
+            listFileNames(path, FileFilter.default).foreach(fileName => {
               val child = CommonUtils.path(path, fileName)
               delete(child, recursive)
             })
