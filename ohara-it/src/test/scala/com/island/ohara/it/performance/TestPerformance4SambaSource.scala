@@ -16,8 +16,6 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.TopicKey
-import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.smb.SmbSource
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -27,15 +25,12 @@ import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
-
   @Test
   def test(): Unit = {
-    createTopic(topicKey)
+    createTopic()
     val (path, _, _) = setupInputData()
     try {
       setupConnector(
-        topicKey = topicKey,
         className = classOf[SmbSource].getName(),
         settings = sambaSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
