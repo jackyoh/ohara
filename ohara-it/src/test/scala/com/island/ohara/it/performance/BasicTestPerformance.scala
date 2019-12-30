@@ -255,7 +255,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     if (this.connectorKey != null)
       await(
         () => {
-          result(connectorApi.start(connectorKey))
+          result(connectorApi.stop(connectorKey))
           true
         },
         true
