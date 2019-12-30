@@ -16,7 +16,6 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.ConnectorKey
 import com.island.ohara.connector.smb.SmbSink
 import com.island.ohara.common.setting.TopicKey
 import com.island.ohara.common.util.CommonUtils
@@ -28,15 +27,13 @@ import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
-  private[this] val outputDir: String          = "output"
-  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val outputDir: String  = "output"
+  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   @Test
   def test(): Unit = {
     produce(createTopic(topicKey))
     setupConnector(
-      connectorKey = connectorKey,
       topicKey = topicKey,
       className = classOf[SmbSink].getName(),
       settings = sambaSettings
