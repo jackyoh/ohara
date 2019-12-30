@@ -252,7 +252,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
     // record topic meters
     recordCsv(path("topic"), result(topicApi.list()).flatMap(_.metrics.meters))
-    //if (this.connectorKey != null) result(connectorApi.stop(this.connectorKey))
+    if (this.connectorKey != null)
+      await(
+        () => {
+          result(connectorApi.start(connectorKey))
+          true
+        },
+        true
+      )
+
     afterStoppingConnector()
   }
 
