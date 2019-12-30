@@ -16,9 +16,9 @@
 
 package com.island.ohara.it.performance
 
+import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
 import com.island.ohara.client.filesystem.FileSystem
-import com.island.ohara.common.setting.TopicKey
-import com.island.ohara.common.util.{CommonUtils, Releasable}
+import com.island.ohara.common.util.Releasable
 import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.experimental.categories.Category
@@ -29,7 +29,6 @@ import org.junit.{AssumptionViolatedException, Test}
 class TestPerformance4HdfsSink extends BasicTestPerformance {
   private[this] val HDFS_URL_KEY: String         = "ohara.it.performance.hdfs.url"
   private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.hdfs.needDeleteData"
-  private[this] val topicKey: TopicKey           = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   private[this] val dataDir: String = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
@@ -38,12 +37,12 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   )
 
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
+  private[this] val topicInfo: TopicInfo    = createTopic()
 
   @Test
   def test(): Unit = {
-    produce(createTopic(topicKey))
+    produce(topicInfo)
     setupConnector(
-      topicKey = topicKey,
       className = classOf[HDFSSink].getName(),
       settings = Map(
         com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),
@@ -57,7 +56,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   override def afterStoppingConnector(): Unit =
     if (needDeleteData) {
       val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
-      try fileSystem.delete(s"${dataDir}/${topicKey.topicNameOnKafka}", true)
+      try fileSystem.delete(s"${dataDir}/${topicInfo.topicNameOnKafka}", true)
       finally Releasable.close(fileSystem)
     }
 }

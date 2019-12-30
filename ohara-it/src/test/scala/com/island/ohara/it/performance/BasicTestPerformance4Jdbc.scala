@@ -27,7 +27,7 @@ import org.junit.{After, Before, Test}
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
-import com.island.ohara.common.setting.{ObjectKey, TopicKey}
+import com.island.ohara.common.setting.{ObjectKey}
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 
@@ -54,9 +54,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.jdbc.needDeleteTable"
   private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "false").toBoolean
-
-  private[this] val topicKey: TopicKey          = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val timestampColumnName: String = "COLUMN0"
+  private[this] val timestampColumnName: String  = "COLUMN0"
 
   protected def tableName: String
   protected def isColumnNameUpperCase: Boolean = true
@@ -70,11 +68,10 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   @Test
   def test(): Unit = {
-    createTopic(topicKey)
+    createTopic()
     val (tableName, _, _) = setupTableData()
     try {
       setupConnector(
-        topicKey = topicKey,
         className = classOf[JDBCSourceConnector].getName(),
         settings = Map(
           com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),

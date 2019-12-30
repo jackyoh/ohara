@@ -16,9 +16,8 @@
 
 package com.island.ohara.it.performance
 
+import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
 import com.island.ohara.connector.smb.SmbSink
-import com.island.ohara.common.setting.TopicKey
-import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.Test
@@ -27,14 +26,13 @@ import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
-  private[this] val outputDir: String  = "output"
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val outputDir: String    = "output"
+  private[this] val topicInfo: TopicInfo = createTopic()
 
   @Test
   def test(): Unit = {
-    produce(createTopic(topicKey))
+    produce(topicInfo)
     setupConnector(
-      topicKey = topicKey,
       className = classOf[SmbSink].getName(),
       settings = sambaSettings
         + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)))
@@ -43,6 +41,6 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   }
 
   override def afterStoppingConnector(): Unit = {
-    if (needDeleteData) removeSambaFolder(s"${outputDir}/${topicKey.topicNameOnKafka}")
+    if (needDeleteData) removeSambaFolder(s"${outputDir}/${topicInfo.topicNameOnKafka}")
   }
 }

@@ -16,8 +16,6 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.TopicKey
-import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.perf.PerfSource
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.Test
@@ -25,13 +23,10 @@ import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4PerfSource extends BasicTestPerformance {
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
-
   @Test
   def test(): Unit = {
-    createTopic(topicKey)
+    createTopic()
     setupConnector(
-      topicKey = topicKey,
       className = classOf[PerfSource].getName,
       settings = Map.empty
     )

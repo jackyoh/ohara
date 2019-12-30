@@ -16,8 +16,6 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.TopicKey
-import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.ftp.FtpSink
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -27,20 +25,19 @@ import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val dataDir: String    = "/tmp"
+  private[this] val dataDir: String = "/tmp"
 
   @Test
   def test(): Unit = {
+    val topicInfo = createTopic()
     try {
-      produce(createTopic(topicKey))
+      produce(topicInfo)
       setupConnector(
-        topicKey = topicKey,
         className = classOf[FtpSink].getName(),
         settings = ftpSettings
           + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createFtpFolder(dataDir)))
       )
       sleepUntilEnd()
-    } finally if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicKey.topicNameOnKafka}")
+    } finally if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicInfo.topicNameOnKafka}")
   }
 }

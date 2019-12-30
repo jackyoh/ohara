@@ -16,8 +16,6 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.TopicKey
-import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.ftp.FtpSource
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -27,15 +25,12 @@ import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
-
   @Test
   def test(): Unit = {
-    createTopic(topicKey)
+    createTopic()
     val (path, _, _) = setupInputData()
     try {
       setupConnector(
-        topicKey = topicKey,
         className = classOf[FtpSource].getName,
         settings = ftpSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))

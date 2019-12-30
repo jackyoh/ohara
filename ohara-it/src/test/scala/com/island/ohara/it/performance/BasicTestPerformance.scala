@@ -52,6 +52,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val log: Logger                    = Logger(classOf[BasicTestPerformance])
   private[this] val wholeTimeout               = 1200
   private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   @Rule
   override def timeout: Timeout = Timeout.seconds(wholeTimeout) // 20 minutes
@@ -115,10 +116,9 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   /**
     * create and start the topic.
-    * @param topicKey topic key
     * @return topic info
     */
-  protected def createTopic(topicKey: TopicKey): TopicInfo = {
+  protected def createTopic(): TopicInfo = {
     result(
       topicApi.request
         .key(topicKey)
@@ -134,7 +134,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   }
 
   protected def setupConnector(
-    topicKey: TopicKey,
     className: String,
     settings: Map[String, JsValue]
   ): ConnectorInfo = {
