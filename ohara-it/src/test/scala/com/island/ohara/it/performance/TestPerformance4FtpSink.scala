@@ -32,15 +32,17 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
 
   @Test
   def test(): Unit = {
-    try {
-      produce(createTopic(topicKey))
-      setupConnector(
-        topicKey = topicKey,
-        className = classOf[FtpSink].getName(),
-        settings = ftpSettings
-          + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createFtpFolder(dataDir)))
-      )
-      sleepUntilEnd()
-    } finally if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicKey.topicNameOnKafka}")
+    produce(createTopic(topicKey))
+    setupConnector(
+      topicKey = topicKey,
+      className = classOf[FtpSink].getName(),
+      settings = ftpSettings
+        + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createFtpFolder(dataDir)))
+    )
+    sleepUntilEnd()
+  }
+
+  override def afterStoppingConnector(): Unit = {
+    if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicKey.topicNameOnKafka}")
   }
 }
