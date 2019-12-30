@@ -16,7 +16,7 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
+import com.island.ohara.common.setting.TopicKey
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.ftp.FtpSource
 import com.island.ohara.it.category.PerformanceGroup
@@ -27,8 +27,7 @@ import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
-  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   @Test
   def test(): Unit = {
@@ -36,7 +35,6 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
     val (path, _, _) = setupInputData()
     try {
       setupConnector(
-        connectorKey = connectorKey,
         topicKey = topicKey,
         className = classOf[FtpSource].getName,
         settings = ftpSettings

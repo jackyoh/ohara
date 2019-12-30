@@ -17,7 +17,7 @@
 package com.island.ohara.it.performance
 
 import com.island.ohara.client.filesystem.FileSystem
-import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
+import com.island.ohara.common.setting.TopicKey
 import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
@@ -29,9 +29,7 @@ import org.junit.{AssumptionViolatedException, Test}
 class TestPerformance4HdfsSink extends BasicTestPerformance {
   private[this] val HDFS_URL_KEY: String         = "ohara.it.performance.hdfs.url"
   private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.hdfs.needDeleteData"
-
-  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val topicKey: TopicKey           = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   private[this] val dataDir: String = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
@@ -45,7 +43,6 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   def test(): Unit = {
     produce(createTopic(topicKey))
     setupConnector(
-      connectorKey = connectorKey,
       topicKey = topicKey,
       className = classOf[HDFSSink].getName(),
       settings = Map(

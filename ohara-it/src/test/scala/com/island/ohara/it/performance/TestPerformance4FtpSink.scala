@@ -16,7 +16,7 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.{ConnectorKey, TopicKey}
+import com.island.ohara.common.setting.TopicKey
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.ftp.FtpSink
 import com.island.ohara.it.category.PerformanceGroup
@@ -27,16 +27,14 @@ import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
-  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val dataDir: String            = "/tmp"
+  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val dataDir: String    = "/tmp"
 
   @Test
   def test(): Unit = {
     try {
       produce(createTopic(topicKey))
       setupConnector(
-        connectorKey = connectorKey,
         topicKey = topicKey,
         className = classOf[FtpSink].getName(),
         settings = ftpSettings
