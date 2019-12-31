@@ -251,6 +251,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
     // record topic meters
     recordCsv(path("topic"), result(topicApi.list()).flatMap(_.metrics.meters))
+    afterStoppingConnector()
+  }
+
+  override protected def beforeReleaseConfigurator(): Unit = {
     if (this.connectorKey != null)
       await(
         () => {
@@ -259,8 +263,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         },
         true
       )
-
-    afterStoppingConnector()
   }
 
   private[this] def recordCsv(file: File, meters: Seq[Meter]): Unit =

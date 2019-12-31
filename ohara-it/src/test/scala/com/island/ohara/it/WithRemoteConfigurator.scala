@@ -82,8 +82,11 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
 
   @After
   def releaseConfigurator(): Unit = {
+    beforeReleaseConfigurator()
     Releasable.close(serviceNameHolder)
     // the client is used by name holder so we have to close it later
     Releasable.close(containerClient)
   }
+
+  protected def beforeReleaseConfigurator(): Unit = {}
 }
