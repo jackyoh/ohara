@@ -27,10 +27,11 @@ import spray.json.JsString
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   private[this] val outputDir: String    = "output"
-  private[this] val topicInfo: TopicInfo = createTopic()
+  private[this] var topicInfo: TopicInfo = _
 
   @Test
   def test(): Unit = {
+    topicInfo = createTopic()
     produce(topicInfo)
     setupConnector(
       className = classOf[SmbSink].getName(),
