@@ -61,7 +61,7 @@ abstract class IntegrationTest {
           case _: Throwable if swallowException =>
             false
         },
-      Duration.ofMinutes(5)
+      Duration.ofMinutes(2)
     )
 
   /**
