@@ -51,6 +51,7 @@ case $COMMAND in
     ;;
 esac
 
+status="stop"
 if [[ ${help} == "true" ]];
 then
   echo "bash $0 [serviceName] --help"
@@ -64,7 +65,7 @@ then
    then
      bash hdfs-container.sh --help
    else
-     bash hdfs-container.sh stop $@
+     bash hdfs-container.sh ${status} $@
    fi
 fi
 
@@ -75,7 +76,7 @@ then
   then
     bash ftp-container.sh --help
   else
-    bash ftp-container.sh stop $@
+    bash ftp-container.sh ${status} $@
   fi
 fi
 
@@ -86,7 +87,7 @@ then
   then
     bash samba-container.sh --help
   else
-    bash samba-container.sh stop $@
+    bash samba-container.sh ${status} $@
   fi
 fi
 
@@ -97,6 +98,6 @@ then
   then
     bash oracle-container.sh --help
   else
-    bash oracle-container.sh stop $@
+    bash oracle-container.sh ${status} $@
   fi
 fi
