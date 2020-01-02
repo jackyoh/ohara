@@ -41,11 +41,21 @@ case $COMMAND in
     oracle="true"
     shift
     ;;
+  --help)
+    help="true"
+    shift
+    ;;
   *)
     echo $usage
     exit 1
     ;;
 esac
+
+if [[ ${help} == "true" ]];
+then
+  echo "bash $0 [serviceName] --help"
+  echo "Support the service name is hdfs, ftp, samba and oracle"
+fi
 
 if [[ "${hdfs}" == "true" ]];
 then
