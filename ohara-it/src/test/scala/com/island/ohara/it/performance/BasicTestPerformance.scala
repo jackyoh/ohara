@@ -268,11 +268,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     afterStoppingConnector()
   }
 
-  private[this] def recordCsv(file: File, meters: Seq[Meter]): Unit =
+  private[this] def recordCsv(file: File, meters: Seq[Meter]): Unit = {
+    println("===============================")
+    println(file)
+    println("===============================")
     recordCsv(file, meters.map { m =>
       m.name -> meters.filter(_.name == m.name).map(_.value).sum
     }.toMap)
-
+  }
   private[this] def recordCsv(file: File, items: Map[String, Double]): Unit = if (items.nonEmpty) {
     // we have to fix the order of key-value
     // if we generate line via map.keys and map.values, the order may be different ...
