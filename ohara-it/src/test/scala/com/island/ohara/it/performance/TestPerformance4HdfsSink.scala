@@ -54,7 +54,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
     sleepUntilEnd()
   }
 
-  override def afterStoppingConnector(): Unit =
+  override protected def afterStoppingConnector(): Unit =
     if (needDeleteData) {
       val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
       try fileSystem.delete(s"${dataDir}/${topicInfo.topicNameOnKafka}", true)

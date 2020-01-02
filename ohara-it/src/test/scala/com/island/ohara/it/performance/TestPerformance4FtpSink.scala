@@ -41,7 +41,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
     sleepUntilEnd()
   }
 
-  override def afterStoppingConnector(): Unit = {
+  override protected def afterStoppingConnector(): Unit = {
     if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicInfo.topicNameOnKafka}")
   }
 }
