@@ -51,8 +51,8 @@ then
   echo "--user               Set oracle database user name"
   echo "--password           Set oracle database password"
   echo "--port               Set connection port for client"
-  echo "--sid                Set connection sid"
-  echo "--host             Set host name to remote host the oracle database container"
+  echo "--sid                Set connection sid. example: --sid xe"
+  echo "--host               Set host name to remote host the oracle database container"
   exit 1
 fi
 

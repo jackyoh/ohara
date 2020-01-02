@@ -49,44 +49,44 @@ esac
 
 if [[ "${hdfs}" == "true" ]];
 then
-   echo "Start HDFS service"
+   echo "Stop HDFS service"
    if [[ "$1" == "--help" ]];
    then
      bash hdfs-container.sh --help
    else
-     bash hdfs-container.sh start $@
+     bash hdfs-container.sh stop $@
    fi
 fi
 
 if [[ "${ftp}" == "true" ]];
 then
-  echo "Start FTP service"
+  echo "Stop FTP service"
   if [[ "$1" == "--help" ]];
   then
     bash ftp-container.sh --help
   else
-    bash ftp-container.sh start $@
+    bash ftp-container.sh stop $@
   fi
 fi
 
 if [[ "${samba}" == "true" ]];
 then
-  echo "Start Samba service"
+  echo "Stop Samba service"
   if [[ "$1" == "--help" ]];
   then
     bash samba-container.sh --help
   else
-    bash samba-container.sh start $@
+    bash samba-container.sh stop $@
   fi
 fi
 
 if [[ "${oracle}" == "true" ]];
 then
-  echo "Start Oracle service"
+  echo "Stop Oracle service"
   if [[ "$1" == "--help" ]];
   then
     bash oracle-container.sh --help
   else
-    bash oracle-container.sh start $@
+    bash oracle-container.sh stop $@
   fi
 fi
