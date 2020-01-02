@@ -16,6 +16,8 @@
 
 package com.island.ohara.it
 
+import java.util.concurrent.TimeUnit
+
 import com.island.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
 import com.island.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
 import com.island.ohara.client.configurator.v0.{BrokerApi, WorkerApi, ZookeeperApi}
@@ -105,5 +107,6 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
         .flatMap(wkApi.start)
     )
     await(() => result(wkApi.get(wkKey)).state.isDefined)
+    TimeUnit.SECONDS.sleep(10)
   }
 }
