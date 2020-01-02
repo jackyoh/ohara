@@ -72,13 +72,13 @@ $ docker run -d --env SAMBA_USER_NAME=${user} --env SAMBA_USER_PASS=${password} 
 $ bash start-service.sh [service name] [argument.....]
 ```
 
-Below is support the service name:
+Below is support the service:
 
 ```
-hdfs
-ftp
-samba
-oracle
+hdfs: Apache hadoop 2.7.0
+ftp:  Apache ftpserver 1.1.1
+samba: Samba 4.9.1
+oracle: Oracle enterprise 12.2.0.1
 ```
 
 Below command is example to start the samba service:
