@@ -65,3 +65,54 @@ $ docker build -f samba.dockerfile -t oharastream/ohara:samba .
 ```
 $ docker run -d --env SAMBA_USER_NAME=${user} --env SAMBA_USER_PASS=${password} -p 139:139 -p 445:445 oharastream/ohara:samba
 ```
+
+### How to use the start-service.sh script to start the hdfs, ftp, samba and oracle service?
+
+```
+$ bash start-service.sh [service name] [argument.....]
+```
+
+Below is support the service name:
+
+```
+hdfs
+ftp
+samba
+oracle
+```
+
+Below command is example to start the samba service:
+
+```
+$ bash start-service.sh samba --user ohara --password password --sport 139 --dport 445 --host host1
+```
+
+### How to use the stop-service.sh script to stop the service?
+
+```
+$ bash stop-service.sh [service name] [argument.....]
+```
+
+Below command is example to stop the samba service:
+
+```
+$ bash stop-service.sh samba --host host1
+```
+
+### How to use the --help argument for the start-service.sh and stop-service.sh script?
+
+Below command to show all service name
+
+```
+$ bash start-service.sh --help
+```
+
+Below command to show service argument
+```
+$ bash start-service.sh [service name] --help
+```
+
+example:
+```
+$ bash start-service.sh samba --help
+```
