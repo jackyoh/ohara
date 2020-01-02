@@ -254,14 +254,16 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
     // Have setup connector on the worker.
     // Need to stop the connector on the worker.
-    if (result(connectorApi.get(connectorKey)).name.nonEmpty)
-      await(
-        () => {
-          result(connectorApi.stop(connectorKey))
+    result(connectorApi.list()).foreach(
+      connector =>
+        await(
+          () => {
+            result(connectorApi.stop(connector.key))
+            true
+          },
           true
-        },
-        true
-      )
+        )
+    )
 
     afterStoppingConnector()
   }
