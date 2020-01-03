@@ -86,7 +86,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[topic properties]------------------------------//
   private[this] val megabytesOfInputDataKey           = "ohara.it.performance.data.size"
-  private[this] val megabytesOfInputDataDefault: Long = 100
+  private[this] val megabytesOfInputDataDefault: Long = 1000
   protected val sizeOfInputData =
     1024L * 1024L * value(megabytesOfInputDataKey).map(_.toLong).getOrElse(megabytesOfInputDataDefault)
 
