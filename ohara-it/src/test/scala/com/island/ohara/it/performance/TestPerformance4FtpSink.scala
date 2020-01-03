@@ -17,6 +17,7 @@
 package com.island.ohara.it.performance
 
 import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
+import com.island.ohara.common.setting.ConnectorKey
 import com.island.ohara.connector.ftp.FtpSink
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -41,7 +42,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
     sleepUntilEnd()
   }
 
-  override protected def afterStoppingConnector(): Unit = {
+  override protected def afterStoppingConnector(connectorKey: ConnectorKey): Unit = {
     if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicInfo.topicNameOnKafka}")
   }
 }

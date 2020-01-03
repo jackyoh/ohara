@@ -220,7 +220,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     * This function is after get metrics data, you can run other operating.
     * example delete data.
     */
-  protected def afterStoppingConnector(): Unit = {}
+  protected def afterStoppingConnector(connectorKey: ConnectorKey): Unit = {}
 
   //------------------------------[core functions]------------------------------//
 
@@ -265,7 +265,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         )
     )
 
-    afterStoppingConnector()
+    afterStoppingConnector(connectorKey)
   }
 
   private[this] def recordCsv(file: File, meters: Seq[Meter]): Unit =

@@ -18,6 +18,7 @@ package com.island.ohara.it.performance
 
 import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
 import com.island.ohara.client.filesystem.FileSystem
+import com.island.ohara.common.setting.ConnectorKey
 import com.island.ohara.common.util.Releasable
 import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
@@ -55,7 +56,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   }
 
   //Test assembly check for QA
-  override protected def afterStoppingConnector(): Unit = {
+  override protected def afterStoppingConnector(connectorKey: ConnectorKey): Unit = {
     if (needDeleteData) {
       val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
       try fileSystem.delete(s"${dataDir}/${topicInfo.topicNameOnKafka}", true)
