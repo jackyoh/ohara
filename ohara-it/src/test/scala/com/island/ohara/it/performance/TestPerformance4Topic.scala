@@ -23,6 +23,10 @@ import org.junit.experimental.categories.Category
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Topic extends BasicTestPerformance {
   @Test
-  def test(): Unit =
+  def test(): Unit = {
+    println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     produce(createTopic())
+    println("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+  }
+
 }

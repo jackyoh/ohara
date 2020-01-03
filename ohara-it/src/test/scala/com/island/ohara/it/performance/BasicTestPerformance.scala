@@ -226,6 +226,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   @After
   def record(): Unit = {
+    println("cccccccccccccccccccccccccccccccccccccccccc")
     def simpleName(className: String): String = {
       val index = className.lastIndexOf(".")
       if (index != -1) className.substring(index + 1)
@@ -279,15 +280,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   private[this] def recordCsv(file: File, items: Map[String, Double]): Unit = if (items.nonEmpty) {
     // we have to fix the order of key-value
     // if we generate line via map.keys and map.values, the order may be different ...
+    println("1111111111111111111111111111111111111111111111")
     val headers    = items.keys.toList
     val values     = headers.map(items(_)).mkString(",")
     val fileWriter = new FileWriter(file)
     try {
       val headerStr = headers.map(s => s"""\"$s\"""").mkString(",")
-      println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
       println(headerStr)
       println(values)
-      println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
       fileWriter.write(headerStr)
       fileWriter.write("\n")
