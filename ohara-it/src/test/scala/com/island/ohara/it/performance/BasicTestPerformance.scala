@@ -264,7 +264,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           true
         )
     )
-    Thread.sleep(300000L)
     afterStoppingConnector()
   }
 
@@ -283,7 +282,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     val values     = headers.map(items(_)).mkString(",")
     val fileWriter = new FileWriter(file)
     try {
-      fileWriter.write(headers.map(s => s"""\"$s\"""").mkString(","))
+      val headerStr = headers.map(s => s"""\"$s\"""").mkString(",")
+      println("-----------------------------------")
+      println(headerStr)
+      println(values)
+      println("------------------------------------")
+
+      fileWriter.write(headerStr)
       fileWriter.write("\n")
       fileWriter.write(values)
     } finally Releasable.close(fileWriter)
