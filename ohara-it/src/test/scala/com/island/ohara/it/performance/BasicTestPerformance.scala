@@ -264,7 +264,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           true
         )
     )
-
+    Thread.sleep(300000L)
     afterStoppingConnector()
   }
 
