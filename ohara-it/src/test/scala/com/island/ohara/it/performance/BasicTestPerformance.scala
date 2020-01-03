@@ -159,7 +159,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   protected def produce(topicInfo: TopicInfo): (TopicInfo, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
-    val numberOfRowsToFlush    = 2000
+    val numberOfRowsToFlush    = 100
     val numberOfProducerThread = 4
     val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed                 = new AtomicBoolean(false)
