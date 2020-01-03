@@ -258,7 +258,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       })
     })
     println("*******************************************")
-
+    Thread.sleep(120000)
     recordCsv(path("topic"), result(topicApi.list()).flatMap(_.metrics.meters))
 
     // Have setup connector on the worker.
