@@ -175,6 +175,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
             .build()
           var cachedRows = 0
           try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+            println("create data......................")
             producer
               .sender()
               .topicName(topicInfo.key.topicNameOnKafka())
