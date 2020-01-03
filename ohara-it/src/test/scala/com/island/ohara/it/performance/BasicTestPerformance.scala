@@ -271,6 +271,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     println("===============================")
     println(file)
     println("===============================")
+    println(s"Meters size: ${meters.size}")
     recordCsv(file, meters.map { m =>
       m.name -> meters.filter(_.name == m.name).map(_.value).sum
     }.toMap)
@@ -283,10 +284,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     val fileWriter = new FileWriter(file)
     try {
       val headerStr = headers.map(s => s"""\"$s\"""").mkString(",")
-      println("-----------------------------------")
+      println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
       println(headerStr)
       println(values)
-      println("------------------------------------")
+      println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
       fileWriter.write(headerStr)
       fileWriter.write("\n")
