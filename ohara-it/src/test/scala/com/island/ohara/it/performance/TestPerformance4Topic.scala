@@ -24,9 +24,7 @@ import org.junit.experimental.categories.Category
 class TestPerformance4Topic extends BasicTestPerformance {
   @Test
   def test(): Unit = {
-    println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     produce(createTopic())
-    println("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
   }
 
 }

@@ -227,7 +227,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   @After
   def record(): Unit = {
-    println("cccccccccccccccccccccccccccccccccccccccccc")
     def simpleName(className: String): String = {
       val index = className.lastIndexOf(".")
       if (index != -1) className.substring(index + 1)
@@ -252,6 +251,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       )
 
     // record topic meters
+    println("******************************************")
+    println(s"topic size: ${result(topicApi.list()).size}")
+    result(topicApi.list).foreach(topic => {
+      topic.metrics.meters.foreach(x => {
+        println(s"${x.name}     ${x.value}")
+      })
+    })
+    println("*******************************************")
+
     recordCsv(path("topic"), result(topicApi.list()).flatMap(_.metrics.meters))
 
     // Have setup connector on the worker.
