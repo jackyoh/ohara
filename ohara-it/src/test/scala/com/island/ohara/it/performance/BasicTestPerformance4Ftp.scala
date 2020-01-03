@@ -174,4 +174,14 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     try if (client.exist(path)) client.delete(path, true)
     finally Releasable.close(client)
   }
+
+  /**
+    * Is exist for folder or file
+    * @param path ile path on the remote ftp server
+    */
+  protected def exists(path: String): Boolean = {
+    val client = ftpClient()
+    try client.exist(path)
+    finally Releasable.close(client)
+  }
 }

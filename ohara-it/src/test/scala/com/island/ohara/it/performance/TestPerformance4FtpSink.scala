@@ -27,13 +27,11 @@ import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
-  private[this] val dataDir: String      = "/tmp"
-  private[this] var topicInfo: TopicInfo = _
+  private[this] val dataDir: String = "/tmp"
 
   @Test
   def test(): Unit = {
-    topicInfo = createTopic()
-    produce(topicInfo)
+    produce(createTopic())
     setupConnector(
       className = classOf[FtpSink].getName(),
       settings = ftpSettings
@@ -43,5 +41,9 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
   }
 
   override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
-    if (cleanupTestData) recursiveRemoveFolder(s"${dataDir}/${topicInfo.topicNameOnKafka}")
+    if (cleanupTestData)
+      topicInfos.foreach { topicInfo =>
+        val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
+        if (exists(path)) recursiveRemoveFolder(path)
+      }
 }

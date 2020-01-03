@@ -27,13 +27,11 @@ import spray.json.JsString
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
-  private[this] val outputDir: String    = "output"
-  private[this] var topicInfo: TopicInfo = _
+  private[this] val outputDir: String = "output"
 
   @Test
   def test(): Unit = {
-    topicInfo = createTopic()
-    produce(topicInfo)
+    produce(createTopic())
     setupConnector(
       className = classOf[SmbSink].getName(),
       settings = sambaSettings
@@ -43,5 +41,9 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   }
 
   override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
-    if (needDeleteData) removeSambaFolder(s"${outputDir}/${topicInfo.topicNameOnKafka}")
+    if (needDeleteData)
+      topicInfos.foreach { topicInfo =>
+        val path = s"${outputDir}/${topicInfo.topicNameOnKafka}"
+        if (exists(path)) removeSambaFolder(path)
+      }
 }

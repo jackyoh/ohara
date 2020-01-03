@@ -88,6 +88,12 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     finally Releasable.close(client)
   }
 
+  protected def exists(path: String): Boolean = {
+    val client = sambaClient()
+    try client.exists(path)
+    finally Releasable.close(client)
+  }
+
   protected def setupInputData(): (String, Long, Long) = {
     val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
 

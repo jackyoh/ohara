@@ -38,12 +38,10 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   )
 
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
-  private[this] var topicInfo: TopicInfo    = _
 
   @Test
   def test(): Unit = {
-    topicInfo = createTopic()
-    produce(topicInfo)
+    produce(createTopic())
     setupConnector(
       className = classOf[HDFSSink].getName(),
       settings = Map(
@@ -58,7 +56,9 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
     if (needDeleteData) {
       val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
-      try fileSystem.delete(s"${dataDir}/${topicInfo.topicNameOnKafka}", true)
-      finally Releasable.close(fileSystem)
+      try topicInfos.foreach { topicInfo =>
+        val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
+        if (fileSystem.exists(path)) fileSystem.delete(path, true)
+      } finally Releasable.close(fileSystem)
     }
 }
