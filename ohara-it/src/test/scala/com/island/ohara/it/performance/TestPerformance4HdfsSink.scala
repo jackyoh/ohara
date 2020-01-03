@@ -54,6 +54,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
     sleepUntilEnd()
   }
 
+  //Test assembly check for QA
   override protected def afterStoppingConnector(): Unit =
     if (needDeleteData) {
       val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
