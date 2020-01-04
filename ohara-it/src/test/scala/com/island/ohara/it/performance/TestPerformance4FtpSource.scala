@@ -28,20 +28,22 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
     createTopic()
-    val completedFolder = "/completed"
-    val (path, _, _)    = setupInputData()
+    val completedPath = "/completed"
+    val errorPath     = "/error"
+    val (path, _, _)  = setupInputData()
     try {
       setupConnector(
         className = classOf[FtpSource].getName,
         settings = ftpSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
-          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createFtpFolder(completedFolder)))
-          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createFtpFolder("/error")))
+          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createFtpFolder(completedPath)))
+          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createFtpFolder(errorPath)))
       )
       sleepUntilEnd()
     } finally if (cleanupTestData) {
       removeFtpFolder(path)
-      removeFtpFolder(completedFolder)
+      removeFtpFolder(completedPath)
+      removeFtpFolder(errorPath)
     }
   }
 }

@@ -28,20 +28,22 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
   @Test
   def test(): Unit = {
     createTopic()
-    val completedFolder = "completed"
-    val (path, _, _)    = setupInputData()
+    val completedPath = "completed"
+    val errorPath     = "error"
+    val (path, _, _)  = setupInputData()
     try {
       setupConnector(
         className = classOf[SmbSource].getName(),
         settings = sambaSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
-          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createSambaFolder(completedFolder)))
-          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createSambaFolder("error")))
+          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createSambaFolder(completedPath)))
+          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createSambaFolder(errorPath)))
       )
       sleepUntilEnd()
     } finally if (needDeleteData) {
       removeSambaFolder(path)
-      removeSambaFolder(completedFolder)
+      removeSambaFolder(completedPath)
+      removeSambaFolder(errorPath)
     }
   }
 }
