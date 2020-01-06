@@ -108,6 +108,6 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
     await(() => result(wkApi.get(wkKey)).state.isDefined)
 
     val connectionProps = result(wkApi.get(wkKey)).connectionProps
-    await(() => result(WorkerClient(connectionProps).plugins).size > 0, true)
+    await(() => result(WorkerClient(connectionProps).plugins).nonEmpty, true)
   }
 }
