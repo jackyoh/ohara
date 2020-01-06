@@ -19,6 +19,7 @@ package com.island.ohara.it
 import com.island.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
 import com.island.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
 import com.island.ohara.client.configurator.v0.{BrokerApi, WorkerApi, ZookeeperApi}
+import com.island.ohara.client.kafka.WorkerClient
 import com.island.ohara.common.setting.ObjectKey
 import com.island.ohara.common.util.CommonUtils
 import org.junit.Before
@@ -105,5 +106,8 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
         .flatMap(wkApi.start)
     )
     await(() => result(wkApi.get(wkKey)).state.isDefined)
+
+    val connectionProps = result(wkApi.get(wkKey)).connectionProps
+    await(() => result(WorkerClient(connectionProps).plugins).size > 0, true)
   }
 }
