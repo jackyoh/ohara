@@ -152,7 +152,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
             .create()
         )
         result(connectorApi.start(connectorKey))
-        result(connectorApi.list()).nonEmpty
+        true
       },
       true
     )
