@@ -139,26 +139,25 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     val executors = Executors.newFixedThreadPool(4)
     val client    = ftpClient()
     try {
-      val files = {
-        val fs       = client.listFileNames(path).map(name => s"$path/$name")
-        val fileSize = fs.size
-        if (fileSize > 0) {
-          val queue = new ArrayBlockingQueue[String](fileSize)
+      val fs = client.listFileNames(path).map(name => s"$path/$name")
+      if (fs.nonEmpty) {
+        val files = {
+          val queue = new ArrayBlockingQueue[String](fs.size)
           queue.addAll(fs.asJava)
           queue
-        } else new ArrayBlockingQueue[String](1)
-      }
-      (0 until count).foreach { _ =>
-        executors.execute(() => {
-          val client = ftpClient()
-          try {
-            var file = files.poll()
-            while (file != null) {
-              client.delete(file)
-              file = files.poll()
-            }
-          } finally Releasable.close(client)
-        })
+        }
+        (0 until count).foreach { _ =>
+          executors.execute(() => {
+            val client = ftpClient()
+            try {
+              var file = files.poll()
+              while (file != null) {
+                client.delete(file)
+                file = files.poll()
+              }
+            } finally Releasable.close(client)
+          })
+        }
       }
     } finally try {
       executors.shutdown()
