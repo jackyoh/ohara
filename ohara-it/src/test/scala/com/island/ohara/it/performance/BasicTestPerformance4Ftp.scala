@@ -140,10 +140,13 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     val client    = ftpClient()
     try {
       val files = {
-        val fs    = client.listFileNames(path).map(name => s"$path/$name")
-        val queue = new ArrayBlockingQueue[String](fs.size)
-        queue.addAll(fs.asJava)
-        queue
+        val fs       = client.listFileNames(path).map(name => s"$path/$name")
+        val fileSize = fs.size
+        if (fileSize > 0) {
+          val queue = new ArrayBlockingQueue[String](fileSize)
+          queue.addAll(fs.asJava)
+          queue
+        } else new ArrayBlockingQueue[String](1)
       }
       (0 until count).foreach { _ =>
         executors.execute(() => {
