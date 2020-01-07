@@ -135,33 +135,37 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     * @param path file path on the remote ftp server
     */
   protected def removeFtpFolder(path: String): Unit = {
-    val count     = numberOfProducerThread
-    val executors = Executors.newFixedThreadPool(4)
-    val client    = ftpClient()
+    val client = ftpClient()
     try {
-      val files = {
-        val fs    = client.listFileNames(path).map(name => s"$path/$name")
-        val queue = new ArrayBlockingQueue[String](fs.size)
-        queue.addAll(fs.asJava)
-        queue
+      val fs = client.listFileNames(path).map(name => s"$path/$name")
+      if (fs.nonEmpty) {
+        val count     = numberOfProducerThread
+        val executors = Executors.newFixedThreadPool(4)
+        try {
+          val files = {
+            val queue = new ArrayBlockingQueue[String](fs.size)
+            queue.addAll(fs.asJava)
+            queue
+          }
+          (0 until count).foreach { _ =>
+            executors.execute(() => {
+              val client = ftpClient()
+              try {
+                var file = files.poll()
+                while (file != null) {
+                  client.delete(file)
+                  file = files.poll()
+                }
+              } finally Releasable.close(client)
+            })
+          }
+        } finally {
+          executors.shutdown()
+          // we delete the folder only if all threads are completed
+          if (executors.awaitTermination(60, TimeUnit.SECONDS)) client.delete(path)
+          else throw new IllegalArgumentException(s"failed to remove folder:$path due to timeout")
+        }
       }
-      (0 until count).foreach { _ =>
-        executors.execute(() => {
-          val client = ftpClient()
-          try {
-            var file = files.poll()
-            while (file != null) {
-              client.delete(file)
-              file = files.poll()
-            }
-          } finally Releasable.close(client)
-        })
-      }
-    } finally try {
-      executors.shutdown()
-      // we delete the folder only if all threads are completed
-      if (executors.awaitTermination(60, TimeUnit.SECONDS)) client.delete(path)
-      else throw new IllegalArgumentException(s"failed to remove folder:$path due to timeout")
     } finally Releasable.close(client)
   }
 
