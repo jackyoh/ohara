@@ -137,18 +137,20 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     className: String,
     settings: Map[String, JsValue]
   ): ConnectorInfo = {
-    result(
-      connectorApi.request
-        .settings(settings)
-        .key(connectorKey)
-        .className(className)
-        .topicKey(topicKey)
-        .workerClusterKey(workerClusterInfo.key)
-        .numberOfTasks(numberOfConnectorTasks)
-        .create()
-    )
+    //Before create and start the connector, need to await
+    // worker http server running completed.
     await(
       () => {
+        result(
+          connectorApi.request
+            .settings(settings)
+            .key(connectorKey)
+            .className(className)
+            .topicKey(topicKey)
+            .workerClusterKey(workerClusterInfo.key)
+            .numberOfTasks(numberOfConnectorTasks)
+            .create()
+        )
         result(connectorApi.start(connectorKey))
         true
       },
