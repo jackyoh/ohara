@@ -77,6 +77,7 @@ Example Request
   .. code-block:: json
 
      {
+       "brokerClusterKey": "bk",
        "name": "topic0",
        "numberOfReplications": 1,
        "numberOfPartitions": 1
@@ -87,20 +88,22 @@ Example Response
   .. code-block:: json
 
     {
-      "group": "default",
-      "name": "topic0",
-      "workerClusterKey": {
+      "brokerClusterKey": {
         "group": "default",
-        "name": "preCreatedBkCluster"
+        "name": "bk"
       },
-      "numberOfReplications": 1,
-      "numberOfPartitions": 1,
+      "name": "topic0",
+      "partitionInfos": [],
+      "lastModified": 1578537142950,
       "tags": {},
-      "lastModified": 1553498552595,
+      "numberOfReplications": 1,
       "metrics": {
         "meters": []
-      }
+      },
+      "group":"default",
+      "numberOfPartitions": 1
     }
+
 
   .. note::
      The topic, which is just created, does not have any metrics.
@@ -123,20 +126,22 @@ Example Response
   .. code-block:: json
 
     {
-      "group": "default",
-      "name": "topic0",
-      "workerClusterKey": {
+      "brokerClusterKey": {
         "group": "default",
-        "name": "preCreatedBkCluster"
+        "name": "bk"
       },
-      "numberOfReplications": 1,
-      "numberOfPartitions": 3,
+      "name": "topic0",
+      "partitionInfos": [],
+      "lastModified": 1578537915735,
       "tags": {},
-      "lastModified": 1553498552595,
+      "numberOfReplications": 1,
       "metrics": {
         "meters": []
-      }
+      },
+      "group": "default",
+      "numberOfPartitions": 3
     }
+
 
 
 list all topics properties
@@ -161,23 +166,22 @@ Example Response
 
     [
       {
-        "group": "default",
-        "name": "topic0",
-        "workerClusterKey": {
+        "brokerClusterKey": {
           "group": "default",
-          "name": "preCreatedBkCluster"
+          "name": "bk"
         },
-        "numberOfReplications": 1,
-        "numberOfPartitions": 3,
+        "name": "topic1",
+        "partitionInfos": [],
+        "lastModified": 1578537915735,
         "tags": {},
-        "lastModified": 1553498552595,
+        "numberOfReplications": 1,
         "metrics": {
           "meters": []
-        }
+        },
+        "group": "default",
+        "numberOfPartitions": 3
       }
     ]
-
-
 
 delete a topic properties
 -------------------------
@@ -192,7 +196,7 @@ Example Response
 
   .. note::
     It is ok to delete an nonexistent topic, and the response is 204 NoContent.
-
+    You must be stopped the delete topic.
 
 .. _rest-topics-get:
 
@@ -205,21 +209,21 @@ Example Response
   .. code-block:: json
 
     {
-      "group": "default",
-      "name": "topic0",
-      "workerClusterKey": {
+      "brokerClusterKey": {
         "group": "default",
-        "name": "preCreatedBkCluster"
+        "name": "bk"
       },
-      "numberOfReplications": 1,
-      "numberOfPartitions": 3,
+      "name": "topic1",
+      "partitionInfos": [],
+      "lastModified": 1578537915735,
       "tags": {},
-      "lastModified": 1553498552595,
+      "numberOfReplications": 1,
       "metrics": {
         "meters": []
-      }
+      },
+      "group": "default",
+      "numberOfPartitions": 3
     }
-
 
 start a topic on remote broker cluster
 --------------------------------------
