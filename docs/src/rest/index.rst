@@ -86,7 +86,6 @@ Manage clusters
    :maxdepth: 2
    :caption: REST APIs
 
-   rest-version
    rest-topics
    rest-connectors
    rest-pipelines
