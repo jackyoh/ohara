@@ -46,7 +46,7 @@ on a dead cluster will get an abstract with error state.
 
 The properties used in generating pipeline are shown below.
 
-#. group (**string**) — pipeline’s name
+#. group (**string**) — pipeline’s group
 #. name (**string**) — pipeline’s name
 #. endpoints (**array(object)**) — the relationship between objects
 
@@ -94,6 +94,8 @@ the response from server shows that it fails to find the status of the
 :ref:`connector <rest-connectors>` to pipeline.
 
 Example Request 1
+  Running single topic example
+
   .. code-block:: json
 
      {
@@ -111,32 +113,119 @@ Example Response 1
   .. code-block:: json
 
     {
-      "name":"pipeline0",
-      "lastModified":1578554730836,
-      "endpoints":[
+      "name": "pipeline0",
+      "lastModified": 1578639344607,
+      "endpoints": [
         {
-          "group":"default",
-          "name":"topic0",
-          "kind":"topic"
+          "group": "default",
+          "name": "topic0",
+          "kind": "topic"
         }
       ],
-      "tags":{},
-      "objects":[
-       {
-         "name":"topic0",
-         "state":"RUNNING",
-         "lastModified":1578537915735,
-         "tags":{},
-         "metrics":{
-           "meters":[]
-         },
-         "kind":"topic",
-         "group":"default"
-       }
+      "tags": {},
+      "objects": [
+        {
+          "name": "topic0",
+          "state": "RUNNING",
+          "lastModified": 1578635914746,
+          "tags": {},
+          "metrics": {
+            "meters": []
+          },
+          "kind": "topic",
+          "group": "default"
+        }
       ],
-      "jarKeys":[],
-      "group":"default"
+      "jarKeys": [],
+      "group": "default"
     }
+
+Example Request 2
+  Running topic and perf connector example
+
+  .. code-block:: json
+
+    {
+      "name": "pipeline1",
+      "endpoints": [
+        {
+          "group": "default",
+          "name": "topic0",
+          "kind": "topic"
+        },
+        {
+          "group": "default",
+          "name": "perf",
+          "kind": "connector"
+        }
+      ]
+    }
+
+Example Response 2
+  .. code-block:: json
+
+    {
+      "name": "pipeline1",
+      "lastModified": 1578649709850,
+      "endpoints": [
+        {
+          "group": "default",
+          "name": "topic0",
+          "kind": "topic"
+        },
+        {
+          "group": "default",
+          "name": "perf",
+          "kind": "connector"
+        }
+      ],
+      "tags": {},
+      "objects": [
+        {
+          "name": "topic0",
+          "state": "RUNNING",
+          "lastModified": 1578649564486,
+          "tags": {},
+          "metrics": {
+            "meters": [
+              {
+                "name": "BytesOutPerSec",
+                "document": "BytesOutPerSec",
+                "unit": "bytes / SECONDS",
+                "queryTime": 1578649704688,
+                "value": 0.0
+              }
+            ]
+          },
+          "kind": "topic",
+          "group": "default"
+        },
+        {
+          "name": "perf",
+          "state": "RUNNING",
+          "lastModified": 1578649620960,
+          "tags": {},
+          "className": "com.island.ohara.connector.perf.PerfSource",
+          "metrics": {
+            "meters": [
+              {
+                "name": "ignored.message.size",
+                "startTime": 1578649656575,
+                "document": "size of ignored messages",
+                "unit": "bytes",
+                "queryTime": 1578649707752,
+                "value": 0.0
+              }
+            ]
+          },
+          "kind": "source",
+          "group": "default"
+        }
+      ],
+      "jarKeys": [],
+      "group": "default"
+    }
+
 
 update a pipeline
 -----------------
@@ -146,17 +235,15 @@ update a pipeline
 Example Request
   .. code-block:: json
 
-     {
-       "name": "pipeline0",
-       "endpoints": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "kind": "topic"
-         }
-       ]
-     }
-
+    {
+      "endpoints": [
+        {
+          "group": "default",
+          "name": "topic1",
+          "kind": "topic"
+        }
+      ]
+    }
 
   .. note::
     This API creates an new pipeline for you if the input name
@@ -167,30 +254,32 @@ Example Response
 
     {
       "name": "pipeline0",
-      "lastModified": 1578557938472,
+      "lastModified": 1578641282237,
       "endpoints": [
         {
-          "group":"default",
-          "name":"topic0",
-          "kind":"topic"
+          "group": "default",
+          "name": "topic1",
+          "kind": "topic"
         }
       ],
       "tags": {},
       "objects": [
         {
-           "name": "topic0",
-           "lastModified": 1578553391534,
-           "tags": {},
-           "metrics": {
-             "meters": []
-           },
-           "kind": "topic",
-           "group":"default"
+          "name": "topic1",
+          "state": "RUNNING",
+          "lastModified": 1578641231579,
+          "tags": {},
+          "metrics": {
+            "meters": []
+          },
+          "kind": "topic",
+          "group": "default"
         }
       ],
-      "jarKeys":[],
-      "group":"default"
+      "jarKeys": [],
+      "group": "default"
     }
+
 
 list all pipelines
 ------------------
@@ -204,53 +293,72 @@ name of pipeline, please use :ref:`GET <rest-pipelines-get>` to fetch details
 of **single** pipeline.
 
 the accepted query keys are listed below.
+
 #. group
 #. name
+#. jarKeys
 #. lastModified
 #. tags
-#. tag - this field is similar to tags but it addresses the "contain" behavior.
 
-Example Response
+Example Request 1
+    * GET /v0/pipelines
+
+Example Response 1
   .. code-block:: json
 
-     [
-       {
-         "name": "pipeline0",
-         "lastModified": 1554950999668,
-         "endpoints": [
-           {
-             "group": "default",
-             "name": "topic0",
-             "kind": "topic"
-           }
-         ],
-         "objects": [
-           {
-             "group": "default",
-             "name": "topic0",
-             "lastModified": 1554950034608,
-             "metrics": {
-               "meters": []
-             },
-             "kind": "topic",
-             "tags": {}
-           },
-           {
-             "group": "default",
-             "name": "81cb80a9-34a5-4e45-881a-cb87d4fbb5bd",
-             "lastModified": 1554950058696,
-             "error": "Failed to get status and type of connector:81cb80a9-34a5-4e45-881a-cb87d4fbb5bd. This could be a temporary issue since our worker cluster is too busy to sync status of connector. abc doesn't exist",
-             "metrics": {
-               "meters": []
-             },
-             "kind": "connector",
-             "tags": {}
-           }
-         ],
-         "tags": {}
-       }
-     ]
+    [
+      {
+        "name": "pipeline0",
+        "lastModified": 1578641282237,
+        "endpoints": [
+          {
+            "group": "default",
+            "name": "topic1",
+            "kind": "topic"
+          }
+        ],
+        "tags": {},
+        "objects": [
+          {
+            "name": "topic1",
+            "state": "RUNNING",
+            "lastModified": 1578641231579,
+            "tags": {},
+            "metrics": {
+              "meters": []
+            },
+            "kind": "topic",
+              "group": "default"
+            }
+        ],
+        "jarKeys": [],
+        "group": "default"
+      }
+    ]
 
+Example Request 2
+    * GET /v0/pipelines?name=topic1
+
+Example Response 2
+  .. code-block:: json
+
+    [
+      {
+        "name": "pipeline0",
+        "lastModified": 1578647223700,
+        "endpoints": [
+          {
+            "group": "default",
+            "name": "topic1",
+            "kind": "topic"
+          }
+        ],
+        "tags": {},
+        "objects": [],
+        "jarKeys": [],
+        "group": "default"
+      }
+    ]
 
 delete a pipeline
 -----------------
@@ -280,41 +388,21 @@ get a pipeline
 Example Response
   .. code-block:: json
 
-     {
-       "name": "pipeline0",
-       "lastModified": 1554950999668,
-       "endpoints": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "kind": "topic"
-         }
-       ],
-       "objects": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "lastModified": 1554950034608,
-           "metrics": {
-             "meters": []
-           },
-           "kind": "topic",
-           "tags": {}
-         },
-         {
-           "group": "default",
-           "name": "81cb80a9-34a5-4e45-881a-cb87d4fbb5bd",
-           "lastModified": 1554950058696,
-           "error": "Failed to get status and type of connector:81cb80a9-34a5-4e45-881a-cb87d4fbb5bd. This could be a temporary issue since our worker cluster is too busy to sync status of connector. abc doesn't exist",
-           "metrics": {
-             "meters": []
-           },
-           "kind": "connector",
-           "tags": {}
-         }
-       ],
-       "tags": {}
-     }
+    {
+      "name": "pipeline0",
+      "lastModified": 1578647223700,
+      "endpoints": [
+        {
+          "group": "default",
+          "name": "topic1",
+          "kind": "topic"
+        }
+      ],
+      "tags": {},
+      "objects": [],
+      "jarKeys": [],
+      "group": "default"
+    }
 
 
 refresh a pipeline
