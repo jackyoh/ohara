@@ -110,84 +110,33 @@ Example Request 1
 Example Response 1
   .. code-block:: json
 
-     {
-       "name": "pipeline0",
-       "lastModified": 1554950999668,
-       "endpoints": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "kind": "topic"
-         }
-       ],
-       "objects": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "lastModified": 1554950034608,
-           "metrics": {
-             "meters": []
-           },
-           "kind": "topic",
-           "tags": {}
+    {
+      "name":"pipeline0",
+      "lastModified":1578554730836,
+      "endpoints":[
+        {
+          "group":"default",
+          "name":"topic0",
+          "kind":"topic"
+        }
+      ],
+      "tags":{},
+      "objects":[
+       {
+         "name":"topic0",
+         "state":"RUNNING",
+         "lastModified":1578537915735,
+         "tags":{},
+         "metrics":{
+           "meters":[]
          },
-         {
-           "group": "default",
-           "name": "81cb80a9-34a5-4e45-881a-cb87d4fbb5bd",
-           "lastModified": 1554950058696,
-           "error": "Failed to get status and type of connector:81cb80a9-34a5-4e45-881a-cb87d4fbb5bd. This could be a temporary issue since our worker cluster is too busy to sync status of connector. abc doesn't exist",
-           "metrics": {
-             "meters": []
-           },
-           "kind": "connector",
-           "tags": {}
-         }
-       ],
-       "tags": {}
-     }
-
-Example Request 1
-  .. code-block:: json
-
-     {
-       "name": "pipeline1",
-       "endpoints": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "kind": "topic"
-         }
-       ]
-     }
-
-Example Response 1
-  .. code-block:: json
-
-     {
-       "name": "pipeline1",
-       "lastModified": 1554952500972,
-       "endpoints": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "kind": "topic"
-         }
-       ],
-       "objects": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "lastModified": 1554950034608,
-           "metrics": {
-             "meters": []
-           },
-           "kind": "topic",
-           "tags": {}
-         }
-       ],
-       "tags": {}
-     }
-
+         "kind":"topic",
+         "group":"default"
+       }
+      ],
+      "jarKeys":[],
+      "group":"default"
+    }
 
 update a pipeline
 -----------------
@@ -208,6 +157,7 @@ Example Request
        ]
      }
 
+
   .. note::
     This API creates an new pipeline for you if the input name
     does not exist!
@@ -215,42 +165,32 @@ Example Request
 Example Response
   .. code-block:: json
 
-     {
-       "name": "pipeline0",
-       "lastModified": 1554950999668,
-       "endpoints": [
-         {
-           "group": "default",
+    {
+      "name": "pipeline0",
+      "lastModified": 1578557938472,
+      "endpoints": [
+        {
+          "group":"default",
+          "name":"topic0",
+          "kind":"topic"
+        }
+      ],
+      "tags": {},
+      "objects": [
+        {
            "name": "topic0",
-           "kind": "topic"
-         }
-       ],
-       "objects": [
-         {
-           "group": "default",
-           "name": "topic0",
-           "lastModified": 1554950034608,
+           "lastModified": 1578553391534,
+           "tags": {},
            "metrics": {
              "meters": []
            },
            "kind": "topic",
-           "tags": {}
-         },
-         {
-           "group": "default",
-           "name": "81cb80a9-34a5-4e45-881a-cb87d4fbb5bd",
-           "lastModified": 1554950058696,
-           "error": "Failed to get status and type of connector:81cb80a9-34a5-4e45-881a-cb87d4fbb5bd. This could be a temporary issue since our worker cluster is too busy to sync status of connector. abc doesn't exist",
-           "metrics": {
-             "meters": []
-           },
-           "kind": "connector",
-           "tags": {}
-         }
-       ],
-       "tags": {}
-     }
-
+           "group":"default"
+        }
+      ],
+      "jarKeys":[],
+      "group":"default"
+    }
 
 list all pipelines
 ------------------
