@@ -303,7 +303,7 @@ the accepted query keys are listed below.
 #. tags
 
 Example Request 1
-    * GET /v0/pipelines
+  * GET /v0/pipelines
 
 Example Response 1
   .. code-block:: json
