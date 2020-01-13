@@ -93,6 +93,8 @@ the response from server shows that it fails to find the status of the
 :ref:`connector <rest-connectors>`. That is to say, it is ok to add un-running
 :ref:`connector <rest-connectors>` to pipeline.
 
+Allow setting the not exists object for the endpoint. The object resposne value is empty.
+
 Example Request 1
   Running single topic example
 
@@ -404,6 +406,7 @@ Example Response
       "group": "default"
     }
 
+If set to not exists object for the endpoint, The objects response is empty.
 
 refresh a pipeline
 ------------------
