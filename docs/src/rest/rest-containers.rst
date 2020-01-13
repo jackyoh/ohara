@@ -57,7 +57,7 @@ Example Response
      - nodeName (**string**) — the node which host this container
      - imageName (**string**) — the image used to create this container
      - id (**string**) — container id
-     - kind (**string**) — Ohara support the DOCKER and K8S mode
+     - kind (**string**) — Ohara supports the DOCKER and K8S mode
 
   .. code-block:: json
 
