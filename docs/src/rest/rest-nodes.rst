@@ -38,8 +38,8 @@ following services.
 
 The version (tag) depends on which ohara you used. It would be better to
 use the same version to Ohara. For example, the version of Ohara
-configurator you are running is 0.9.0, then the official images you should
-download is oharastream/xxxx:0.9.0.
+configurator you are running is $|version|, then the official images you should
+download is oharastream/xxxx:$|version|.
 
 The properties used by describing a node are shown below.
 
@@ -156,7 +156,6 @@ update a node
 #. password (**string**) — ssh password
 
 Example Request
-
   .. code-block:: json
 
     {
