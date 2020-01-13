@@ -406,7 +406,8 @@ Example Response
       "group": "default"
     }
 
-noted: the field "objects" displays only existent endpoints.
+  .. note::
+    The field "objects" displays only existent endpoints.
 
 refresh a pipeline
 ------------------
