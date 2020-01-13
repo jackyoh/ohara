@@ -406,7 +406,7 @@ Example Response
       "group": "default"
     }
 
-If set to not exists object for the endpoint, The objects response is empty.
+noted: the field "objects" displays only existent endpoints.
 
 refresh a pipeline
 ------------------
