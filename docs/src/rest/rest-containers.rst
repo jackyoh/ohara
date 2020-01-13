@@ -51,67 +51,52 @@ Example Response
      - portMappings (**array(object)**) — the exported ports of this container
 
        - portMappings[i].hostIp (**string**) — the network interface of container host
-       - portMappings[i].portPairs (**object**) — the container port and host port
-
-         - portMappings[i].portPairs[j].hostPort (**int**) — host port
-         - portMappings[i].portPairs[j].containerPort (**int**) — container port
+       - portMappings[i].hostPort (**int**) — host port
+       - portMappings[i].containerPort (**int**) — container port
 
      - nodeName (**string**) — the node which host this container
      - imageName (**string**) — the image used to create this container
      - id (**string**) — container id
-     - created (**string**) — create time
+     - kind (**string**) — Ohara support the DOCKER and K8S mode
 
   .. code-block:: json
 
-     [
-       {
-         "clusterKey": {
-           "group": "default",
-           "name": "zk00"
-         },
-         "clusterType": "zookeeper",
-         "containers": [
-           {
-             "environments": {
-               "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/zookeeper/default/bin",
-               "ZK_ID": "0",
-               "ZK_ELECTION_PORT": "3888",
-               "JAVA_HOME": "/usr/lib/jvm/jre",
-               "ZK_CLIENT_PORT": "2181",
-               "ZK_SERVERS": "node00",
-               "ZK_PEER_PORT": "2888",
-               "ZOOKEEPER_HOME": "/home/zookeeper/default"
-             },
-             "name": "occl-zk00-zk-2aa11cc",
-             "hostname": "node00",
-             "size": "32.9kB (virtual 595MB)",
-             "state": "RUNNING",
-             "portMappings": [
-               {
-                 "hostIp": "0.0.0.0",
-                 "portPairs": [
-                   {
-                     "hostPort": 2181,
-                     "containerPort": 2181
-                   },
-                   {
-                     "hostPort": 2888,
-                     "containerPort": 2888
-                   },
-                   {
-                     "hostPort": 3888,
-                     "containerPort": 3888
-                   }
-                 ]
-               }
-             ],
-             "nodeName": "node00",
-             "imageName": "oharastream/zookeeper:$|version|",
-             "id": "22169c48646c",
-             "kind": "DOCKER",
-             "created": "2019-04-12 03:30:56 -0400 EDT"
-           }
-         ]
-       }
-     ]
-
+    [
+      {
+        "clusterKey": {
+          "group": "default",
+          "name": "wk00"
+        },
+        "clusterType": "worker",
+        "containers": [
+          {
+            "environments": {
+              "KAFKA_JMX_OPTS": "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=41484 -Dcom.sun.management.jmxremote.rmi.port=41484 -Djava.rmi.server.hostname=ohara-release-test-00",
+              "KAFKA_HEAP_OPTS": "-Xms1024M -Xmx1024M",
+              "WORKER_PLUGIN_URLS": "",
+              "WORKER_SHARED_JAR_URLS": ""
+            },
+            "name": "default-wk00-worker-3b8c71a",
+            "hostname": "wk00-worker-5739cbd",
+            "size": -1,
+            "state": "RUNNING",
+            "portMappings": [
+              {
+                "hostIp": "10.2.10.30",
+                "hostPort": 36789,
+                "containerPort": 36789
+              },
+              {
+                "hostIp": "10.2.10.30",
+                "hostPort": 41484,
+                "containerPort": 41484
+              }
+            ],
+            "nodeName": "ohara-release-test-00",
+            "imageName": "oharastream/connect-worker:0.9.0-SNAPSHOT",
+            "id": "2a3b3872-35ab-11ea-8a18-a29736512df3",
+            "kind": "K8S"
+          }
+        ]
+      }
+    ]
