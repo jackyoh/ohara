@@ -55,22 +55,25 @@ Example Response
        "settings": [
          {
            "definition": {
-             "reference": "NONE",
-             "displayName": "connector.class",
-             "internal": false,
-             "documentation": "the class name of connector",
-             "valueType": "CLASS",
-             "tableKeys": [],
-             "orderInGroup": 0,
-             "key": "connector.class",
-             "required": true,
-             "defaultValue": null,
+             "displayName": "Connector class",
              "group": "core",
-             "editable": true
-           },
-           "setting": {
+             "orderInGroup": 3,
              "key": "connector.class",
-             "value": "com.island.ohara.connector.perf",
+             "valueType": "CLASS",
+             "necessary": "REQUIRED",
+             "defaultValue": null,
+             "documentation": "the class name of connector",
+             "reference": "NONE",
+             "regex": null,
+             "internal": false,
+             "permission": "EDITABLE",
+             "tableKeys": [],
+             "recommendedValues": [],
+             "blacklist": []
+           },
+           "value": {
+             "key": "connector.class",
+             "value": "com.island.ohara.connector.perf.PerfSource",
              "errors": []
            }
          }
@@ -81,7 +84,7 @@ The above example only show a part of report. The element **definition**
 is equal to :ref:`connector’s setting definition <rest-workers>`. The definition
 is what connector must define. If you don’t write any definitions for
 you connector, the validation will do nothing for you. The element
-**setting** is what you request to validate.
+**value** is what you request to validate.
 
 #. key (**string**) — the property key. It is equal to key in **definition**
 #. value (**string**) — the value you request to validate
