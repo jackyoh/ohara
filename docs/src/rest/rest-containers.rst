@@ -93,7 +93,7 @@ Example Response
               }
             ],
             "nodeName": "ohara-release-test-00",
-            "imageName": "oharastream/connect-worker:0.9.0-SNAPSHOT",
+            "imageName": "oharastream/connect-worker:$|version|",
             "id": "2a3b3872-35ab-11ea-8a18-a29736512df3",
             "kind": "K8S"
           }
