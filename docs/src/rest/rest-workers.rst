@@ -69,9 +69,17 @@ The properties which can be set by user are shown below.
                                  on the worker cluster. see :ref:`Files APIs <rest-files>` for uploading jars to ohara. The files which
                                  are deployed to worker must be uber jars - it must include all dependencies exclude for ohara stuff.
 #. sharedJarKeys (**array(object)**) — those jars is deployed on the root classpath so all connectors are able to load them.
+    .. note::
+      #. When you implement the Ohara connector, you must use the File API upload connector jar file
+         to worker.
+
+      #. If your jdbc source connector need to use the third party jar file (such oracle
+         jdbc jar file), you must use the File API upload jar file then setting sharedJarKeys
+         to create the worker API.
+
 #. nodeNames (**array(string)**) — the nodes running the worker process
 
-The following information are updated by Ohara.
+   The following information are updated by Ohara.
 
 #. aliveNodes (**array(string)**) — the nodes that host the running containers of worker
 
