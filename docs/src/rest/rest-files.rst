@@ -28,22 +28,10 @@ carry the jar name pointing to a existent jar in ohara. The worker
 cluster will load all connectors of the input jar, and then you are able
 to use the connectors on the worker cluster.
 
-Worker and Stream load jar file to use from the File API, example:
-
-#. When you implement the Ohara connector, you must use the File API upload connector jar file
-   to worker.
-
-#. If your jdbc source connector need to use the third party jar file (such oracle
-   jdbc jar file), you must use the File API upload jar file then setting sharedJarKeys
-   to create the worker API.
-
-#. If you implement the Ohara stream application, you must pack to jar file and use the File API
-   upload jar file then setting the jarKey to create the Stream API.
-
-The File API allow any file, if file is jar the backend to parser stream and connector classes info.
+The File API upload jar file to use by the :ref:`Worker <rest-workers>` and :ref:`Stream <rest-streams>`.
 
   .. note::
-    When files are using by connector or stream, The files cann't update and delete.
+    The file used by a worker or stream can't be either updated or deleted.
 
 The properties stored by ohara are shown below.
 
@@ -60,7 +48,8 @@ The properties stored by ohara are shown below.
   - classInfos[i].classType — the type of this class. for example, topic, source connector, sink connector or stream app
   - classInfos[i].settingDefinitions — the definitions of this class
 
-
+  .. note::
+    The field "classInfos" is empty if the file is NOT a valid jar.
 
 upload a file to Ohara
 ----------------------

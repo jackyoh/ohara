@@ -39,6 +39,11 @@ the image and then executes as a docker container. The `Stream image`_
 is kept in each node so don’t worry about the network. We all hate
 re-download everything when running services.
 
+  .. note::
+    If you implement the Ohara stream application, you must pack to jar file
+    and use the File API upload jar file then setting the jarKey to create the
+    Stream API.
+
 The following information of Stream are updated by ohara.
 
 .. _rest-stream-stored-data:
