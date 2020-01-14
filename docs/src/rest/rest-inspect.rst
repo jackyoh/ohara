@@ -48,13 +48,14 @@ Example Response
     {
       "versionInfo": {
         "branch": "$|branch|",
+        "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
         "version": "$|version|",
-        "user": "chia",
-        "revision": "b86742ca03a0ca02cc3578f8686e38e5cf2fb461",
-        "date": "2019-05-13 09:59:38"
+        "date": "2020-01-08 06:05:47",
+        "user": "root"
       },
-      "mode": "FAKE"
+      "mode": "K8S"
     }
+
 
 get zookeeper/broker/worker/stream info
 ---------------------------------------
@@ -80,26 +81,31 @@ Example Response
       "imageName": "oharastream/zookeeper:$|version|",
       "settingDefinitions": [
         {
-          "reference": "NONE",
-          "displayName": "group",
-          "internal": false,
-          "documentation": "group of this worker cluster",
-          "valueType": "STRING",
-          "tableKeys": [],
-          "orderInGroup": 1,
-          "key": "group",
-          "required": false,
-          "defaultValue": "default",
-          "group": "core",
-          "editable": true
-        }
-      ]
+           "blacklist": [],
+           "reference": "NONE",
+           "displayName": "peerPort",
+           "regex": null,
+           "internal": false,
+           "permission": "EDITABLE",
+           "documentation": "the port exposed to each quorum",
+           "necessary": "OPTIONAL_WITH_RANDOM_DEFAULT",
+           "valueType": "BINDING_PORT",
+           "tableKeys": [],
+           "orderInGroup": 10,
+           "key": "peerPort",
+           "defaultValue": null,
+           "recommendedValues": [],
+           "group": "core"
+        },
+      ],
+      "classInfos": []
     }
+
 
 get running zookeeper/broker/worker/stream info
 -----------------------------------------------
 
-*GET /v0/inspect/$service/name=$name?group=$group*
+*GET /v0/inspect/$service/$name?group=$group*
 
 This API used to fetch the definitions for specific cluster service and the definitions of available classes in the service.
 The following fields are returned.
@@ -123,25 +129,50 @@ Example Response
   .. code-block:: json
 
     {
-      "imageName": "oharastream/stream:$|version|",
+      "imageName": "oharastream/broker:0.9.0-SNAPSHOT",
       "settingDefinitions": [
         {
+          "blacklist": [],
           "reference": "NONE",
-          "displayName": "group",
+          "displayName": "xmx",
+          "regex": null,
           "internal": false,
-          "documentation": "group of this worker cluster",
-          "valueType": "STRING",
+          "permission": "EDITABLE",
+          "documentation": "maximum memory allocation (in MB)",
+          "necessary": "OPTIONAL_WITH_DEFAULT",
+          "valueType": "POSITIVE_LONG",
           "tableKeys": [],
-          "orderInGroup": 1,
-          "key": "group",
-          "required": false,
-          "defaultValue": "default",
-          "group": "core",
-          "editable": true
+          "orderInGroup": 8,
+          "key": "xmx",
+          "defaultValue": 1024,
+          "recommendedValues": [],
+          "group": "core"
         }
       ],
       "classInfos": [
-
+        {
+          "classType": "topic",
+          "className": "N/A",
+          "settingDefinitions": [
+            {
+              "blacklist": [],
+              "reference": "NONE",
+              "displayName": "numberOfPartitions",
+              "regex": null,
+              "internal": false,
+              "permission": "EDITABLE",
+              "documentation": "the number of partitions",
+              "necessary": "OPTIONAL_WITH_DEFAULT",
+              "valueType": "POSITIVE_INT",
+              "tableKeys": [],
+              "orderInGroup": 4,
+              "key": "numberOfPartitions",
+              "defaultValue": 1,
+              "recommendedValues": [],
+              "group": "core"
+            }
+          ]
+        }
       ]
     }
 
@@ -240,31 +271,30 @@ the response includes following items.
   - messages[i].error (**Option(String)**) — error message happen in failing to parse value
 
 Example Response
+  .. code-block:: json
 
-.. code-block:: json
-
-  {
-    "messages": [
-      {
-        "partition": 1,
-        "offset": 12,
-        "sourceClass": "com.abc.SourceTask",
-        "sourceKey": {
-          "group": "g",
-          "name": "n"
+    {
+      "messages": [
+        {
+          "partition": 1,
+          "offset": 12,
+          "sourceClass": "com.abc.SourceTask",
+          "sourceKey": {
+            "group": "g",
+            "name": "n"
+          },
+          "value": {
+            "a": "b",
+            "b": "c"
+          }
         },
-        "value": {
-          "a": "b",
-          "b": "c"
+        {
+          "partition": 1,
+          "offset": 13,
+          "error": "unknown message"
         }
-      },
-      {
-        "partition": 1,
-        "offset": 13,
-        "error": "unknown message"
-      }
-    ]
-  }
+      ]
+    }
 
 Query File
 -----------
@@ -291,7 +321,6 @@ Example Request
 
 
 Example Response
-
   .. code-block:: json
 
     {
