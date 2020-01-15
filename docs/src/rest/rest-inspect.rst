@@ -129,7 +129,7 @@ Example Response
   .. code-block:: json
 
     {
-      "imageName": "oharastream/broker:0.9.0-SNAPSHOT",
+      "imageName": "oharastream/broker:$|version|",
       "settingDefinitions": [
         {
           "blacklist": [],
