@@ -207,15 +207,12 @@ following fields.
 Example Request
   .. code-block:: json
 
-     {
-       "url": "jdbc:sqlserver://",
-       "user": "abc",
-       "password": "abc",
-       "workerClusterKey": {
-         "group": "default",
-         "name": "wk00"
-       }
-     }
+    {
+      "url": "jdbc:postgresql://localhost:5432/postgres",
+      "user": "ohara",
+      "password": "123456",
+      "workerClusterKey": "wk00"
+    }
 
 Example Response
   #. name (**string**) — database name
@@ -232,21 +229,27 @@ Example Response
 
   .. code-block:: json
 
-     {
-       "name": "sqlserver",
-       "tables": [
-         {
-           "name": "t0",
-           "columns": [
-             {
-               "name": "c0",
-               "dataType": "integer",
-               "pk": true
-             }
-           ]
-         }
-       ]
-     }
+    {
+      "name": "postgresql",
+      "tables": [
+        {
+          "schemaPattern": "public",
+          "name": "table1",
+          "columns": [
+            {
+              "name": "column1",
+              "dataType": "timestamp",
+              "pk": false
+            },
+            {
+              "name": "column2",
+              "dataType": "varchar",
+              "pk": true
+            }
+          ]
+        }
+      ]
+    }
 
 
 Query Topic
@@ -276,22 +279,19 @@ Example Response
     {
       "messages": [
         {
-          "partition": 1,
-          "offset": 12,
-          "sourceClass": "com.abc.SourceTask",
           "sourceKey": {
-            "group": "g",
-            "name": "n"
+            "group": "default",
+            "name": "perf"
           },
+          "sourceClass": "com.island.ohara.connector.perf.PerfSourceTask",
+          "partition": 0,
+          "offset": 0,
           "value": {
-            "a": "b",
-            "b": "c"
+            "a": "c54e2f3477",
+            "b": "32ae422fb5",
+            "c": "53e448ab80",
+            "tags": []
           }
-        },
-        {
-          "partition": 1,
-          "offset": 13,
-          "error": "unknown message"
         }
       ]
     }
@@ -300,15 +300,17 @@ Query File
 -----------
 
 #. name (**string**) — the file name without extension
+#. url (**string**) — Only show the jar file info. Retrun value is always null
 #. group (**string**) — the group name (we use this field to separate different workspaces)
 #. size (**long**) — file size
+#. tags (**object**) — the extra description to this object
+#. lastModified (**long**) — the time of uploading this file
 #. classInfos (**array(object)**) — the information of available classes in this file
 
   - classInfos[i].className — the name of this class
   - classInfos[i].classType — the type of this class. for example, topic, source connector, sink connector or stream app
   - classInfos[i].settingDefinitions — the definitions of this class
 
-#. lastModified (**long**) — the time of uploading this file
 
 *POST /v0/inspect/files*
 
@@ -316,29 +318,43 @@ Example Request
   .. code-block:: text
 
      Content-Type: multipart/form-data
-     file="aa.jar"
-     group="wk01"
+     file="ohara-it-sink.jar"
+     group="default"
 
 
 Example Response
   .. code-block:: json
 
     {
-      "name": "aa.jar",
-      "group": "wk01",
-      "size": 1779,
-      "url": "http://localhost:12345/v0/downloadFiles/aa.jar",
+      "name": "ohara-it-sink.jar",
+      "size": 7902,
+      "url": null,
+      "lastModified": 1579055900202,
+      "tags": {},
       "classInfos": [
         {
-          "classType": "connector",
-          "className": "a.b.c.Source",
-          "settingDefinitions": []
-        },
-        {
-          "classType": "stream",
-          "className": "a.b.c.bbb",
-          "settingDefinitions": []
+          "classType": "sink",
+          "className": "com.island.ohara.it.connector.DumbSinkConnector",
+          "settingDefinitions": [
+            {
+              "blacklist": [],
+              "reference": "NONE",
+              "displayName": "kind",
+              "regex": null,
+              "internal": false,
+              "permission": "READ_ONLY",
+              "documentation": "kind of connector",
+              "necessary": "OPTIONAL_WITH_DEFAULT",
+              "valueType": "STRING",
+              "tableKeys": [],
+              "orderInGroup": 13,
+              "key": "kind",
+              "defaultValue": "sink",
+              "recommendedValues": [],
+              "group": "core"
+            }
+          ]
         }
       ],
-      "lastModified": 1561012496975
+      "group": "default"
     }
