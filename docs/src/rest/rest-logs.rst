@@ -27,20 +27,20 @@ friend, open a door to observe the logs of running cluster.
 The available query parameters are shown below.
 
 #. sinceSeconds (**long**) — show the logs since relative time
-
-It collect output from all containers’ of a cluster and then format them
-to JSON representation which has following elements.
+   It collect output from all containers’ of a cluster and then format them
+   to JSON representation which has following elements.
 
 #. clusterKey (**object**) — cluster key
 
-  - clusterKey.group (**string**) — cluster group
-  - clusterKey.name (**string**) — cluster name
+   - clusterKey.group (**string**) — cluster group
+
+   - clusterKey.name (**string**) — cluster name
 
 #. logs (**array(object)**) — log of each container
 
    - logs[i].hostname — hostname
-   - logs[i].value — total log of a container
 
+   - logs[i].value — total log of a container
 
 get the log of a running cluster
 --------------------------------
@@ -54,22 +54,43 @@ get the log of a running cluster
   - workers
   - streams
 
-Example Response
+Example Request 1
+  * GET /v0/logs/zookeepers/zk?group=default
+
+Example Response 1
   .. code-block:: json
 
     {
       "clusterKey": {
         "group": "default",
-        "name": "precreatezkcluster"
+        "name": "zk"
       },
       "logs": [
         {
           "hostname": "node00",
-          "value": "2019-04-15 02:13:33,168 [myid:] - INFO [main:QuorumPeerConfig@136"
+          "value": "2020-01-14 10:15:42,146 [myid:] - INFO [main:QuorumPeerConfig@136"
         }
       ]
     }
 
+Example Request 2
+  * GET /v0/logs/zookeepers/zk?group=default&sinceSeconds=10000
+
+Example Response 2
+  .. code-block:: json
+
+    {
+      "clusterKey": {
+        "group": "default",
+        "name": "zk"
+      },
+      "logs": [
+        {
+          "hostname": "ohara-release-test-00",
+          "value": "2020-01-15 02:00:43,090 [myid:] - INFO  [ProcessThread(sid:0 cport:2181)::PrepRequestProcessor@653] - Got user-level KeeperException when processing sessionid:0x100000761180000 type:setData cxid:0x11a zxid:0x9e txntype:-1 reqpath:n/a Error Path:/config/topics/default-topic0 Error:KeeperErrorCode = NoNode for /config/topics/default-topic0\n"
+        }
+      ]
+    }
 
 get the log of Configurator
 ---------------------------
@@ -82,16 +103,16 @@ Example Response
     {
       "clusterKey": {
         "group": "N/A",
-        "name": "abc"
+        "name": "node00"
       },
       "logs": [
         {
           "hostname": "node00",
-          "value": "2019-04-15 02:13:33,168 [myid:] - INFO [main:QuorumPeerConfig@136"
+          "value": "2020-01-10 09:43:02,669 INFO  [main] configurator.Configurator$(391): start a configurator built on hostname:ohara-release-test-00 and port:5000\n2020-01-10 09:43:02,676 INFO  [main] configurator.Configurator$(393): enter ctrl+c to terminate the configurator"
         }
       ]
     }
 
-.. note::
-  the Configurator MUST run on docker container and the node hosting Configurator MUST be added to Configurator via
-  :ref:`Node APIs <rest-nodes>`
+  .. note::
+    the Configurator MUST run on docker container and the node hosting Configurator MUST be added to Configurator via
+    :ref:`Node APIs <rest-nodes>`
