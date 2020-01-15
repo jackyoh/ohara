@@ -105,9 +105,6 @@ delete a node
 
 *DELETE /v0/objects/${name}*
 
-Example Request
-  * DELETE /v0/objects/n0
-
 Example Response
   ::
 
@@ -117,9 +114,6 @@ get a object
 ------------
 
 *GET /v0/objects/${name}*
-
-Example Request
-  * GET /v0/objects/n0
 
 Example Response
   .. code-block:: json
