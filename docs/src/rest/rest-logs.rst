@@ -27,8 +27,9 @@ friend, open a door to observe the logs of running cluster.
 The available query parameters are shown below.
 
 #. sinceSeconds (**long**) — show the logs since relative time
-   It collect output from all containers’ of a cluster and then format them
-   to JSON representation which has following elements.
+
+It collect output from all containers’ of a cluster and then format them
+to JSON representation which has following elements.
 
 #. clusterKey (**object**) — cluster key
 
