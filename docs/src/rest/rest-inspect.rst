@@ -300,7 +300,6 @@ Query File
 -----------
 
 #. name (**string**) — the file name without extension
-#. url (**string**) — Only show the jar file info. Retrun value is always null
 #. group (**string**) — the group name (we use this field to separate different workspaces)
 #. size (**long**) — file size
 #. tags (**object**) — the extra description to this object
