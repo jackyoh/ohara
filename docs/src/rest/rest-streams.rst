@@ -72,9 +72,6 @@ The following are common settings to a stream app.
     {"group": "default", "name": "n"}
 
 #. tags (**object**) — the user defined parameters
-
-
-
 #. nodeNames (**array(string)**) — node list of stream running container
 #. aliveNodes (**array(string)**) — the nodes that host the running containers of stream cluster
 #. state (**option(string)**) — only started/failed stream has state (DEAD if all containers are not running, else RUNNING)
@@ -101,35 +98,48 @@ Create the properties of a stream.
 
 *POST /v0/streams*
 
+#. name (**string**) — new stream name. This is the object unique name ; default is random string.
+#. group (**string**) — group name for current stream ; default value is "default"
+#. imageName (**string**) — image name of stream used to ; default is oharastream/stream:|version|
+#. nodeNames (**array(string)**) — node name list of stream used to ; default is empty
+#. tags (**object**) — a key-value map of user defined data ; default is empty
+#. jarKey (**object**) — the used jar key
+
+   - group (**string**) — the group name of this jar
+   - name (**string**) — the name of this jar
+
+#. brokerClusterKey (**option(object)**) — the broker cluster used for stream running ; default we will auto fill this
+   parameter for you if you don't specify it and there only exists one broker cluster.
+#. jmxPort (**int**) — expose port for jmx ; default is random port
+#. from (**array(TopicKey)**) — source topic ; default is empty array
+
+   .. note::
+      Currently, stream uses a "single flow" for users to define their own data flow, we need a better
+      structure to support multiple topics.
+
+      We only support one topic for current version. We will throw exception in start api if you assign
+      more than 1 topic. We will support multiple topics on issue :ohara-issue:`688`
+
+#. to (**array(TopicKey)**) — target topic ; default is empty array
+
+   .. note::
+      Currently, stream uses a "single flow" for users to define their own data flow, we need a better
+      structure to support multiple topics.
+
+      We only support one topic for current version. We will throw exception in start api if you assign
+      more than 1 topic. We will support multiple topics on issue :ohara-issue:`688`
+
 Example Request
-  #. name (**string**) — new stream name. This is the object unique name ; default is random string.
-  #. group (**string**) — group name for current stream ; default value is "default"
-  #. imageName (**string**) — image name of stream used to ; default is oharastream/stream:|version|
-  #. nodeNames (**array(string)**) — node name list of stream used to ; default is empty
-  #. tags (**object**) — a key-value map of user defined data ; default is empty
-  #. jarKey (**object**) — the used jar key
+  .. code-block:: json
 
-     - group (**string**) — the group name of this jar
-     - name (**string**) — the name of this jar
-
-  #. brokerClusterKey (**option(object)**) — the broker cluster used for stream running ; default we will auto fill this
-     parameter for you if you don't specify it and there only exists one broker cluster.
-  #. jmxPort (**int**) — expose port for jmx ; default is random port
-  #. from (**array(TopicKey)**) — source topic ; default is empty array
-
-     .. note::
-        we only support one topic for current version. We will throw exception in start api if you assign
-        more than 1 topic.
-
-     [TODO] We will support multiple topics on issue :ohara-issue:`688`
-
-  #. to (**array(TopicKey)**) — target topic ; default is empty array
-
-     .. note::
-        we only support one topic for current version. We will throw exception in start api if you assign
-        more than 1 topic.
-
-     [TODO] We will support multiple topics on issue :ohara-issue:`688`
+    {
+      "name": "streamtest1",
+      "brokerClusterKey": "bk",
+      "jarKey": "ohara-it-stream.jar",
+      "nodeNames": ["node00"],
+      "from": ["topic0"],
+      "to": ["topic1"]
+    }
 
 Example Response
   Response format is as :ref:`stream stored format <rest-stream-stored-data>`.
@@ -137,28 +147,46 @@ Example Response
   .. code-block:: json
 
     {
-      "lastModified": 1563499550267,
+      "author": "root",
+      "brokerClusterKey": {
+        "group": "default",
+        "name": "bk"
+      },
+      "name": "streamtest1",
+      "xms": 1024,
+      "routes": {},
+      "lastModified": 1579145546218,
+      "tags": {},
+      "xmx": 1024,
+      "imageName": "oharastream/stream:$|version|",
+      "jarKey": {
+        "group": "default",
+        "name": "ohara-it-stream.jar"
+      },
+      "to": [
+        {
+          "group": "default",
+          "name": "topic1"
+        }
+      ],
+      "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
+      "version": "$|version|",
       "aliveNodes": [],
+      "className": "com.island.ohara.it.stream.DumbStream",
+      "from": [
+        {
+          "group": "default",
+          "name": "topic0"
+        }
+      ],
       "metrics": {
         "meters": []
       },
-      "name": "a5eddb5b9fd144f1a75e",
-      "brokerClusterKey": {
-        "group": "default",
-        "name": "4ef3d4a266"
-      },
+      "jmxPort": 44914,
+      "kind": "stream",
       "group": "default",
-      "tags": {},
-      "imageName": "oharastream/stream:$|VERSION|",
-      "from": [],
-      "to": [],
-      "jarKey": {
-        "group": "wk01",
-        "name": "stream-app.jar"
-      },
-      "jmxPort": 3792,
       "nodeNames": [
-        "node1"
+        "node00"
       ]
     }
 
@@ -182,27 +210,47 @@ Example Response
   .. code-block:: json
 
     {
-      "lastModified": 1563499550267,
+      "author": "root",
+      "brokerClusterKey": {
+        "group": "default",
+        "name": "bk"
+      },
+      "name": "streamtest1",
+      "xms": 1024,
+      "routes": {},
+      "lastModified": 1579145546218,
+      "tags": {},
+      "xmx": 1024,
+      "imageName": "oharastream/stream:$|version|",
+      "jarKey": {
+        "group": "default",
+        "name": "ohara-it-stream.jar"
+      },
+      "to": [
+        {
+          "group": "default",
+          "name": "topic1"
+        }
+      ],
+      "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
+      "version": "$|version|",
       "aliveNodes": [],
+      "className": "com.island.ohara.it.stream.DumbStream",
+      "from": [
+        {
+          "group": "default",
+          "name": "topic0"
+        }
+      ],
       "metrics": {
         "meters": []
       },
-      "name": "a5eddb5b9fd144f1a75e",
+      "jmxPort": 44914,
+      "kind": "stream",
       "group": "default",
-      "brokerClusterKey": {
-        "group": "default",
-        "name": "4ef3d4a266"
-      },
-      "tags": {},
-      "imageName": "oharastream/stream:$|version|",
-      "from": [],
-      "to": [],
-      "jarKey": {
-        "group": "wk01",
-        "name": "ohara-it-stream.jar"
-      },
-      "jmxPort": 3792,
-      "nodeNames": []
+      "nodeNames": [
+        "node00"
+      ]
     }
 
 list information of stream cluster
@@ -211,14 +259,15 @@ list information of stream cluster
 *GET /v0/streams*
 
 the accepted query keys are listed below.
+#. author
 #. group
 #. name
 #. lastModified
 #. tags
-#. tag - this field is similar to tags but it addresses the "contain" behavior.
 #. state
 #. aliveNodes
 #. key
+#. version
 
 Example Response
   Response format is as :ref:`stream stored format <rest-stream-stored-data>`.
@@ -227,27 +276,47 @@ Example Response
 
     [
       {
-        "lastModified": 1563499550267,
+        "author": "root",
+        "brokerClusterKey": {
+          "group": "default",
+          "name": "bk"
+        },
+        "name": "streamtest1",
+        "xms": 1024,
+        "routes": {},
+        "lastModified": 1579145546218,
+        "tags": {},
+        "xmx": 1024,
+        "imageName": "oharastream/stream:$|version|",
+        "jarKey": {
+          "group": "default",
+          "name": "ohara-it-stream.jar"
+        },
+        "to": [
+          {
+            "group": "default",
+            "name": "topic1"
+          }
+        ],
+        "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
+        "version": "0.9.0-SNAPSHOT",
         "aliveNodes": [],
+        "className": "com.island.ohara.it.stream.DumbStream",
+        "from": [
+          {
+            "group": "default",
+            "name": "topic0"
+          }
+        ],
         "metrics": {
           "meters": []
         },
-        "name": "a5eddb5b9fd144f1a75e",
+        "jmxPort": 44914,
+        "kind": "stream",
         "group": "default",
-        "brokerClusterKey": {
-          "group": "default",
-          "name": "4ef3d4a266"
-        },
-        "tags": {},
-        "imageName": "oharastream/stream:$|version|",
-        "from": [],
-        "to": [],
-        "jarKey": {
-          "group": "wk01",
-          "name": "ohara-it-stream.jar"
-        },
-        "jmxPort": 3792,
-        "nodeNames": []
+        "nodeNames": [
+          "node00"
+        ]
       }
     ]
 
@@ -276,33 +345,30 @@ Update the properties of a non-started stream.
 #. from (**option(array(string))**) — source topic.
 
    .. note::
-      we only support one topic for current version. We will throw exception in start api if you assign
-      more than 1 topic.
+      Currently, stream uses a "single flow" for users to define their own data flow, we need a better
+      structure to support multiple topics.
 
-   [TODO] We will support multiple topics on issue :ohara-issue:`688`
+      we only support one topic for current version. We will throw exception in start api if you assign
+      more than 1 topic. We will support multiple topics on issue :ohara-issue:`688`
 
 #. to (**option(array(string))**) — target topic.
 
    .. note::
-      we only support one topic for current version. We will throw exception in start api if you assign
-      more than 1 topic.
+      Currently, stream uses a "single flow" for users to define their own data flow, we need a better
+      structure to support multiple topics.
 
-   [TODO] We will support multiple topics on issue :ohara-issue:`688`
+      we only support one topic for current version. We will throw exception in start api if you assign
+      more than 1 topic. We will support multiple topics on issue :ohara-issue:`688`
 
 Example Request
   .. code-block:: json
 
-     {
-       "imageName": "myimage",
-       "from": ["newTopic1"],
-       "to": ["newTopic2"],
-       "jarKey": {
-         "group": "newGroup",
-         "name": "newJar.jar"
-       },
-       "jmxPort": 8888,
-       "nodeNames": ["node1", "node2"]
-     }
+    {
+      "from": ["topic2"],
+      "to": ["topic3"],
+      "jarKey": "ohara-it-stream.jar",
+      "nodeNames": ["node01"]
+    }
 
 Example Response
   Response format is as :ref:`stream stored format <rest-stream-stored-data>`.
@@ -310,39 +376,48 @@ Example Response
   .. code-block:: json
 
     {
-      "lastModified": 1563503358666,
-      "aliveNodes": [
-        "node1",
-        "node2"
+      "author": "root",
+      "brokerClusterKey": {
+        "group": "default",
+        "name": "bk"
+      },
+      "name": "streamtest1",
+      "xms": 1024,
+      "routes": {},
+      "lastModified": 1579153777586,
+      "tags": {},
+      "xmx": 1024,
+      "imageName": "oharastream/stream:$|version|",
+      "jarKey": {
+        "group": "default",
+        "name": "ohara-it-stream.jar"
+      },
+      "to": [
+        {
+          "group": "default",
+          "name": "topic3"
+        }
+      ],
+      "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
+      "version": "0.9.0-SNAPSHOT",
+      "aliveNodes": [],
+      "className": "com.island.ohara.it.stream.DumbStream",
+      "from": [
+        {
+          "group": "default",
+          "name": "topic2"
+        }
       ],
       "metrics": {
         "meters": []
       },
-      "name": "myapp",
+      "jmxPort": 44914,
+      "kind": "stream",
       "group": "default",
-      "brokerClusterKey": {
-        "group": "default",
-        "name": "4ef3d4a266"
-      },
-      "tags": {},
-      "imageName": "myimage",
-      "jarKey": {
-        "group": "newGroup",
-        "name": "newJar.jar"
-      },
-      "to": [
-        "newTopic2"
-      ],
-      "from": [
-        "newTopic1"
-      ],
-      "jmxPort": 8888,
       "nodeNames": [
-        "node1",
-        "node2"
+        "node01"
       ]
     }
-
 
 delete properties of specific stream
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

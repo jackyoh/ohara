@@ -327,7 +327,6 @@ Example Response
     {
       "name": "ohara-it-sink.jar",
       "size": 7902,
-      "url": null,
       "lastModified": 1579055900202,
       "tags": {},
       "classInfos": [
