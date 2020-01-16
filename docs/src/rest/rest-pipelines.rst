@@ -302,10 +302,7 @@ the accepted query keys are listed below.
 #. lastModified
 #. tags
 
-Example Request 1
-  * GET /v0/pipelines
-
-Example Response 1
+Example Response
   .. code-block:: json
 
     [
@@ -338,10 +335,9 @@ Example Response 1
       }
     ]
 
-Example Request 2
-    * GET /v0/pipelines?name=topic1
+*GET /v0/pipelines?name=${pipelineName}*
 
-Example Response 2
+Example Response
   .. code-block:: json
 
     [

@@ -55,10 +55,7 @@ get the log of a running cluster
   - workers
   - streams
 
-Example Request 1
-  * GET /v0/logs/zookeepers/zk?group=default
-
-Example Response 1
+Example Response
   .. code-block:: json
 
     {
@@ -74,10 +71,13 @@ Example Response 1
       ]
     }
 
-Example Request 2
-  * GET /v0/logs/zookeepers/zk?group=default&sinceSeconds=10000
 
-Example Response 2
+get the since seconds log
+--------------------------------
+
+* GET /v0/logs/$clusterType/$clusterName?group=$group&sinceSeconds=$relativeSeconds*
+
+Example Response
   .. code-block:: json
 
     {

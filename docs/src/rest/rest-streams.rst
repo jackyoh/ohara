@@ -299,7 +299,7 @@ Example Response
           }
         ],
         "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
-        "version": "0.9.0-SNAPSHOT",
+        "version": "$|version|",
         "aliveNodes": [],
         "className": "com.island.ohara.it.stream.DumbStream",
         "from": [
@@ -399,7 +399,7 @@ Example Response
         }
       ],
       "revision": "b303f3c2e52647ee5e79e55f9d74a5e51238a92c",
-      "version": "0.9.0-SNAPSHOT",
+      "version": "$|version|",
       "aliveNodes": [],
       "className": "com.island.ohara.it.stream.DumbStream",
       "from": [
