@@ -31,30 +31,29 @@ topic are shown below.
    - brokerClusterKey.group (**option(string)**) — the group of cluster
    - brokerClusterKey.name (**string**) — the name of cluster
 
-  .. note::
-    the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
-    {"group": "default", "name": "n"}
+   .. note::
+      the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
+      {"group": "default", "name": "n"}
 
 #. numberOfReplications (**option(int)**) — the number of replications
 #. numberOfPartitions (**option(int)**)— the number of partitions for this topic
 #. tags (**option(object)**) — the extra description to this object
 
-.. note::
-  #. The name must be unique in a broker cluster.
-  #. There are many other available configs which are useful in creating topic. Please ref :ref:`broker clusters <rest-brokers>` to see how to retrieve the available configs for specific broker cluster.
-
+   .. note::
+      #. The name must be unique in a broker cluster.
+      #. There are many other available configs which are useful in creating topic. Please ref :ref:`broker clusters <rest-brokers>` to see how to retrieve the available configs for specific broker cluster.
 
 The following information are tagged by ohara.
 
 #. state (**option(string)**) — state of a running topic. nothing if the topic is not running.
 #. partitionInfos (**Array(object)**) — the details of partitions.
 
-  - index (**int**) — the index of partition
-  - leaderNode (**String**) — the leader (node) of this partition
-  - replicaNodes (**Array(String)**) — the nodes hosting the replica for this partition
-  - inSyncReplicaNodes (**Array(String)**) — the nodes which have fetched the newest data from leader
-  - beginningOffset (**long**) — the beginning offset
-  - endOffset (**endOffset**) — the latest offset (Normally, it is the latest commit data)
+   - index (**int**) — the index of partition
+   - leaderNode (**String**) — the leader (node) of this partition
+   - replicaNodes (**Array(String)**) — the nodes hosting the replica for this partition
+   - inSyncReplicaNodes (**Array(String)**) — the nodes which have fetched the newest data from leader
+   - beginningOffset (**long**) — the beginning offset
+   - endOffset (**endOffset**) — the latest offset (Normally, it is the latest commit data)
 
 #. group (**string**) — the group value is always "default"
 #. :ref:`metrics <connector-metrics>` (**object**) — the metrics number of a running topic

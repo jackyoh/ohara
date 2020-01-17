@@ -196,9 +196,9 @@ following fields.
    - workerClusterKey.group (**option(string)**) — the group of cluster
    - workerClusterKey.name (**string**) — the name of cluster
 
-  .. note::
-    the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
-    {"group": "default", "name": "n"}
+   .. note::
+     the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
+     {"group": "default", "name": "n"}
 
 #. catalogPattern (**option(string)**) — filter returned tables according to catalog
 #. schemaPattern (**option(string)**) — filter returned tables according to schema

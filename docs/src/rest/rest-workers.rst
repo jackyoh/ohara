@@ -44,9 +44,9 @@ The properties which can be set by user are shown below.
    - brokerClusterKey.group (**option(string)**) — the group of cluster
    - brokerClusterKey.name (**string**) — the name of cluster
 
-  .. note::
-    the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
-    {"group": "default", "name": "n"}
+   .. note::
+     the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
+     {"group": "default", "name": "n"}
 
 #. clientPort (**int**) — worker client port
 #. jmxPort (**int**) — worker jmx port

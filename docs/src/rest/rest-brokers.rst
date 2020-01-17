@@ -41,8 +41,8 @@ The properties which can be set by user are shown below.
 #. jmxPort (**int**) — port used by jmx service
 #. zookeeperClusterKey (**object**) — key of zookeeper cluster used to store metadata of broker cluster
 
-  - zookeeperClusterKey.group(**option(string)**) — the group of zookeeper cluster
-  - zookeeperClusterKey.name(**string**) — the name of zookeeper cluster
+   - zookeeperClusterKey.group(**option(string)**) — the group of zookeeper cluster
+   - zookeeperClusterKey.name(**string**) — the name of zookeeper cluster
 
     .. note::
       the following forms are legal as well. 1) {"name": "n"} and 2) "n". Both forms are converted to
