@@ -69,7 +69,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = "ohara.it.performance.duration"
-  private[this] val durationOfPerformanceDefault = 30 seconds
+  private[this] val durationOfPerformanceDefault = 300 seconds
   protected val durationOfPerformance: Duration = {
     val v = value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
     // too big duration is never completed
