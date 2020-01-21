@@ -31,6 +31,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
 
   @Test
   def test(): Unit = {
+    // For QA test
     produce(createTopic())
     setupConnector(
       className = classOf[FtpSink].getName(),
