@@ -75,6 +75,7 @@ public interface BrokerClient extends Releasable {
   }
 
   default List<TopicDescription> topicDescriptions(List<String> topicNames) {
+    // Open pull request for test
     return topicDescriptions().stream()
         .filter(t -> topicNames.stream().anyMatch(n -> n.equals(t.name())))
         .collect(Collectors.toList());
