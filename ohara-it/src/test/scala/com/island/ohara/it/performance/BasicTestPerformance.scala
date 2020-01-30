@@ -280,7 +280,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           case (name, meter) =>
             Seq(
               name               -> meter.value,
-              s"$name(inPerSec)" -> meter.valueInPerSec.getOrElse(0.0)
+              s"$name(inPerSec)" -> {
+                println(s"meter value in per sec ${meter.valueInPerSec}")
+                meter.valueInPerSec.getOrElse(0.0)
+              }
             )
         },
       // the empty causes exception
