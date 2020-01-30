@@ -49,10 +49,9 @@ import scala.concurrent.duration._
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger                    = Logger(classOf[BasicTestPerformance])
-  private[this] val wholeTimeout               = 1200
-  private[this] val connectorKey: ConnectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5))
-  private[this] val topicKey: TopicKey         = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  protected val log: Logger            = Logger(classOf[BasicTestPerformance])
+  private[this] val wholeTimeout       = 1200
+  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   @Rule
   override def timeout: Timeout = Timeout.seconds(wholeTimeout) // 20 minutes
@@ -134,6 +133,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   }
 
   protected def setupConnector(
+    connectorKey: ConnectorKey,
     className: String,
     settings: Map[String, JsValue]
   ): ConnectorInfo = {

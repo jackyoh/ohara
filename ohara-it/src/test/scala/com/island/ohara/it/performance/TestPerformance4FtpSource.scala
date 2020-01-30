@@ -16,6 +16,8 @@
 
 package com.island.ohara.it.performance
 
+import com.island.ohara.common.setting.ConnectorKey
+import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.ftp.FtpSource
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -33,6 +35,7 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
     val (path, _, _)  = setupInputData()
     try {
       setupConnector(
+        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[FtpSource].getName,
         settings = ftpSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))

@@ -19,7 +19,8 @@ package com.island.ohara.it.performance
 import com.island.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
 import com.island.ohara.client.filesystem.FileSystem
-import com.island.ohara.common.util.Releasable
+import com.island.ohara.common.setting.ConnectorKey
+import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.experimental.categories.Category
@@ -43,6 +44,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   def test(): Unit = {
     produce(createTopic())
     setupConnector(
+      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
       settings = Map(
         com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),

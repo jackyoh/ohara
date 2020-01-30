@@ -16,6 +16,8 @@
 
 package com.island.ohara.it.performance
 
+import com.island.ohara.common.setting.ConnectorKey
+import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.jio.JsonOut
 import com.island.ohara.it.category.PerformanceGroup
 import org.junit.Test
@@ -28,6 +30,7 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
   def test(): Unit = {
     produce(createTopic())
     setupConnector(
+      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[JsonOut].getName,
       settings = Map(com.island.ohara.connector.jio.BINDING_PORT_KEY -> JsNumber(workerClusterInfo.freePorts.head))
     )

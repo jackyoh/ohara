@@ -16,23 +16,15 @@
 
 package com.island.ohara.it.performance
 
-import com.island.ohara.common.setting.ConnectorKey
 import com.island.ohara.common.util.CommonUtils
-import com.island.ohara.connector.perf.PerfSource
-import com.island.ohara.it.category.PerformanceGroup
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
-@Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4PerfSource extends BasicTestPerformance {
+class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
+  override protected def tableName: String = s"TABLE${CommonUtils.randomString().toUpperCase()}"
+
   @Test
   def test(): Unit = {
     createTopic()
-    setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
-      className = classOf[PerfSource].getName,
-      settings = Map.empty
-    )
-    sleepUntilEnd()
+    val (tableName, _, _) = setupTableData()
   }
 }

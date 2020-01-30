@@ -16,6 +16,7 @@
 
 package com.island.ohara.it.performance
 
+import com.island.ohara.common.setting.ConnectorKey
 import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 import com.island.ohara.it.category.PerformanceGroup
@@ -34,6 +35,7 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
     val (tableName, _, _) = setupTableData()
     try {
       setupConnector(
+        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[JDBCSourceConnector].getName(),
         settings = Map(
           com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),

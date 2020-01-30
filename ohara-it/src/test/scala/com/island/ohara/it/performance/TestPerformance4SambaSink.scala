@@ -18,6 +18,8 @@ package com.island.ohara.it.performance
 
 import com.island.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
+import com.island.ohara.common.setting.ConnectorKey
+import com.island.ohara.common.util.CommonUtils
 import com.island.ohara.connector.smb.SmbSink
 import com.island.ohara.it.category.PerformanceGroup
 import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -33,6 +35,7 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   def test(): Unit = {
     produce(createTopic())
     setupConnector(
+      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[SmbSink].getName(),
       settings = sambaSettings
         + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)))
