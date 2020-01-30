@@ -17,11 +17,36 @@
 package com.island.ohara.it.performance
 
 import com.island.ohara.common.util.CommonUtils
+import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 import com.island.ohara.it.category.PerformanceGroup
+import org.junit.Test
 import org.junit.experimental.categories.Category
+import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   override protected val tableName: String =
     s"TABLE${CommonUtils.randomString().toUpperCase()}"
+
+  @Test
+  def test(): Unit = {
+    createTopic()
+    val (tableName, _, _) = setupTableData()
+    try {
+      setupConnector(
+        className = classOf[JDBCSourceConnector].getName(),
+        settings = Map(
+          com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
+          com.island.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
+          com.island.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
+          com.island.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
+          com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
+          com.island.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
+          com.island.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
+          com.island.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
+        )
+      )
+      sleepUntilEnd()
+    } finally if (needDeleteData) client.dropTable(tableName)
+  }
 }

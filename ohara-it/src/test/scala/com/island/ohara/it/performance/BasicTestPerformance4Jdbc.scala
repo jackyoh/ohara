@@ -23,69 +23,45 @@ import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
 
 import com.island.ohara.common.util.Releasable
-import org.junit.{After, Before, Test}
+import org.junit.{After, Before}
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
 import com.island.ohara.common.setting.{ObjectKey}
 import com.island.ohara.common.util.CommonUtils
-import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import spray.json.{JsNumber, JsString}
 import org.junit.AssumptionViolatedException
 import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val DB_URL_KEY: String = "ohara.it.performance.jdbc.url"
-  private[this] val url: String =
+  protected[this] val url: String =
     sys.env.getOrElse(DB_URL_KEY, throw new AssumptionViolatedException(s"$DB_URL_KEY does not exists!!!"))
 
   private[this] val DB_USER_NAME_KEY: String = "ohara.it.performance.jdbc.username"
-  private[this] val user: String =
+  protected[this] val user: String =
     sys.env.getOrElse(DB_USER_NAME_KEY, throw new AssumptionViolatedException(s"$DB_USER_NAME_KEY does not exists!!!"))
 
   private[this] val DB_PASSWORD_KEY: String = "ohara.it.performance.jdbc.password"
-  private[this] val password: String =
+  protected[this] val password: String =
     sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
 
   private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
   private[this] val jarFolderPath: String  = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
 
-  private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.jdbc.needDeleteTable"
-  private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "false").toBoolean
-  private[this] val timestampColumnName: String  = "COLUMN0"
+  private[this] val NEED_DELETE_DATA_KEY: String  = "ohara.it.performance.jdbc.needDeleteTable"
+  protected[this] val needDeleteData: Boolean     = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "false").toBoolean
+  protected[this] val timestampColumnName: String = "COLUMN0"
 
   protected def tableName: String
   protected def isColumnNameUpperCase: Boolean = true
   private[this] val numberOfProducerThread     = 2
-  private[this] var client: DatabaseClient     = _
+  protected[this] var client: DatabaseClient   = _
 
   @Before
   final def setup(): Unit = {
     client = DatabaseClient.builder.url(url).user(user).password(password).build
-  }
-
-  @Test
-  def test(): Unit = {
-    createTopic()
-    val (tableName, _, _) = setupTableData()
-    try {
-      setupConnector(
-        className = classOf[JDBCSourceConnector].getName(),
-        settings = Map(
-          com.island.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
-          com.island.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
-          com.island.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
-          com.island.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
-          com.island.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
-          com.island.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
-          com.island.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
-          com.island.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
-        )
-      )
-      sleepUntilEnd()
-    } finally if (needDeleteData) client.dropTable(tableName)
   }
 
   override protected def sharedJars: Set[ObjectKey] = {
@@ -99,7 +75,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       .toSet
   }
 
-  private[this] def setupTableData(): (String, Long, Long) = {
+  protected[this] def setupTableData(): (String, Long, Long) = {
     val columnNames: Seq[String] = Seq(timestampColumnName) ++ rowData().cells().asScala.map(_.name)
 
     val columnInfos = columnNames
