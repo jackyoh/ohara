@@ -23,9 +23,12 @@ import com.island.ohara.common.setting.ConnectorKey
 import com.island.ohara.common.util.{CommonUtils, Releasable}
 import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.connector.jdbc.source.JDBCSourceConnector
+import com.island.ohara.it.category.PerformanceGroup
+import org.junit.experimental.categories.Category
 import org.junit.{AssumptionViolatedException, Test}
 import spray.json.{JsNumber, JsString}
 
+@Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
   private[this] val dataDir: String = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
