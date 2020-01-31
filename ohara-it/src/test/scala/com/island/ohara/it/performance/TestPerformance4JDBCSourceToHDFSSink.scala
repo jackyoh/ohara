@@ -27,11 +27,10 @@ import org.junit.{AssumptionViolatedException, Test}
 import spray.json.{JsNumber, JsString}
 
 class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
-  private[this] val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
-  private[this] val dataDir: String      = "/tmp"
+  private[this] val dataDir: String = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
-    HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
+    HDFSPerformanceTestingUtils.HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"${HDFSPerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
 
   override protected val tableName: String = s"TABLE${CommonUtils.randomString().toUpperCase()}"

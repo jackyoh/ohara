@@ -29,13 +29,12 @@ import org.junit.{AssumptionViolatedException, Test}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4HdfsSink extends BasicTestPerformance {
-  private[this] val HDFS_URL_KEY: String         = "ohara.it.performance.hdfs.url"
   private[this] val NEED_DELETE_DATA_KEY: String = "ohara.it.performance.hdfs.needDeleteData"
 
   private[this] val dataDir: String = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
-    HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
+    HDFSPerformanceTestingUtils.HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"${HDFSPerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
 
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean

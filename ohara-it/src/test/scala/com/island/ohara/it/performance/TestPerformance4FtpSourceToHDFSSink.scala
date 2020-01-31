@@ -31,15 +31,14 @@ import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
-  private[this] val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
-  private[this] val dataDir: String      = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
-    HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
+    HDFSPerformanceTestingUtils.HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"${HDFSPerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
-  private[this] val completedPath = "/completed"
-  private[this] val errorPath     = "/error"
-  private[this] val (path, _, _)  = setupInputData()
+  private[this] val dataDir: String = "/tmp"
+  private[this] val completedPath   = "/completed"
+  private[this] val errorPath       = "/error"
+  private[this] val (path, _, _)    = setupInputData()
 
   @Test
   def test(): Unit = {
