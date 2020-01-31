@@ -88,8 +88,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     val sizeInBytes         = new LongAdder()
 
     val client = ftpClient()
-    try if (client.exist(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
-    else client.mkdir(csvOutputFolder)
+    try if (!client.exist(csvOutputFolder)) client.mkdir(csvOutputFolder)
     finally Releasable.close(client)
 
     try {

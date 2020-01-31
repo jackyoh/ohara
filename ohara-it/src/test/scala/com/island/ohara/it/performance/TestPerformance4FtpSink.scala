@@ -30,10 +30,11 @@ import org.junit.experimental.categories.Category
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
   private[this] val dataDir: String = "/tmp"
+  private[this] val topicInfo       = createTopic()
 
   @Test
   def test(): Unit = {
-    produce(createTopic())
+    produce(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[FtpSink].getName(),
@@ -49,4 +50,6 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
         val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
         if (exists(path)) recursiveRemoveFolder(path)
       }
+
+  override protected def afterFrequencySleep(): Unit = produce(topicInfo)
 }

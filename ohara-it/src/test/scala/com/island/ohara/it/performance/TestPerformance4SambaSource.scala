@@ -49,4 +49,6 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
       removeSambaFolder(errorPath)
     }
   }
+
+  override protected def afterFrequencySleep(): Unit = setupInputData()
 }

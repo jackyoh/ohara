@@ -49,4 +49,6 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
       removeFtpFolder(errorPath)
     }
   }
+
+  override protected def afterFrequencySleep(): Unit = setupInputData()
 }

@@ -51,4 +51,6 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
       sleepUntilEnd()
     } finally if (needDeleteData) client.dropTable(tableName)
   }
+
+  override protected def afterFrequencySleep(): Unit = setupTableData()
 }

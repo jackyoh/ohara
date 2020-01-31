@@ -19,7 +19,6 @@ package com.island.ohara.it.performance
 import java.io.File
 import java.sql.Timestamp
 import java.util.concurrent.{Executors, TimeUnit}
-
 import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
 
 import com.island.ohara.common.util.Releasable
@@ -27,11 +26,13 @@ import org.junit.{After, Before}
 import com.island.ohara.client.configurator.v0.FileInfoApi
 import com.island.ohara.client.configurator.v0.InspectApi.RdbColumn
 import com.island.ohara.client.database.DatabaseClient
-import com.island.ohara.common.setting.{ObjectKey}
+import com.island.ohara.common.setting.ObjectKey
 import com.island.ohara.common.util.CommonUtils
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.junit.AssumptionViolatedException
+
 import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
@@ -82,7 +83,6 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   protected[this] def setupTableData(): (String, Long, Long) = {
     val columnNames: Seq[String] = Seq(timestampColumnName) ++ rowData().cells().asScala.map(_.name)
-
     val columnInfos = columnNames
       .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
       .zipWithIndex
@@ -93,7 +93,10 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
           else RdbColumn(columnName, "VARCHAR(45)", false)
       }
 
-    client.createTable(tableName, columnInfos)
+    if (client.tables().map(_.name).filter(_ == tableName).isEmpty) {
+      log.info(s"Create the ${tableName} table for JDBC source connector test")
+      client.createTable(tableName, columnInfos)
+    }
 
     val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed      = new AtomicBoolean(false)
@@ -102,7 +105,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
     try {
       (0 until numberOfProducerThread).foreach { x =>
         pool.execute(() => {
-          val client = DatabaseClient.builder.url(url).user(user).password(password).build
+          val client        = DatabaseClient.builder.url(url).user(user).password(password).build
+          val timestampData = new Timestamp(CommonUtils.current() - 432000000)
           try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
             val sql = s"INSERT INTO $tableName VALUES " + columnInfos
               .map(_ => "?")
@@ -110,9 +114,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
             val preparedStatement = client.connection.prepareStatement(sql)
             try {
-              val t = new Timestamp(1576655465184L)
-              preparedStatement.setTimestamp(1, t)
-              sizeInBytes.add(t.toString().length())
+              preparedStatement.setTimestamp(1, timestampData)
+              sizeInBytes.add(timestampData.toString().length())
 
               rowData().cells().asScala.zipWithIndex.foreach {
                 case (result, index) => {

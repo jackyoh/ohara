@@ -183,6 +183,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           log.error("failed to log meters", e)
       } finally afterRecodingReports(reports)
       TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
+      afterFrequencySleep()
     }
     durationOfPerformance.toMillis
   }
@@ -193,6 +194,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     * @param reports the stuff we record
     */
   protected def afterRecodingReports(reports: Seq[PerformanceReport]): Unit = {
+    // nothing by default
+  }
+
+  /**
+    * Duration running function for after sleep
+    */
+  protected def afterFrequencySleep(): Unit = {
     // nothing by default
   }
 

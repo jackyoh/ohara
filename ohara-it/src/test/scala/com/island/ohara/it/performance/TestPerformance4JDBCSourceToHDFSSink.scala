@@ -83,4 +83,6 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
         if (fileSystem.exists(path)) fileSystem.delete(path, true)
       } finally Releasable.close(fileSystem)
     }
+
+  override protected def afterFrequencySleep(): Unit = setupTableData()
 }

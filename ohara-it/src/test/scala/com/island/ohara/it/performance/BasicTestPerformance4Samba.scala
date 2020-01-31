@@ -99,8 +99,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     val sizeInBytes         = new LongAdder()
 
     val client = sambaClient()
-    try if (client.exists(csvOutputFolder)) throw new IllegalArgumentException(s"$csvOutputFolder exists!!!")
-    else createSambaFolder(csvOutputFolder)
+    try if (!client.exists(csvOutputFolder)) createSambaFolder(csvOutputFolder)
     finally Releasable.close(client)
 
     try {

@@ -26,9 +26,11 @@ import spray.json.JsNumber
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4JsonOut extends BasicTestPerformance {
+  private[this] val topicInfo = createTopic()
+
   @Test
   def test(): Unit = {
-    produce(createTopic())
+    produce(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[JsonOut].getName,
@@ -36,4 +38,6 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
     )
     sleepUntilEnd()
   }
+
+  override protected def afterFrequencySleep(): Unit = produce(topicInfo)
 }

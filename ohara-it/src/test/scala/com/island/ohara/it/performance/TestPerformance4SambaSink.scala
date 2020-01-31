@@ -30,10 +30,11 @@ import spray.json.JsString
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   private[this] val outputDir: String = "output"
+  private[this] val topicInfo         = createTopic()
 
   @Test
   def test(): Unit = {
-    produce(createTopic())
+    produce(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[SmbSink].getName(),
@@ -49,4 +50,6 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
         val path = s"${outputDir}/${topicInfo.topicNameOnKafka}"
         if (exists(path)) removeSambaFolder(path)
       }
+
+  override protected def afterFrequencySleep(): Unit = produce(topicInfo)
 }
