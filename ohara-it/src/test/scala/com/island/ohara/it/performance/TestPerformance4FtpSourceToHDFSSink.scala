@@ -18,17 +18,67 @@ package com.island.ohara.it.performance
 
 import com.island.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import com.island.ohara.client.configurator.v0.TopicApi.TopicInfo
+import com.island.ohara.client.filesystem.FileSystem
+import com.island.ohara.common.setting.ConnectorKey
+import com.island.ohara.common.util.{CommonUtils, Releasable}
+import com.island.ohara.connector.ftp.FtpSource
+import com.island.ohara.connector.hdfs.sink.HDFSSink
 import com.island.ohara.it.category.PerformanceGroup
-import org.junit.Test
+import com.island.ohara.kafka.connector.csv.CsvConnectorDefinitions
+import org.junit.{AssumptionViolatedException, Test}
 import org.junit.experimental.categories.Category
+import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
-  @Test
-  def test(): Unit = {}
+  private[this] val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
+  private[this] val dataDir: String      = "/tmp"
+  private[this] val hdfsURL: String = sys.env.getOrElse(
+    HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"$HDFS_URL_KEY does not exists!!!")
+  )
+  private[this] val completedPath = "/completed"
+  private[this] val errorPath     = "/error"
+  private[this] val (path, _, _)  = setupInputData()
 
-  override protected def afterStoppingConnectors(
-    connectorInfos: Seq[ConnectorInfo],
-    topicInfos: Seq[TopicInfo]
-  ): Unit = {}
+  @Test
+  def test(): Unit = {
+    createTopic()
+    // Running FTP Source Connector
+    setupConnector(
+      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+      className = classOf[FtpSource].getName,
+      settings = ftpSettings
+        + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
+        + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createFtpFolder(completedPath)))
+        + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createFtpFolder(errorPath)))
+    )
+
+    //Running HDFS Sink Connector
+    setupConnector(
+      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+      className = classOf[HDFSSink].getName(),
+      settings = Map(
+        com.island.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),
+        com.island.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(2000),
+        com.island.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(dataDir)
+      )
+    )
+    sleepUntilEnd()
+  }
+
+  override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
+    if (cleanupTestData) {
+      // Delete file for the FTP
+      removeFtpFolder(path)
+      removeFtpFolder(completedPath)
+      removeFtpFolder(errorPath)
+
+      // Delete file for the HDFS
+      val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
+      try topicInfos.foreach { topicInfo =>
+        val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
+        if (fileSystem.exists(path)) fileSystem.delete(path, true)
+      } finally Releasable.close(fileSystem)
+    }
 }
