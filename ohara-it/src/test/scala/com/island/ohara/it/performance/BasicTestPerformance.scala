@@ -177,14 +177,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     val end = CommonUtils.current() + durationOfPerformance.toMillis
     while (CommonUtils.current() <= end) {
       afterFrequencySleep()
-      val reports = connectorReports()
-      try reports.foreach(logMeters)
-      catch {
-        case e: Throwable =>
-          log.error("failed to log meters", e)
-      } finally afterRecodingReports(reports)
+      fetchConnectorMetrics()
       TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
     }
+    // Final metrics data
+    fetchConnectorMetrics()
     durationOfPerformance.toMillis
   }
 
@@ -332,5 +329,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         )
     )
     afterStoppingConnectors(result(connectorApi.list()), result(topicApi.list()))
+  }
+
+  private[this] def fetchConnectorMetrics(): Unit = {
+    val reports = connectorReports()
+    try reports.foreach(logMeters)
+    catch {
+      case e: Throwable =>
+        log.error("failed to log meters", e)
+    } finally afterRecodingReports(reports)
   }
 }
