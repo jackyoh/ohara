@@ -67,7 +67,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       .port(configuratorPort)
 
   //------------------------------[global properties]------------------------------//
-  private[this] val durationOfPerformanceKey     = "ohara.it.performance.duration"
+  private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
   private[this] val durationOfPerformanceDefault = 30 seconds
   protected val durationOfPerformance: Duration = {
     val v = value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
@@ -76,31 +76,31 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     v
   }
 
-  private[this] val reportOutputFolderKey = "ohara.it.performance.report.output"
+  private[this] val reportOutputFolderKey = PerformanceTestingUtils.REPORT_OUTPUT_KEY
   private[this] val reportOutputFolder: File = mkdir(
     new File(
       value(reportOutputFolderKey).getOrElse("/tmp/performance")
     )
   )
 
-  private[this] val logMetersFrequencyKey               = "ohara.it.performance.log.meters.frequency"
+  private[this] val logMetersFrequencyKey               = PerformanceTestingUtils.LOG_METERS_FREQUENCY_KEY
   private[this] val logMetersFrequencyDefault: Duration = 5 seconds
   protected val logMetersFrequency: Duration =
     value(logMetersFrequencyKey).map(Duration(_)).getOrElse(logMetersFrequencyDefault)
 
   //------------------------------[topic properties]------------------------------//
-  private[this] val megabytesOfInputDataKey           = "ohara.it.performance.data.size"
+  private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE
   private[this] val megabytesOfInputDataDefault: Long = 1000
   protected val sizeOfInputData: Long =
     1024L * 1024L * value(megabytesOfInputDataKey).map(_.toLong).getOrElse(megabytesOfInputDataDefault)
 
-  private[this] val numberOfPartitionsKey     = "ohara.it.performance.topic.partitions"
+  private[this] val numberOfPartitionsKey     = PerformanceTestingUtils.PARTITION_SIZE_KEY
   private[this] val numberOfPartitionsDefault = 1
   protected val numberOfPartitions: Int =
     value(numberOfPartitionsKey).map(_.toInt).getOrElse(numberOfPartitionsDefault)
 
   //------------------------------[connector properties]------------------------------//
-  private[this] val numberOfConnectorTasksKey     = "ohara.it.performance.connector.tasks"
+  private[this] val numberOfConnectorTasksKey     = PerformanceTestingUtils.TASK_SIZE_KEY
   private[this] val numberOfConnectorTasksDefault = 1
   protected val numberOfConnectorTasks: Int =
     value(numberOfConnectorTasksKey).map(_.toInt).getOrElse(numberOfConnectorTasksDefault)

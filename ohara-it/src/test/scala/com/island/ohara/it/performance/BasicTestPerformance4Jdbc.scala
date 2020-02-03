@@ -35,22 +35,27 @@ import org.junit.AssumptionViolatedException
 import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
-  private[this] val DB_URL_KEY: String = "ohara.it.performance.jdbc.url"
   protected[this] val url: String =
-    sys.env.getOrElse(DB_URL_KEY, throw new AssumptionViolatedException(s"$DB_URL_KEY does not exists!!!"))
+    sys.env.getOrElse(
+      PerformanceTestingUtils.DB_URL_KEY,
+      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.DB_URL_KEY} does not exists!!!")
+    )
 
-  private[this] val DB_USER_NAME_KEY: String = "ohara.it.performance.jdbc.username"
   protected[this] val user: String =
-    sys.env.getOrElse(DB_USER_NAME_KEY, throw new AssumptionViolatedException(s"$DB_USER_NAME_KEY does not exists!!!"))
+    sys.env.getOrElse(
+      PerformanceTestingUtils.DB_USER_NAME_KEY,
+      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.DB_USER_NAME_KEY} does not exists!!!")
+    )
 
-  private[this] val DB_PASSWORD_KEY: String = "ohara.it.performance.jdbc.password"
   protected[this] val password: String =
-    sys.env.getOrElse(DB_PASSWORD_KEY, throw new AssumptionViolatedException(s"$DB_PASSWORD_KEY does not exists!!!"))
+    sys.env.getOrElse(
+      PerformanceTestingUtils.DB_PASSWORD_KEY,
+      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.DB_PASSWORD_KEY} does not exists!!!")
+    )
 
-  private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
-  private[this] val jarFolderPath: String  = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
+  private[this] val jarFolderPath: String = sys.env.getOrElse(PerformanceTestingUtils.JAR_FOLDER_KEY, "/jar")
 
-  private[this] val NEED_DELETE_DATA_KEY: String  = "ohara.it.performance.jdbc.needDeleteTable"
+  private[this] val NEED_DELETE_DATA_KEY: String  = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected[this] val needDeleteData: Boolean     = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "false").toBoolean
   protected[this] val timestampColumnName: String = "COLUMN0"
 

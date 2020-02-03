@@ -27,18 +27,18 @@ import spray.json.{JsNumber, JsString, JsValue}
 import collection.JavaConverters._
 
 abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
-  private[this] val ftpHostname = value("ohara.it.performance.ftp.hostname")
-    .getOrElse(throw new AssumptionViolatedException("ohara.it.performance.ftp.hostname is required"))
+  private[this] val ftpHostname = value(PerformanceTestingUtils.FTP_HOSTNAME_KEY)
+    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_HOSTNAME_KEY} is required"))
 
-  private[this] val ftpPort = value("ohara.it.performance.ftp.port")
-    .getOrElse(throw new AssumptionViolatedException("ohara.it.performance.ftp.port is required"))
+  private[this] val ftpPort = value(PerformanceTestingUtils.FTP_PORT_KEY)
+    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_PORT_KEY} is required"))
     .toInt
 
-  private[this] val ftpUser = value("ohara.it.performance.ftp.user")
-    .getOrElse(throw new AssumptionViolatedException("ohara.it.performance.ftp.user is required"))
+  private[this] val ftpUser = value(PerformanceTestingUtils.FTP_USER_KEY)
+    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_USER_KEY} is required"))
 
-  private[this] val ftpPassword = value("ohara.it.performance.ftp.password")
-    .getOrElse(throw new AssumptionViolatedException("ohara.it.performance.ftp.password is required"))
+  private[this] val ftpPassword = value(PerformanceTestingUtils.FTP_PASSWORD_KEY)
+    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_PASSWORD_KEY} is required"))
 
   private[this] val numberOfProducerThread = 2
 
@@ -63,10 +63,10 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     com.island.ohara.connector.ftp.FTP_PASSWORD_KEY  -> JsString(ftpPassword)
   )
 
-  private[this] val csvInputFolderKey       = "ohara.it.performance.csv.input"
+  private[this] val csvInputFolderKey       = PerformanceTestingUtils.CSV_INPUT_KEY
   private[this] val csvOutputFolder: String = value(csvInputFolderKey).getOrElse("/input")
 
-  private[this] val cleanupTestDataKey   = "ohara.it.performance.cleanup"
+  private[this] val cleanupTestDataKey   = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected val cleanupTestData: Boolean = value(cleanupTestDataKey).forall(_.toBoolean)
 
   private[this] def ftpClient() =
