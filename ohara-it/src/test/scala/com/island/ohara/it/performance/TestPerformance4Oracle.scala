@@ -32,6 +32,7 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   @Test
   def test(): Unit = {
     createTable()
+    setupTableData()
     createTopic()
     try {
       setupConnector(

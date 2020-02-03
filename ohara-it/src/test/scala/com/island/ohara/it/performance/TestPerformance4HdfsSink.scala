@@ -39,9 +39,11 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
 
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
-  private[this] val topicInfo = createTopic()
+  private[this] var topicInfo: TopicInfo = _
+
   @Test
   def test(): Unit = {
+    topicInfo = createTopic()
     produce(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
