@@ -176,6 +176,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected def sleepUntilEnd(): Long = {
     val end = CommonUtils.current() + durationOfPerformance.toMillis
     while (CommonUtils.current() <= end) {
+      afterFrequencySleep()
       val reports = connectorReports()
       try reports.foreach(logMeters)
       catch {
@@ -183,7 +184,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           log.error("failed to log meters", e)
       } finally afterRecodingReports(reports)
       TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
-      afterFrequencySleep()
     }
     durationOfPerformance.toMillis
   }

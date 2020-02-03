@@ -65,6 +65,16 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   private[this] val numberOfProducerThread     = 2
   protected[this] var client: DatabaseClient   = _
 
+  private[this] val columnNames: Seq[String] = Seq(timestampColumnName) ++ rowData().cells().asScala.map(_.name)
+  private[this] val columnInfos = columnNames
+    .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
+    .zipWithIndex
+    .map {
+      case (columnName, index) =>
+        if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
+        else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
+        else RdbColumn(columnName, "VARCHAR(45)", false)
+    }
   @Before
   final def setup(): Unit = {
     client = DatabaseClient.builder.url(url).user(user).password(password).build
@@ -81,23 +91,12 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       .toSet
   }
 
+  protected[this] def createTable(): Unit = {
+    log.info(s"Create the ${tableName} table for JDBC source connector test")
+    client.createTable(tableName, columnInfos)
+  }
+
   protected[this] def setupTableData(): (String, Long, Long) = {
-    val columnNames: Seq[String] = Seq(timestampColumnName) ++ rowData().cells().asScala.map(_.name)
-    val columnInfos = columnNames
-      .map(columnName => if (!isColumnNameUpperCase) columnName.toLowerCase else columnName.toUpperCase)
-      .zipWithIndex
-      .map {
-        case (columnName, index) =>
-          if (index == 0) RdbColumn(columnName, "TIMESTAMP", true)
-          else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
-          else RdbColumn(columnName, "VARCHAR(45)", false)
-      }
-
-    if (client.tables().map(_.name).filter(_ == tableName).isEmpty) {
-      log.info(s"Create the ${tableName} table for JDBC source connector test")
-      client.createTable(tableName, columnInfos)
-    }
-
     val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed      = new AtomicBoolean(false)
     val count       = new LongAdder()

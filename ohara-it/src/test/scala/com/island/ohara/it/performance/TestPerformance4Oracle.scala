@@ -31,8 +31,8 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
 
   @Test
   def test(): Unit = {
+    createTable()
     createTopic()
-    val (tableName, _, _) = setupTableData()
     try {
       setupConnector(
         connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
