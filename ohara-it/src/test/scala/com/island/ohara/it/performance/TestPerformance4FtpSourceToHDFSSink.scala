@@ -32,8 +32,8 @@ import spray.json.{JsNumber, JsString}
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
   private[this] val hdfsURL: String = sys.env.getOrElse(
-    HDFSPerformanceTestingUtils.HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"${HDFSPerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
+    PerformanceTestingUtils.HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
   private[this] val dataDir: String = "/tmp"
   private[this] val completedPath   = "/completed"

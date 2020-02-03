@@ -33,8 +33,8 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
 
   private[this] val dataDir: String = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
-    HDFSPerformanceTestingUtils.HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"${HDFSPerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
+    PerformanceTestingUtils.HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
 
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean

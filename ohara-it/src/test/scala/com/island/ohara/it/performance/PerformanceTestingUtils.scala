@@ -16,6 +16,6 @@
 
 package com.island.ohara.it.performance
 
-object HDFSPerformanceTestingUtils {
-  private[performance] val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
+private[performance] object PerformanceTestingUtils {
+  val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
 }
