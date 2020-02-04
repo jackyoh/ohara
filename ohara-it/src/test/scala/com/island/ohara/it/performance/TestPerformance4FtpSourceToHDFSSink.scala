@@ -80,4 +80,6 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
         if (fileSystem.exists(path)) fileSystem.delete(path, true)
       } finally Releasable.close(fileSystem)
     }
+
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = setupInputData()
 }

@@ -52,5 +52,5 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
         if (exists(path)) recursiveRemoveFolder(path)
       }
 
-  override protected def afterFrequencySleep(): Unit = produce(topicInfo)
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = produce(topicInfo)
 }

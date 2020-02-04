@@ -106,6 +106,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         pool.execute(() => {
           val client = DatabaseClient.builder.url(url).user(user).password(password).build
           try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+            // 432000000 is 5 days ago
             val timestampData = new Timestamp(CommonUtils.current() - 432000000)
             val sql = s"INSERT INTO $tableName VALUES " + columnInfos
               .map(_ => "?")

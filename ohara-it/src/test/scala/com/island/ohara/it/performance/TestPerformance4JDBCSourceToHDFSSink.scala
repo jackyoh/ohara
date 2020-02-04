@@ -85,5 +85,5 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       } finally Releasable.close(fileSystem)
     }
 
-  override protected def afterFrequencySleep(): Unit = setupTableData()
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = setupTableData()
 }

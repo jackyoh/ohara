@@ -174,14 +174,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   }
 
   protected def sleepUntilEnd(): Long = {
-    val end = CommonUtils.current() + durationOfPerformance.toMillis
-    while (CommonUtils.current() <= end) {
-      afterFrequencySleep()
-      fetchConnectorMetrics()
-      TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
-    }
-    // Final metrics data
-    fetchConnectorMetrics()
+    try {
+      val end = CommonUtils.current() + durationOfPerformance.toMillis
+      while (CommonUtils.current() <= end) {
+        val reports = connectorReports()
+        afterFrequencySleep(reports)
+        fetchConnectorMetrics(reports)
+        TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
+      }
+    } finally fetchConnectorMetrics(connectorReports())
     durationOfPerformance.toMillis
   }
 
@@ -197,7 +198,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   /**
     * Duration running function for after sleep
     */
-  protected def afterFrequencySleep(): Unit = {
+  protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
     // nothing by default
   }
 
@@ -331,8 +332,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     afterStoppingConnectors(result(connectorApi.list()), result(topicApi.list()))
   }
 
-  private[this] def fetchConnectorMetrics(): Unit = {
-    val reports = connectorReports()
+  private[this] def fetchConnectorMetrics(reports: Seq[PerformanceReport]): Unit = {
     try reports.foreach(logMeters)
     catch {
       case e: Throwable =>

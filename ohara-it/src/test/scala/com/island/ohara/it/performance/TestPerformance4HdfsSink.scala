@@ -66,5 +66,5 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
       } finally Releasable.close(fileSystem)
     }
 
-  override protected def afterFrequencySleep(): Unit = produce(topicInfo)
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = produce(topicInfo)
 }
