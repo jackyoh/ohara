@@ -53,12 +53,13 @@ then
   echo "--sport              Set Samba server ssn port (required argument)"
   echo "--dport              Set Samba server ds port (required argument)"
   echo "--host               Set host name to remote host the Samba server container (required argument)"
+  echo "--volume             Expose the container folder to the host path"
   exit 1
 fi
 
 containerName="samba-benchmark-test"
 
-ARGUMENT_LIST=("user" "password" "sport" "dport" "host")
+ARGUMENT_LIST=("user" "password" "sport" "dport" "host" "volume")
 
 opts=$(getopt \
     --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
@@ -88,6 +89,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --host)
       host=$2
+      shift 2
+      ;;
+    --volume)
+      volume=$2
       shift 2
       ;;
     *)
@@ -120,6 +125,11 @@ then
   exit 1
 fi
 
+if [[ ! -z ${volume} ]] && [[ "${start}" == "true" ]];
+then
+  volumeArg="-v ${volume}:/home/ohara"
+fi
+
 if [[ -z ${host} ]];
 then
   echo 'Please set the --host argument to deploy Samba server container. example: --host host1'
@@ -132,7 +142,7 @@ then
   echo "Pull Samba server docker image"
   ssh ohara@${host} docker pull $sambaDockerImageName
   echo "Starting Samba server container. user name is $user"
-  ssh ohara@${host} docker run -d --name $containerName --env SAMBA_USER_NAME=$user --env SAMBA_USER_PASS=$password -p $sport:139 -p $dport:445 $sambaDockerImageName
+  ssh ohara@${host} docker run -d ${volumeArg} --name $containerName --env SAMBA_USER_NAME=$user --env SAMBA_USER_PASS=$password -p $sport:139 -p $dport:445 $sambaDockerImageName
 fi
 
 if [[ "${stop}" == "true" ]];

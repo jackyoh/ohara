@@ -42,13 +42,14 @@ case $COMMAND in
     ;;
 esac
 
-while getopts n:s:u: option
+while getopts n:s:u:v: option
 do
  case "${option}"
  in
  n) nameNode=${OPTARG};;
  s) dataNodes=${OPTARG};;
  u) userName=${OPTARG};;
+ v) volume=${OPTARG};;
  esac
 done
 
@@ -60,6 +61,7 @@ then
   echo "-n                   Set HDFS namenode hostname and port to start the datanode. example: -n host1:9000"
   echo "-s                   Set HDFS datanode hostname list. example: -s host1,host2,host3"
   echo "-u                   Set ssh user name to remote deploy datanode"
+  echo "-v                   Expose the namenode and datanode container folder for the host path"
   exit 1
 fi
 
@@ -70,7 +72,13 @@ fi
 
 if [[ -z "${nameNode}" ]];
 then
-  nameNode="${HOSTNAME}"
+  echo "Please set the -n argument for the namenode host"
+  exit 1;
+fi
+
+if [[ ! -z "${volume}" ]];
+then
+  volumeArg="-v ${volume}:/tmp/hadoop"
 fi
 
 nameNodeImageName="oharastream/ohara:hdfs-namenode"
@@ -84,12 +92,12 @@ if [ "$start" == "true" ];
 then
   echo "Starting HDFS container"
   echo "Starting ${HOSTNAME} node namenode......"
-  ssh ${userName}@${nameNode} "docker pull ${nameNodeImageName};docker run -d -it --name ${nameNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${nameNodeImageName}"
+  ssh ${userName}@${nameNode} "docker pull ${nameNodeImageName};docker run -d ${volumeArg} -it --name ${nameNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${nameNodeImageName}"
 
   for dataNode in $dataNodes;
   do
     echo "Starting ${dataNode} node datanode......"
-    ssh ${userName}@${dataNode} "docker pull ${dataNodeImageName};docker run -d -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${dataNodeImageName}"
+    ssh ${userName}@${dataNode} "docker pull ${dataNodeImageName};docker run -d ${volumeArg} -it --name ${dataNodeContainerName} --env HADOOP_NAMENODE=${nameNode}:9000 --net host ${dataNodeImageName}"
   done
 fi
 
