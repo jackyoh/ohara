@@ -29,22 +29,22 @@ fi
 
 # create password file
 echo "${SAMBA_USER_PASS}
-${SAMBA_USER_PASS}" > $pwdFile
+${SAMBA_USER_PASS}" > ${pwdFile}
 
 # Modify smb.conf file
 smbDir="/home/ohara/samba-data"
-mkdir -p $smbDir
+mkdir -p ${smbDir}
 echo "[homes]
         comment = Home Directories
         valid users = %S, %D%w%S
-        path = $smbDir
+        path = ${smbDir}
         browseable = No
         read only = No
         inherit acls = Yes" > /etc/samba/smb.conf
 
 groupadd smbgrp
 useradd ${SAMBA_USER_NAME} -G smbgrp
-smbpasswd -a ${SAMBA_USER_NAME} < $pwdFile
-chown -R ohara:ohara $smbDir
+smbpasswd -a ${SAMBA_USER_NAME} < ${pwdFile}
+chown -R ohara:ohara ${smbDir}
 
 /usr/sbin/smbd --foreground --no-process-group

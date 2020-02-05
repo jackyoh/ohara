@@ -19,12 +19,12 @@ usage="USAGE: $0 [start|stop|--help] --user"' ${USER_NAME} --password ${PASSWORD
 
 if [ $# -lt 1 ];
 then
-  echo $usage
+  echo ${usage}
   exit 1
 fi
 
 COMMAND=$1
-case $COMMAND in
+case ${COMMAND} in
   start)
     start="true"
     shift
@@ -38,14 +38,14 @@ case $COMMAND in
     shift
     ;;
   *)
-    echo $usage
+    echo ${usage}
     exit 1
     ;;
 esac
 
 if [ "${help}" == "true" ];
 then
-  echo $usage
+  echo ${usage}
   echo "Argument             Description"
   echo "--------             -----------"
   echo "--user               Set oracle database user name"
@@ -133,7 +133,7 @@ echo "Port is ${port}"
 ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 sleep 3m
 ssh ohara@${host} << EOF
-docker exec -i $containerName bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
+docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
 EOF
 echo "Start oracle database complete. User name is ${user}"
 fi
@@ -141,5 +141,5 @@ fi
 if [[ "${stop}" == "true" ]];
 then
   echo "Stoping oracle database container"
-  ssh ohara@${host} docker rm -f $containerName
+  ssh ohara@${host} docker rm -f ${containerName}
 fi

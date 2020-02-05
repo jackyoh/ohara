@@ -19,12 +19,12 @@
 usage="USAGE: $0 [hdfs|ftp|samba|oracle] [--help | arg1 arg2 ...]"
 if [ $# -lt 1 ];
 then
-  echo $usage
+  echo ${usage}
   exit 1
 fi
 
 COMMAND=$1
-case $COMMAND in
+case ${COMMAND} in
   hdfs)
     hdfs="true"
     shift
@@ -46,7 +46,7 @@ case $COMMAND in
     shift
     ;;
   *)
-    echo $usage
+    echo ${usage}
     exit 1
     ;;
 esac

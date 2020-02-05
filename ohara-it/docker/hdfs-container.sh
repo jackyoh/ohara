@@ -18,12 +18,12 @@
 usage="USAGE: $0 [start|stop|--help] arg1 arg2 ..."
 if [ $# -lt 1 ];
 then
-  echo $usage
+  echo ${usage}
   exit 1
 fi
 
 COMMAND=$1
-case $COMMAND in
+case ${COMMAND} in
   start)
     start="true"
     shift
@@ -37,7 +37,7 @@ case $COMMAND in
     shift
     ;;
   *)
-    echo $usage
+    echo ${usage}
     exit 1
     ;;
 esac
@@ -55,7 +55,7 @@ done
 
 if [ "${help}" == "true" ];
 then
-  echo $usage
+  echo ${usage}
   echo "Argument             Description"
   echo "--------             -----------"
   echo "-n                   Set HDFS namenode hostname and port to start the datanode. example: -n host1:9000"
@@ -88,7 +88,7 @@ nameNodeContainerName="namenode"
 dataNodeContainerName="datanode"
 
 IFS=","
-if [ "$start" == "true" ];
+if [ "${start}" == "true" ];
 then
   echo "Starting HDFS container"
   echo "Starting ${HOSTNAME} node namenode......"
@@ -101,10 +101,10 @@ then
   done
 fi
 
-if [ "$stop" == "true" ];
+if [ "${stop}" == "true" ];
 then
     echo "Stoping HDFS container"
-    for dataNode in $dataNodes;
+    for dataNode in ${dataNodes};
     do
       echo "Stoping ${dataNode} node datanode......"
       ssh ${userName}@${dataNode} docker rm -f ${dataNodeContainerName}

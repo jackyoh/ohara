@@ -19,12 +19,12 @@
 usage="USAGE: $0 [start|stop|--help] arg1 arg2 ..."
 if [ $# -lt 1 ];
 then
-  echo $usage
+  echo ${usage}
   exit 1
 fi
 
 COMMAND=$1
-case $COMMAND in
+case ${COMMAND} in
   start)
     start="true"
     shift
@@ -38,14 +38,14 @@ case $COMMAND in
     shift
     ;;
   *)
-    echo $usage
+    echo ${usage}
     exit 1
     ;;
 esac
 
 if [ "${help}" == "true" ];
 then
-  echo $usage
+  echo ${usage}
   echo "Argument             Description"
   echo "--------             -----------"
   echo "--user               Set Samba server user name (required argument)"
@@ -140,13 +140,13 @@ sambaDockerImageName="oharastream/ohara:samba"
 if [[ "${start}" == "true" ]];
 then
   echo "Pull Samba server docker image"
-  ssh ohara@${host} docker pull $sambaDockerImageName
-  echo "Starting Samba server container. user name is $user"
-  ssh ohara@${host} docker run -d ${volumeArg} --name $containerName --env SAMBA_USER_NAME=$user --env SAMBA_USER_PASS=$password -p $sport:139 -p $dport:445 $sambaDockerImageName
+  ssh ohara@${host} docker pull ${sambaDockerImageName}
+  echo "Starting Samba server container. user name is ${user}"
+  ssh ohara@${host} docker run -d ${volumeArg} --name ${containerName} --env SAMBA_USER_NAME=${user} --env SAMBA_USER_PASS=${password} -p ${sport}:139 -p ${dport}:445 ${sambaDockerImageName}
 fi
 
 if [[ "${stop}" == "true" ]];
 then
   echo "Stoping Samba server container"
-  ssh ohara@${host} docker rm -f $containerName
+  ssh ohara@${host} docker rm -f ${containerName}
 fi
