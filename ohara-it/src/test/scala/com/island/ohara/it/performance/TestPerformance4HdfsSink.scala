@@ -67,6 +67,6 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
     }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    produce(topicInfo, 1024L)
+    produce(topicInfo, sizeOfDurationInputData)
   }
 }

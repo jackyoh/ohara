@@ -89,10 +89,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     value(logMetersFrequencyKey).map(Duration(_)).getOrElse(logMetersFrequencyDefault)
 
   //------------------------------[topic properties]------------------------------//
-  private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE
+  private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE_KEY
   private[this] val megabytesOfInputDataDefault: Long = 1000
   protected val sizeOfInputData: Long =
     1024L * 1024L * value(megabytesOfInputDataKey).map(_.toLong).getOrElse(megabytesOfInputDataDefault)
+
+  private[this] val kbytesOfDurationInputDataKey   = PerformanceTestingUtils.DURATION_DATA_SIZE_KEY
+  private[this] val kbytesOfInputDataDefault: Long = 1
+  protected val sizeOfDurationInputData: Long =
+    1024L * value(kbytesOfDurationInputDataKey).map(_.toLong).getOrElse(kbytesOfInputDataDefault)
 
   private[this] val numberOfPartitionsKey     = PerformanceTestingUtils.PARTITION_SIZE_KEY
   private[this] val numberOfPartitionsDefault = 1

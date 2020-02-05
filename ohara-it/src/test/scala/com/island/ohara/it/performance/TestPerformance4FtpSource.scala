@@ -51,6 +51,6 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
   }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    setupInputData(1024L)
+    setupInputData(sizeOfDurationInputData)
   }
 }

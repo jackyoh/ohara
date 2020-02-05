@@ -53,6 +53,6 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
       }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    produce(topicInfo, 1024L)
+    produce(topicInfo, sizeOfDurationInputData)
   }
 }

@@ -20,7 +20,8 @@ private[performance] object PerformanceTestingUtils {
   val DURATION_KEY             = "ohara.it.performance.duration"
   val REPORT_OUTPUT_KEY        = "ohara.it.performance.report.output"
   val LOG_METERS_FREQUENCY_KEY = "ohara.it.performance.log.meters.frequency"
-  val DATA_SIZE                = "ohara.it.performance.data.size"
+  val DATA_SIZE_KEY            = "ohara.it.performance.data.size"
+  val DURATION_DATA_SIZE_KEY   = "ohara.it.performance.duration.data.size"
   val PARTITION_SIZE_KEY       = "ohara.it.performance.topic.partitions"
   val TASK_SIZE_KEY            = "ohara.it.performance.connector.tasks"
 

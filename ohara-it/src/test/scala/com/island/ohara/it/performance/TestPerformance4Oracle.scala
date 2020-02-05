@@ -54,6 +54,6 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    setupTableData(1024)
+    setupTableData(sizeOfDurationInputData)
   }
 }

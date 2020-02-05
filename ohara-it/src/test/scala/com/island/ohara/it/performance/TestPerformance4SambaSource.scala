@@ -51,6 +51,6 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
   }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    setupInputData(1024L)
+    setupInputData(sizeOfDurationInputData)
   }
 }
