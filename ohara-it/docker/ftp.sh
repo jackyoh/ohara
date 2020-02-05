@@ -61,7 +61,7 @@ echo "<server xmlns=\"http://mina.apache.org/ftpserver/spring/v1\"
 </server>" > ${ftpSettingFilePath}
 
 ftpDir=/home/ohara/ftp-data
-mkdir -p $ftpDir
+mkdir -p ${ftpDir}
 echo "ftpserver.user.${FTP_USER_NAME}.userpassword=${FTP_USER_PASS}
 ftpserver.user.${FTP_USER_NAME}.homedirectory=${ftpDir}
 ftpserver.user.${FTP_USER_NAME}.enableflag=true
