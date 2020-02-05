@@ -61,8 +61,8 @@ COPY namenode.sh /home/$USER/default/bin
 
 ENV HADOOP_HOME=/home/$USER/default
 ENV HADOOP_CONF_DIR=/home/$USER/default/config
-ENV HADOOP_NAMENODE_FOLDER=/tmp/hadoop
-ENV HADOOP_DATANODE_FOLDER=/tmp/hadoop
+ENV HADOOP_NAMENODE_FOLDER=/home/$USER/hdfs-data
+ENV HADOOP_DATANODE_FOLDER=/home/$USER/hdfs-data
 ENV PATH=$PATH:$HADOOP_HOME/bin
 
 RUN chmod +x /home/$USER/default/bin/core-site.sh

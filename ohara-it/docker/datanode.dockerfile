@@ -60,7 +60,7 @@ COPY datanode.sh /home/$USER/default/bin
 
 ENV HADOOP_HOME=/home/$USER/default
 ENV HADOOP_CONF_DIR=/home/$USER/default/config
-ENV HADOOP_DATANODE_FOLDER=/tmp/hadoop
+ENV HADOOP_DATANODE_FOLDER=/home/$USER/hdfs-data
 ENV PATH=$PATH:$HADOOP_HOME/bin
 RUN chmod +x /home/$USER/default/bin/hdfs-site.sh
 RUN chmod +x /home/$USER/default/bin/datanode.sh

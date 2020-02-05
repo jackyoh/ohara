@@ -78,7 +78,7 @@ fi
 
 if [[ ! -z "${volume}" ]];
 then
-  volumeArg="-v ${volume}:/tmp/hadoop"
+  volumeArg="-v ${volume}:/home/ohara/hdfs-data"
 fi
 
 nameNodeImageName="oharastream/ohara:hdfs-namenode"

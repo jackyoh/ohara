@@ -60,8 +60,10 @@ echo "<server xmlns=\"http://mina.apache.org/ftpserver/spring/v1\"
         <file-user-manager file=\"./res/conf/users.properties\" encrypt-passwords=\"clear\" />
 </server>" > ${ftpSettingFilePath}
 
+ftpDir=/home/ohara/ftp-data
+mkdir -p $ftpDir
 echo "ftpserver.user.${FTP_USER_NAME}.userpassword=${FTP_USER_PASS}
-ftpserver.user.${FTP_USER_NAME}.homedirectory=./res/home
+ftpserver.user.${FTP_USER_NAME}.homedirectory=${ftpDir}
 ftpserver.user.${FTP_USER_NAME}.enableflag=true
 ftpserver.user.${FTP_USER_NAME}.writepermission=true
 ftpserver.user.${FTP_USER_NAME}.maxloginnumber=0

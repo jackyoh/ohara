@@ -138,7 +138,7 @@ fi
 
 if [[ ! -z ${volume} ]] && [[ "${start}" == "true" ]];
 then
-  volumeArg="-v ${volume}:/home/ohara/default/res/home"
+  volumeArg="-v ${volume}:/home/ohara/ftp-data"
 fi
 
 ftpDockerImageName="oharastream/ohara:ftp"

@@ -127,7 +127,7 @@ fi
 
 if [[ ! -z ${volume} ]] && [[ "${start}" == "true" ]];
 then
-  volumeArg="-v ${volume}:/home/ohara/data"
+  volumeArg="-v ${volume}:/home/ohara/samba-data"
 fi
 
 if [[ -z ${host} ]];
