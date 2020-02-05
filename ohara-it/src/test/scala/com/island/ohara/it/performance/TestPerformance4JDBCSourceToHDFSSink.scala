@@ -41,7 +41,7 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
   @Test
   def test(): Unit = {
     createTable()
-    setupTableData()
+    setupTableData(sizeOfInputData)
     createTopic()
     //Running JDBC Source Connector
     setupConnector(
@@ -85,5 +85,7 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       } finally Releasable.close(fileSystem)
     }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = setupTableData()
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
+    setupTableData(1024)
+  }
 }

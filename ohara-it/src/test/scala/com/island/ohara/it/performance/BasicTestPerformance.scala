@@ -248,7 +248,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     result(connectorApi.get(connectorKey))
   }
 
-  protected def produce(topicInfo: TopicInfo): (TopicInfo, Long, Long) = {
+  protected def produce(topicInfo: TopicInfo, dataSize: Long): (TopicInfo, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
     val numberOfRowsToFlush    = 2000
     val numberOfProducerThread = 4
@@ -265,7 +265,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
             .connectionProps(brokerClusterInfo.connectionProps)
             .build()
           var cachedRows = 0
-          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+          try while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
             producer
               .sender()
               .topicName(topicInfo.key.topicNameOnKafka())

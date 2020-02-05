@@ -32,7 +32,7 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   @Test
   def test(): Unit = {
     createTable()
-    setupTableData()
+    setupTableData(sizeOfInputData)
     createTopic()
     try {
       setupConnector(
@@ -53,5 +53,7 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
     } finally if (needDeleteData) client.dropTable(tableName)
   }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = setupTableData()
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
+    setupTableData(1024)
+  }
 }

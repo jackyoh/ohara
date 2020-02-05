@@ -35,7 +35,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo)
+    produce(topicInfo, sizeOfInputData)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[FtpSink].getName(),
@@ -52,5 +52,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
         if (exists(path)) recursiveRemoveFolder(path)
       }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = produce(topicInfo)
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
+    produce(topicInfo, 1024L)
+  }
 }

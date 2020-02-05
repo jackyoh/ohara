@@ -96,7 +96,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
     client.createTable(tableName, columnInfos)
   }
 
-  protected[this] def setupTableData(): (String, Long, Long) = {
+  protected[this] def setupTableData(dataSize: Long): (String, Long, Long) = {
     val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed      = new AtomicBoolean(false)
     val count       = new LongAdder()
@@ -105,7 +105,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       (0 until numberOfProducerThread).foreach { x =>
         pool.execute(() => {
           val client = DatabaseClient.builder.url(url).user(user).password(password).build
-          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+          try while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
             // 432000000 is 5 days ago
             val timestampData = new Timestamp(CommonUtils.current() - 432000000)
             val sql = s"INSERT INTO $tableName VALUES " + columnInfos

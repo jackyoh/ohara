@@ -32,7 +32,7 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo)
+    produce(topicInfo, sizeOfInputData)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[JsonOut].getName,
@@ -41,5 +41,7 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
     sleepUntilEnd()
   }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = produce(topicInfo)
+  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
+    produce(topicInfo, 1024L)
+  }
 }

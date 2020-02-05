@@ -78,7 +78,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .password(ftpPassword)
       .build
 
-  protected def setupInputData(): (String, Long, Long) = {
+  protected def setupInputData(dataSize: Long): (String, Long, Long) = {
     val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
 
     val numberOfRowsToFlush = 1000
@@ -95,7 +95,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       (0 until numberOfProducerThread).foreach { _ =>
         pool.execute(() => {
           val client = ftpClient()
-          try while (!closed.get() && sizeInBytes.longValue() <= sizeOfInputData) {
+          try while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
             val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
             val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
             try {
