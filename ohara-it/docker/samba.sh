@@ -32,7 +32,7 @@ echo "${SAMBA_USER_PASS}
 ${SAMBA_USER_PASS}" > $pwdFile
 
 # Modify smb.conf file
-smbDir="/home/ohara/samba"
+smbDir="/home/ohara/data"
 mkdir -p $smbDir
 echo "[homes]
         comment = Home Directories
