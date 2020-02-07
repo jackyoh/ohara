@@ -137,7 +137,7 @@ while [ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Done ! The dat
 do
   sleep 2m
   ((timeoutCount+=2))
-  if [[ $timeoutCount >= 4 ]];
+  if [[ $timeoutCount -ge 4 ]];
   then
     echo "Running oracle database is timeout. \
          Please use the docker logs -f ${containerName} check the container log message and \
