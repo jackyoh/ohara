@@ -122,7 +122,7 @@ echo "Starting oracle database container"
 echo "Port is ${port}"
 ssh ohara@${host} docker run -d -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 
-while [ ! -z $(docker logs oracle-benchmark-test|awk '/Done ! The database is ready for use1 ./{print}') ]
+while [ -z $(docker logs oracle-benchmark-test|awk '/Done ! The database is ready for use1 ./{print}') ]
 do
   sleep 2m
 done
