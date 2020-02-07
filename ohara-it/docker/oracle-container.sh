@@ -132,7 +132,7 @@ echo "Starting oracle database container"
 echo "Port is ${port}"
 ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 
-while [ $(ssh ohara@${host} docker inspect --format='{{.State.Health.Status}}' ${containerName}) != "healthy"]
+while [ $(ssh ohara@${host} docker inspect --format='{{.State.Health.Status}}' ${containerName}) != "healthy" ]
 do
   sleep 2m
 done
