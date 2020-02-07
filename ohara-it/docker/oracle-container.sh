@@ -133,7 +133,7 @@ echo "Port is ${port}"
 ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 
 timeoutCount=0
-while [ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Done ! The database is ready for use ./{print}') ]
+while [[ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Done ! The database is ready for use ./{print}') ]]
 do
   sleep 1m # Sleep the 1 minute
   ((timeoutCount+=1))
