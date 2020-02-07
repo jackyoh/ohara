@@ -121,7 +121,7 @@ then
 echo "Starting oracle database container"
 echo "Port is ${port}"
 ssh ohara@${host} docker run -d -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
-sleep 5m
+sleep 7m
 ssh ohara@${host} << EOF
 docker exec -i $containerName bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
 EOF
