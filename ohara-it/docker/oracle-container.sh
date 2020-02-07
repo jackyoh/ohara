@@ -139,9 +139,9 @@ do
   ((timeoutCount+=2))
   if [[ $timeoutCount -ge 4 ]];
   then
-    echo "Running oracle database is timeout. \
-         Please use the docker logs -f ${containerName} check the container log message and \
-         log contain the 'Done ! The database is ready for use ' message"
+    echo "Running oracle database is timeout."
+    echo "Please use the docker logs -f ${containerName} check the container message."
+    echo "Confirm container log contain the 'Done ! The database is ready for use ' message."
     exit 1
   fi
 done
