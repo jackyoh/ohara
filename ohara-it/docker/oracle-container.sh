@@ -135,9 +135,9 @@ ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restar
 timeoutCount=0
 while [ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Done ! The database is ready for use ./{print}') ]
 do
-  sleep 2m
+  sleep 2m # Sleep the 2 minute
   ((timeoutCount+=2))
-  if [[ $timeoutCount -ge 10 ]];
+  if [[ $timeoutCount -ge 10 ]]; # Timeout is 10 minute
   then
     echo "Running oracle database is timeout."
     echo "Please use the docker logs -f ${containerName} check the container message."
