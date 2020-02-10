@@ -152,12 +152,29 @@ then
     fi
   done
 
-  sleep 1m # Final confirm the Oracle database container is running and setup complete
+  res=false
+  timeoutCount=0
+  while [[ $res == false ]];
+  do
+    sleep 1m
+    ((timeoutCount+=1))
 
-  ssh ohara@${host} << EOF
-  docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
+    ssh ohara@${host} << EOF
+    docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
 EOF
 # EOF key word can't indentation in if statement
 
+    if [[ $? -eq 0 ]];
+    then
+      res=true
+    fi
+    if [[ $timeoutCount -ge 10 ]]; # Sleep the 10 minute
+    then
+      echo "Create user is timeout."
+      exit 1
+    else
+      echo "Create user is not timeout."
+    fi
+  done
   echo "Start oracle database complete. User name is ${user}"
 fi
