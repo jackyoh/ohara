@@ -148,7 +148,8 @@ done
 
 res=false
 timeoutCount=0
-while [[ ! res ]];do
+while [[ ! res ]]
+do
 ssh ohara@${host} << EOF
 docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
 EOF
