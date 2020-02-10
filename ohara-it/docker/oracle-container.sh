@@ -126,6 +126,12 @@ then
   volumeArg="-v ${volume}:/ORCL"
 fi
 
+if [[ "${stop}" == "true" ]];
+then
+  echo "Stoping oracle database container"
+  ssh ohara@${host} docker rm -f ${containerName}
+fi
+
 if [[ "${start}" == "true" ]];
 then
   echo "Starting oracle database container"
@@ -152,10 +158,4 @@ then
 EOF # EOF key word can't indentation in if statement
 
   echo "Start oracle database complete. User name is ${user}"
-fi
-
-if [[ "${stop}" == "true" ]];
-then
-  echo "Stoping oracle database container"
-  ssh ohara@${host} docker rm -f ${containerName}
 fi
