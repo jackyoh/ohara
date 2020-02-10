@@ -162,7 +162,7 @@ EOF
 # EOF key word can't indentation in if statement
 
     if [[ $? -eq 0 ]];
-      echo "response is true"
+    then
       res=true
     fi
 
