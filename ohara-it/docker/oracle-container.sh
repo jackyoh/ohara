@@ -153,15 +153,15 @@ do
 ssh ohara@${host} << EOF
 docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
 EOF
-if [[ $? -eq 0 ]];then
-res=true
-fi
-sleep 1m
-((timeoutCount+=1))
-if [[ $timeoutCount -ge 10 ]];then
-echo "Oracle database create user error."
-exit 1
-fi
+  if [[ $? -eq 0 ]];then
+    res=true
+  fi
+  sleep 1m
+  ((timeoutCount+=1))
+  if [[ $timeoutCount -ge 10 ]];then
+    echo "Oracle database create user error."
+    exit 1
+  fi
 done
 
 echo "Start oracle database complete. User name is ${user}"
