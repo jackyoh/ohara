@@ -128,43 +128,30 @@ fi
 
 if [[ "${start}" == "true" ]];
 then
-echo "Starting oracle database container"
-echo "Port is ${port}"
-ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
+  echo "Starting oracle database container"
+  echo "Port is ${port}"
+  ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 
-timeoutCount=0
-while [[ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Completed:     alter pluggable database all save state/{print}') ]]
-do
-  sleep 1m # Sleep the 1 minute
-  ((timeoutCount+=1))
-  if [[ $timeoutCount -ge 10 ]]; # Timeout is 10 minute
-  then
-    echo "Running oracle database is timeout."
-    echo "Please use the docker logs -f ${containerName} check the container message."
-    echo "Confirm container log contain the 'Done ! The database is ready for use ' message."
-    exit 1
-  fi
-done
+  timeoutCount=0
+  while [[ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Completed:     alter pluggable database all save state/{print}') ]]
+  do
+    sleep 1m # Sleep the 1 minute
+    ((timeoutCount+=1))
+    if [[ $timeoutCount -ge 10 ]]; # Timeout is 10 minute
+    then
+      echo "Running oracle database is timeout."
+      echo "Please use the docker logs -f ${containerName} check the container message."
+      echo "Confirm container log contain the 'Done ! The database is ready for use ' message."
+      exit 1
+    fi
+  done
 
-res=false
-timeoutCount=0
-while [[ $res == false ]]
-do
-ssh ohara@${host} << EOF
-docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
-if [[ $? -eq 0 ]];then
-res=true
-fi
-sleep 1m
-((timeoutCount+=1))
-if [[ $timeoutCount -ge 10 ]];then
-echo "Oracle database create user error."
-exit 1
-fi
-EOF
-done
+  sleep 1m # Final confirm the Oracle database container is running and setup complete
+  ssh ohara@${host} << EOF
+  docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
+EOF # EOF key word can't indentation in if statement
 
-echo "Start oracle database complete. User name is ${user}"
+  echo "Start oracle database complete. User name is ${user}"
 fi
 
 if [[ "${stop}" == "true" ]];
