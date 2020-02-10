@@ -156,12 +156,14 @@ then
   while [[ $res == false ]];
   do
     ssh ohara@${host} << EOF
-  docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
-EOF
+    docker exec -i ${containerName} bash -c "source /home/oracle/.bashrc;echo -e 'alter session set \"_ORACLE_SCRIPT\"=true;\ncreate user ${user} identified by ${password};\nGRANT CONNECT, RESOURCE, DBA TO ${user};'|sqlplus sys/Oradoc_db1@${sid} as sysdba"
+
     if [[ #? -eq 0]];
-      a="aaaaaa"
+      echo "response is true"
+      res=true
     fi
     sleep 1m
+EOF
   done
   echo "Start oracle database complete. User name is ${user}"
 fi
