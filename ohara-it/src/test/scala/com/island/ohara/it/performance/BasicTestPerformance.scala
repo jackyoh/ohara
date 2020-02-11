@@ -49,8 +49,12 @@ import scala.concurrent.duration._
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger            = Logger(classOf[BasicTestPerformance])
-  private[this] val wholeTimeout       = 1200
+  protected val log: Logger = Logger(classOf[BasicTestPerformance])
+
+  private[this] val wholeTimeoutKey     = PerformanceTestingUtils.WHOLE_TIMEOUT_KEY
+  private[this] val wholeTimeoutDefault = "1200"
+  private[this] val wholeTimeout        = value(wholeTimeoutKey).getOrElse(wholeTimeoutDefault).toLong
+
   private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
 
   @Rule
