@@ -49,16 +49,8 @@ import scala.concurrent.duration._
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger = Logger(classOf[BasicTestPerformance])
-
-  private[this] val wholeTimeoutKey     = PerformanceTestingUtils.WHOLE_TIMEOUT_KEY
-  private[this] val wholeTimeoutDefault = "1200"
-  private[this] val wholeTimeout        = value(wholeTimeoutKey).getOrElse(wholeTimeoutDefault).toLong
-
+  protected val log: Logger            = Logger(classOf[BasicTestPerformance])
   private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
-
-  @Rule
-  override def timeout: Timeout = Timeout.seconds(wholeTimeout) // 20 minutes
 
   protected val topicApi: TopicApi.Access =
     TopicApi.access
@@ -73,12 +65,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
   private[this] val durationOfPerformanceDefault = 30 seconds
-  protected val durationOfPerformance: Duration = {
-    val v = value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
-    // too big duration is never completed
-    if (v.toSeconds > wholeTimeout / 2) throw new AssertionError(s"the max duration is ${wholeTimeout / 2} seconds")
-    v
-  }
+  protected val durationOfPerformance: Duration =
+    value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
+
+  private[this] val wholeTimeout = durationOfPerformance.toSeconds * 2
+  @Rule
+  override def timeout: Timeout = Timeout.seconds(wholeTimeout) // duration * 2 minutes
 
   private[this] val reportOutputFolderKey = PerformanceTestingUtils.REPORT_OUTPUT_KEY
   private[this] val reportOutputFolder: File = mkdir(
