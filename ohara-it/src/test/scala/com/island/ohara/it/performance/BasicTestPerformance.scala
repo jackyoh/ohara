@@ -64,11 +64,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
-  private[this] val durationOfPerformanceDefault = 30 seconds
+  private[this] val durationOfPerformanceDefault = 60 seconds
   protected val durationOfPerformance: Duration =
     value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
 
-  private[this] val wholeTimeout = durationOfPerformance.toSeconds * 20
+  private[this] val wholeTimeout = durationOfPerformance.toSeconds * 3
+
   @Rule
   override def timeout: Timeout = Timeout.seconds(wholeTimeout) // duration * 2 seconds
 
@@ -86,7 +87,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[topic properties]------------------------------//
   private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE_KEY
-  private[this] val megabytesOfInputDataDefault: Long = 1000
+  private[this] val megabytesOfInputDataDefault: Long = 100
   protected val sizeOfInputData: Long =
     1024L * 1024L * value(megabytesOfInputDataKey).map(_.toLong).getOrElse(megabytesOfInputDataDefault)
 
