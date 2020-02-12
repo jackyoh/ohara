@@ -70,7 +70,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   private[this] val wholeTimeout = durationOfPerformance.toSeconds * 2
   @Rule
-  override def timeout: Timeout = Timeout.seconds(wholeTimeout) // duration * 2 minutes
+  override def timeout: Timeout = Timeout.seconds(wholeTimeout) // duration * 2 seconds
 
   private[this] val reportOutputFolderKey = PerformanceTestingUtils.REPORT_OUTPUT_KEY
   private[this] val reportOutputFolder: File = mkdir(
