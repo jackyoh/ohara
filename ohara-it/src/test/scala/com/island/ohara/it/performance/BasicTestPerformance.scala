@@ -68,7 +68,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val durationOfPerformance: Duration =
     value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
 
-  private[this] val wholeTimeout = durationOfPerformance.toSeconds * 2
+  private[this] val wholeTimeout = durationOfPerformance.toSeconds * 20
   @Rule
   override def timeout: Timeout = Timeout.seconds(wholeTimeout) // duration * 2 seconds
 
