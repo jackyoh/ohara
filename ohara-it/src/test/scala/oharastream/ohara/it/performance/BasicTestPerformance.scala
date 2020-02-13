@@ -278,7 +278,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
           try while (!closed.get() &&
                      sizeInBytes.longValue() <= dataSize &&
-                     (CommonUtils.current()) - start <= timeout.toSeconds) {
+                     (CommonUtils.current() - start) <= timeout.toMillis) {
             producer
               .sender()
               .topicName(topicInfo.key.topicNameOnKafka())

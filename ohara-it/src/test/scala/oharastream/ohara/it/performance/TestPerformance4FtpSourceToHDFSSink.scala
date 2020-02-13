@@ -38,7 +38,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
   private[this] val dataDir: String = "/tmp"
   private[this] val completedPath   = "/completed"
   private[this] val errorPath       = "/error"
-  private[this] val (path, _, _)    = setupInputData(sizeOfInputData)
+  private[this] val (path, _, _)    = setupInputData(sizeOfInputData, timeoutOfSetupInputData)
 
   @Test
   def test(): Unit = {
@@ -82,6 +82,6 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
     }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    setupInputData(sizeOfDurationInputData)
+    setupInputData(sizeOfDurationInputData, timeoutOfDurationInputData)
   }
 }
