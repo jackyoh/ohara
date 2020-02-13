@@ -33,6 +33,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import org.junit.AssumptionViolatedException
 
 import collection.JavaConverters._
+import scala.concurrent.duration._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   protected[this] val url: String =
@@ -95,7 +96,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
     client.createTable(tableName, columnInfos)
   }
 
-  protected[this] def setupTableData(dataSize: Long): (String, Long, Long) = {
+  protected[this] def setupTableData(dataSize: Long, timeout: Duration): (String, Long, Long) = {
     val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
     val closed      = new AtomicBoolean(false)
     val count       = new LongAdder()
@@ -112,7 +113,10 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
           val preparedStatement = client.connection.prepareStatement(sql)
 
           try {
-            while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
+            val start = CommonUtils.current()
+            while (!closed.get() &&
+                   sizeInBytes.longValue() <= dataSize &&
+                   CommonUtils.current() - start <= timeout.toMillis) {
               preparedStatement.setTimestamp(1, timestampData)
               sizeInBytes.add(timestampData.toString().length())
 

@@ -25,6 +25,7 @@ import com.island.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
 import collection.JavaConverters._
+import scala.concurrent.duration._
 
 abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val sambaHostname: String = sys.env.getOrElse(
@@ -89,7 +90,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     finally Releasable.close(client)
   }
 
-  protected def setupInputData(dataSize: Long): (String, Long, Long) = {
+  protected def setupInputData(dataSize: Long, timeout: Duration): (String, Long, Long) = {
     val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
 
     val numberOfRowsToFlush = 1000
@@ -106,7 +107,10 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
       (0 until numberOfProducerThread).foreach { _ =>
         pool.execute(() => {
           val client = sambaClient()
-          try while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
+          val start  = CommonUtils.current()
+          try while (!closed.get() &&
+                     sizeInBytes.longValue() <= dataSize &&
+                     (CommonUtils.current() - start) <= timeout.toMillis) {
             val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
             val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
             try {
