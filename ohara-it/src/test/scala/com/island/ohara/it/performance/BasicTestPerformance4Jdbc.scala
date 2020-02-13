@@ -104,15 +104,15 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       (0 until numberOfProducerThread).foreach { x =>
         pool.execute(() => {
           val client = DatabaseClient.builder.url(url).user(user).password(password).build
-          try while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
-            // 432000000 is 5 days ago
-            val timestampData = new Timestamp(CommonUtils.current() - 432000000)
-            val sql = s"INSERT INTO $tableName VALUES " + columnInfos
-              .map(_ => "?")
-              .mkString("(", ",", ")")
+          // 432000000 is 5 days ago
+          val timestampData = new Timestamp(CommonUtils.current() - 432000000)
+          val sql = s"INSERT INTO $tableName VALUES " + columnInfos
+            .map(_ => "?")
+            .mkString("(", ",", ")")
+          val preparedStatement = client.connection.prepareStatement(sql)
 
-            val preparedStatement = client.connection.prepareStatement(sql)
-            try {
+          try {
+            while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
               preparedStatement.setTimestamp(1, timestampData)
               sizeInBytes.add(timestampData.toString().length())
 
@@ -123,10 +123,14 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
                   preparedStatement.setString(index + 2, value)
                 }
               }
-              preparedStatement.executeUpdate()
+              preparedStatement.addBatch()
               count.increment()
-            } finally Releasable.close(preparedStatement)
-          } finally Releasable.close(client)
+            }
+            preparedStatement.executeBatch()
+          } finally {
+            Releasable.close(preparedStatement)
+            Releasable.close(client)
+          }
         })
       }
     } finally {
