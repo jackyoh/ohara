@@ -35,7 +35,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, sizeOfInputData)
+    produce(topicInfo, sizeOfInputData, timeoutOfSetupInputData)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[FtpSink].getName(),
@@ -53,6 +53,6 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
       }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    produce(topicInfo, sizeOfDurationInputData)
+    produce(topicInfo, sizeOfDurationInputData, timeoutOfDurationInputData)
   }
 }

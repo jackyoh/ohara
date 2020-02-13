@@ -44,7 +44,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, sizeOfInputData)
+    produce(topicInfo, sizeOfInputData, timeoutOfSetupInputData)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
@@ -67,6 +67,6 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
     }
 
   override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    produce(topicInfo, sizeOfDurationInputData)
+    produce(topicInfo, sizeOfDurationInputData, timeoutOfDurationInputData)
   }
 }
