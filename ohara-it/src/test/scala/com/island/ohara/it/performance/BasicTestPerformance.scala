@@ -86,10 +86,17 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     value(logMetersFrequencyKey).map(Duration(_)).getOrElse(logMetersFrequencyDefault)
 
   //------------------------------[topic properties]------------------------------//
+  private[this] val timeoutOfSetupInputDataKey               = PerformanceTestingUtils.SETUPDATA_TIMEOUT_KEY
+  private[this] val timeoutOfSetupInputDataDefault: Duration = 60 seconds
+  protected val timeoutOfSetupInputData: Duration =
+    value(timeoutOfSetupInputDataKey).map(Duration(_)).getOrElse(timeoutOfSetupInputDataDefault)
+
   private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE_KEY
   private[this] val megabytesOfInputDataDefault: Long = 100
   protected val sizeOfInputData: Long =
     1024L * 1024L * value(megabytesOfInputDataKey).map(_.toLong).getOrElse(megabytesOfInputDataDefault)
+
+  protected val timeoutOfDurationInputData: Duration = 5 seconds
 
   private[this] val kbytesOfDurationInputDataKey   = PerformanceTestingUtils.DURATION_DATA_SIZE_KEY
   private[this] val kbytesOfInputDataDefault: Long = 1
@@ -250,7 +257,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     result(connectorApi.get(connectorKey))
   }
 
-  protected def produce(topicInfo: TopicInfo, dataSize: Long): (TopicInfo, Long, Long) = {
+  protected def produce(topicInfo: TopicInfo, dataSize: Long, timeout: Duration): (TopicInfo, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
     val numberOfRowsToFlush    = 2000
     val numberOfProducerThread = 4
@@ -267,7 +274,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
             .connectionProps(brokerClusterInfo.connectionProps)
             .build()
           var cachedRows = 0
-          try while (!closed.get() && sizeInBytes.longValue() <= dataSize) {
+          val start      = CommonUtils.current()
+
+          try while (!closed.get() &&
+                     sizeInBytes.longValue() <= dataSize &&
+                     (CommonUtils.current()) - start <= timeout.toSeconds) {
             producer
               .sender()
               .topicName(topicInfo.key.topicNameOnKafka())

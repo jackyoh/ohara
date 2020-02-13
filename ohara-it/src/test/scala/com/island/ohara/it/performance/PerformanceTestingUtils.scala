@@ -17,6 +17,7 @@
 package com.island.ohara.it.performance
 
 private[performance] object PerformanceTestingUtils {
+  val SETUPDATA_TIMEOUT_KEY    = "ohara.it.performance.setupdata.timeout"
   val DURATION_KEY             = "ohara.it.performance.duration"
   val REPORT_OUTPUT_KEY        = "ohara.it.performance.report.output"
   val LOG_METERS_FREQUENCY_KEY = "ohara.it.performance.log.meters.frequency"
