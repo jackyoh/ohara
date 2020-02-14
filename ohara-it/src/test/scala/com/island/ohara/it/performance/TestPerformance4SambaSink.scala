@@ -52,7 +52,7 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
         if (exists(path)) removeSambaFolder(path)
       }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    produce(topicInfo, sizeOfDurationInputData, timeoutOfDurationInputData)
+  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
+    // TODO Close the thread
   }
 }

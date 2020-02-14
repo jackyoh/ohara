@@ -50,7 +50,7 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
     }
   }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    setupInputData(sizeOfDurationInputData, timeoutOfDurationInputData)
+  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
+    // TODO Close the thread
   }
 }

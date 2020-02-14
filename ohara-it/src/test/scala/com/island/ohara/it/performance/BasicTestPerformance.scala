@@ -64,7 +64,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
-  private[this] val durationOfPerformanceDefault = 100 seconds
+  private[this] val durationOfPerformanceDefault = 120 seconds
   protected val durationOfPerformance: Duration =
     value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
 
@@ -87,21 +87,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[topic properties]------------------------------//
   private[this] val timeoutOfSetupInputDataKey               = PerformanceTestingUtils.SETUPDATA_TIMEOUT_KEY
-  private[this] val timeoutOfSetupInputDataDefault: Duration = 60 seconds
+  private[this] val timeoutOfSetupInputDataDefault: Duration = 30 seconds
   protected val timeoutOfSetupInputData: Duration =
     value(timeoutOfSetupInputDataKey).map(Duration(_)).getOrElse(timeoutOfSetupInputDataDefault)
 
   private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE_KEY
-  private[this] val megabytesOfInputDataDefault: Long = 100
+  private[this] val megabytesOfInputDataDefault: Long = 10000
   protected val sizeOfInputData: Long =
     1024L * 1024L * value(megabytesOfInputDataKey).map(_.toLong).getOrElse(megabytesOfInputDataDefault)
-
-  protected val timeoutOfDurationInputData: Duration = 5 seconds
-
-  private[this] val kbytesOfDurationInputDataKey   = PerformanceTestingUtils.DURATION_DATA_SIZE_KEY
-  private[this] val kbytesOfInputDataDefault: Long = 1
-  protected val sizeOfDurationInputData: Long =
-    1024L * value(kbytesOfDurationInputDataKey).map(_.toLong).getOrElse(kbytesOfInputDataDefault)
 
   private[this] val numberOfPartitionsKey     = PerformanceTestingUtils.PARTITION_SIZE_KEY
   private[this] val numberOfPartitionsDefault = 1
@@ -187,12 +180,20 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       val end = CommonUtils.current() + durationOfPerformance.toMillis
       while (CommonUtils.current() <= end) {
         val reports = connectorReports()
-        afterFrequencySleep(reports)
         fetchConnectorMetrics(reports)
+        inputDataMetrics()
         TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
       }
-    } finally fetchConnectorMetrics(connectorReports())
+    } finally {
+      val reports = connectorReports()
+      fetchConnectorMetrics(reports)
+      beforeEndSleepUntil(reports)
+    }
     durationOfPerformance.toMillis
+  }
+
+  protected def inputDataMetrics(): Unit = {
+    // nothing by default
   }
 
   /**
@@ -207,7 +208,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   /**
     * Duration running function for after sleep
     */
-  protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
+  protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
     // nothing by default
   }
 

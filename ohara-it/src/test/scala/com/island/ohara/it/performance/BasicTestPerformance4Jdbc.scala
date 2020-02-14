@@ -19,7 +19,7 @@ package com.island.ohara.it.performance
 import java.io.File
 import java.sql.Timestamp
 import java.util.concurrent.{Executors, TimeUnit}
-import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
+import java.util.concurrent.atomic.LongAdder
 
 import com.island.ohara.common.util.Releasable
 import org.junit.{After, Before}
@@ -36,6 +36,8 @@ import collection.JavaConverters._
 import scala.concurrent.duration._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
+  private val pool = Executors.newFixedThreadPool(1)
+
   protected[this] val url: String =
     sys.env.getOrElse(
       PerformanceTestingUtils.DB_URL_KEY,
@@ -62,7 +64,6 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   protected def tableName: String
   protected def isColumnNameUpperCase: Boolean = true
-  private[this] val numberOfProducerThread     = 2
   protected[this] var client: DatabaseClient   = _
 
   private[this] val columnNames: Seq[String] = Seq(timestampColumnName) ++ rowData().cells().asScala.map(_.name)
@@ -75,6 +76,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
         else RdbColumn(columnName, "VARCHAR(45)", false)
     }
+  private[this] val totalSizeInBytes = new LongAdder()
+  private[this] val count            = new LongAdder()
   @Before
   final def setup(): Unit = {
     client = DatabaseClient.builder.url(url).user(user).password(password).build
@@ -96,57 +99,62 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
     client.createTable(tableName, columnInfos)
   }
 
-  protected[this] def setupTableData(dataSize: Long, timeout: Duration): (String, Long, Long) = {
-    val pool        = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed      = new AtomicBoolean(false)
-    val count       = new LongAdder()
-    val sizeInBytes = new LongAdder()
+  protected[this] def loopInputTableData(): Unit = {
+    pool.execute(() => {
+      setupTableData(durationOfPerformance, logMetersFrequency)
+    })
+  }
+
+  protected[this] def setupTableData(timeout: Duration, sleepTime: Duration = 0 seconds): (String, Long, Long) = {
+    val flushToDB = 2000
+    val client    = DatabaseClient.builder.url(url).user(user).password(password).build
+
+    // 432000000 is 5 days ago
+    val timestampData = new Timestamp(CommonUtils.current() - 432000000)
+    val sql = s"INSERT INTO $tableName VALUES " + columnInfos
+      .map(_ => "?")
+      .mkString("(", ",", ")")
+    val preparedStatement = client.connection.prepareStatement(sql)
+
     try {
-      (0 until numberOfProducerThread).foreach { x =>
-        pool.execute(() => {
-          val client = DatabaseClient.builder.url(url).user(user).password(password).build
-          // 432000000 is 5 days ago
-          val timestampData = new Timestamp(CommonUtils.current() - 432000000)
-          val sql = s"INSERT INTO $tableName VALUES " + columnInfos
-            .map(_ => "?")
-            .mkString("(", ",", ")")
-          val preparedStatement = client.connection.prepareStatement(sql)
+      val start      = CommonUtils.current()
+      var cachedRows = 0
+      while (totalSizeInBytes.longValue() <= sizeOfInputData &&
+             (CommonUtils.current() - start) <= timeout.toMillis) {
+        preparedStatement.setTimestamp(1, timestampData)
+        totalSizeInBytes.add(timestampData.toString().length())
 
-          try {
-            val start = CommonUtils.current()
-            while (!closed.get() &&
-                   sizeInBytes.longValue() <= dataSize &&
-                   CommonUtils.current() - start <= timeout.toMillis) {
-              preparedStatement.setTimestamp(1, timestampData)
-              sizeInBytes.add(timestampData.toString().length())
-
-              rowData().cells().asScala.zipWithIndex.foreach {
-                case (result, index) => {
-                  val value = result.value().toString()
-                  sizeInBytes.add(value.length)
-                  preparedStatement.setString(index + 2, value)
-                }
-              }
-              preparedStatement.addBatch()
-              count.increment()
-            }
-            preparedStatement.executeBatch()
-          } finally {
-            Releasable.close(preparedStatement)
-            Releasable.close(client)
+        rowData().cells().asScala.zipWithIndex.foreach {
+          case (result, index) => {
+            val value = result.value().toString()
+            totalSizeInBytes.add(value.length)
+            preparedStatement.setString(index + 2, value)
           }
-        })
+        }
+        preparedStatement.addBatch()
+        cachedRows += 1
+        if (cachedRows >= flushToDB) {
+          preparedStatement.executeBatch()
+          cachedRows = 0
+        }
+        count.increment()
+        TimeUnit.MILLISECONDS.sleep(sleepTime.toMillis)
       }
+      preparedStatement.executeBatch()
     } finally {
-      pool.shutdown()
-      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      closed.set(true)
+      Releasable.close(preparedStatement)
+      Releasable.close(client)
     }
-    (tableName, count.longValue(), sizeInBytes.longValue())
+    (tableName, count.longValue(), totalSizeInBytes.longValue())
   }
 
   @After
   def close(): Unit = {
     Releasable.close(client)
+  }
+
+  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
+    pool.shutdown()
+    pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
   }
 }
