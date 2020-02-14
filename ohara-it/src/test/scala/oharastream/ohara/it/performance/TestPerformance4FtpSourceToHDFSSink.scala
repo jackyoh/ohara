@@ -81,7 +81,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
       } finally Releasable.close(fileSystem)
     }
 
-  override protected def afterFrequencySleep(reports: Seq[PerformanceReport]): Unit = {
-    setupInputData(sizeOfDurationInputData, timeoutOfDurationInputData)
+  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
+    // TODO Close the thread
   }
 }
