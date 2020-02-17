@@ -49,8 +49,4 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
       removeSambaFolder(errorPath)
     }
   }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
-  }
 }

@@ -108,7 +108,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            TimeUnit.SECONDS.sleep(10)
+            TimeUnit.SECONDS.sleep(logMetersFrequency.toSeconds)
             setupTableData(5 seconds)
           } catch {
             case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
