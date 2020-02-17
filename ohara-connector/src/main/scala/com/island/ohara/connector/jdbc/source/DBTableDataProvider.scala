@@ -31,6 +31,7 @@ import com.typesafe.scalalogging.Logger
   *
   */
 class DBTableDataProvider(jdbcSourceConnectorConfig: JDBCSourceConnectorConfig) extends ReleaseOnce {
+  // For jenkins test
   private[this] lazy val logger = Logger(getClass.getName)
 
   private[this] val client: DatabaseClient = DatabaseClient.builder
