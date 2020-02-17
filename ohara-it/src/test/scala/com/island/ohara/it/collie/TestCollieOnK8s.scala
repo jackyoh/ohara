@@ -28,6 +28,7 @@ import org.scalatest.Matchers._
 import scala.concurrent.ExecutionContext.Implicits.global
 @Category(Array(classOf[CollieGroup]))
 class TestCollieOnK8s extends BasicTests4Collie {
+  // Modify test code for jenkins test
   override protected val nodes: Seq[Node] = EnvTestingUtils.k8sNodes()
   override protected val configurator: Configurator =
     Configurator.builder.k8sClient(EnvTestingUtils.k8sClient()).build()
