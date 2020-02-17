@@ -101,7 +101,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
 
   protected[this] def loopInputTableData(): Unit = {
     pool.execute(() => {
-      setupTableData(durationOfPerformance, logMetersFrequency)
+      //setupTableData(durationOfPerformance, logMetersFrequency)
+      setupTableData(durationOfPerformance)
     })
   }
 
