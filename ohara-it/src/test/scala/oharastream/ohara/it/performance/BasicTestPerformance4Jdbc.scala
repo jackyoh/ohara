@@ -18,7 +18,7 @@ package oharastream.ohara.it.performance
 
 import java.io.File
 import java.sql.Timestamp
-import java.util.concurrent.{Executors, TimeUnit}
+import java.util.concurrent.{Executors, TimeUnit, TimeoutException}
 import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.common.util.Releasable
@@ -34,10 +34,9 @@ import org.junit.AssumptionViolatedException
 
 import collection.JavaConverters._
 import scala.concurrent.duration._
+import scala.util.control.Breaks._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
-  private val pool = Executors.newFixedThreadPool(1)
-
   protected[this] val url: String =
     sys.env.getOrElse(
       PerformanceTestingUtils.DB_URL_KEY,
@@ -76,8 +75,11 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         else if (index == 1) RdbColumn(columnName, "VARCHAR(45)", true)
         else RdbColumn(columnName, "VARCHAR(45)", false)
     }
-  private[this] val totalSizeInBytes = new LongAdder()
-  private[this] val count            = new LongAdder()
+
+  private[this] val totalSizeInBytes            = new LongAdder()
+  private[this] val count                       = new LongAdder()
+  private[this] var inputDataThread: Releasable = _
+
   @Before
   final def setup(): Unit = {
     client = DatabaseClient.builder.url(url).user(user).password(password).build
@@ -100,13 +102,29 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   }
 
   protected[this] def loopInputTableData(): Unit = {
-    pool.execute(() => {
-      //setupTableData(durationOfPerformance, logMetersFrequency)
-      setupTableData(durationOfPerformance)
-    })
+    inputDataThread = {
+      val pool = Executors.newSingleThreadExecutor()
+
+      pool.execute(() => {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+            TimeUnit.SECONDS.sleep(10)
+            setupTableData(5 seconds)
+          } catch {
+            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
+            case interrupException: InterruptedException => {
+              log.error("interrup exception", interrupException)
+              break
+            }
+            case e: Throwable => throw e
+          }
+        }
+      })
+      () => if (pool != null) pool.shutdownNow()
+    }
   }
 
-  protected[this] def setupTableData(timeout: Duration, sleepTime: Duration = 0 seconds): (String, Long, Long) = {
+  protected[this] def setupTableData(timeout: Duration): (String, Long, Long) = {
     val flushToDB = 2000
     val client    = DatabaseClient.builder.url(url).user(user).password(password).build
 
@@ -139,7 +157,6 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
           cachedRows = 0
         }
         count.increment()
-        TimeUnit.MILLISECONDS.sleep(sleepTime.toMillis)
       }
       preparedStatement.executeBatch()
     } finally {
@@ -155,7 +172,6 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   }
 
   override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    pool.shutdown()
-    pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+    Releasable.close(inputDataThread)
   }
 }
