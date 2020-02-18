@@ -32,7 +32,7 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
     createTopic()
     val completedPath = "completed"
     val errorPath     = "error"
-    val (path, _, _)  = setupInputData(timeoutOfSetupInputData)
+    val (path, _, _)  = setupInputData(timeoutOfInputData)
 
     try {
       loopInputData()

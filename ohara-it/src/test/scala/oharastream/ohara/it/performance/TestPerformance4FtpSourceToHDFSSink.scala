@@ -38,7 +38,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
   private[this] val dataDir: String = "/tmp"
   private[this] val completedPath   = "/completed"
   private[this] val errorPath       = "/error"
-  private[this] val (path, _, _)    = setupInputData(timeoutOfSetupInputData)
+  private[this] val (path, _, _)    = setupInputData(timeoutOfInputData)
 
   @Test
   def test(): Unit = {

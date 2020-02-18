@@ -35,7 +35,7 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, timeoutOfSetupInputData)
+    produce(topicInfo, timeoutOfInputData)
     loopProduceData(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),

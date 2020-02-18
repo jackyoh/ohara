@@ -18,7 +18,7 @@ package oharastream.ohara.it.performance
 
 import java.io.{BufferedWriter, OutputStreamWriter}
 import java.util.concurrent.atomic.LongAdder
-import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit, TimeoutException}
+import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit}
 
 import oharastream.ohara.client.filesystem.ftp.FtpClient
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -92,9 +92,8 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            setupInputData(timeOfFrequenceInputData)
+            setupInputData(timeoutOfInputData)
           } catch {
-            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
             case interrupException: InterruptedException => {
               log.error("interrup exception", interrupException)
               break
@@ -103,11 +102,10 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
           }
         }
       })
-      () =>
-        if (pool != null) {
-          pool.shutdownNow()
-          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-        }
+      () => {
+        pool.shutdownNow()
+        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      }
     }
   }
 

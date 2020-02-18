@@ -32,7 +32,7 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, timeoutOfSetupInputData)
+    produce(topicInfo, timeoutOfInputData)
     loopProduceData(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),

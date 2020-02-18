@@ -18,7 +18,7 @@ package oharastream.ohara.it.performance
 
 import java.io.File
 import java.sql.Timestamp
-import java.util.concurrent.{Executors, TimeUnit, TimeoutException}
+import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.common.util.Releasable
@@ -108,9 +108,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            setupTableData(timeOfFrequenceInputData)
+            setupTableData(timeoutOfInputData)
           } catch {
-            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
             case interrupException: InterruptedException => {
               log.error("interrup exception", interrupException)
               break
@@ -119,11 +118,10 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
           }
         }
       })
-      () =>
-        if (pool != null) {
-          pool.shutdownNow()
-          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-        }
+      () => {
+        pool.shutdownNow()
+        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      }
     }
   }
 

@@ -18,7 +18,7 @@ package oharastream.ohara.it.performance
 
 import java.io.{File, FileWriter}
 import java.util.concurrent.atomic.LongAdder
-import java.util.concurrent.{Executors, TimeUnit, TimeoutException}
+import java.util.concurrent.{Executors, TimeUnit}
 
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
@@ -69,17 +69,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val durationOfPerformance: Duration =
     value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
 
-  private[this] val timeoutOfSetupInputDataKey               = PerformanceTestingUtils.SETUPDATA_TIMEOUT_KEY
-  private[this] val timeoutOfSetupInputDataDefault: Duration = 30 seconds
-  protected val timeoutOfSetupInputData: Duration =
-    value(timeoutOfSetupInputDataKey).map(Duration(_)).getOrElse(timeoutOfSetupInputDataDefault)
+  private[this] val timeoutOfInputDataKey               = PerformanceTestingUtils.INPUTDATA_TIMEOUT_KEY
+  private[this] val timeoutOfInputDataDefault: Duration = 30 seconds
+  protected val timeoutOfInputData: Duration =
+    value(timeoutOfInputDataKey).map(Duration(_)).getOrElse(timeoutOfInputDataDefault)
 
-  private[this] val timeOfFrequenceInputDataKey               = PerformanceTestingUtils.FREQUENCE_INPUTDATA_TIME_KEY
-  private[this] val timeOfFrequenceInputDataDefault: Duration = 15 seconds
-  protected val timeOfFrequenceInputData: Duration =
-    value(timeOfFrequenceInputDataKey).map(Duration(_)).getOrElse(timeOfFrequenceInputDataDefault)
-
-  private[this] val wholeTimeout = (durationOfPerformance.toSeconds + timeoutOfSetupInputData.toSeconds) * 2
+  private[this] val wholeTimeout = (durationOfPerformance.toSeconds + timeoutOfInputData.toSeconds) * 2
 
   @Rule
   override def timeout: Timeout = Timeout.seconds(wholeTimeout)
@@ -276,9 +271,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            produce(topicInfo, timeOfFrequenceInputData)
+            produce(topicInfo, timeoutOfInputData)
           } catch {
-            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
             case interrupException: InterruptedException => {
               log.error("interrup exception", interrupException)
               break
@@ -287,11 +281,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           }
         }
       })
-      () =>
-        if (pool != null) {
-          pool.shutdownNow()
-          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-        }
+
+      () => {
+        pool.shutdownNow()
+        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      }
     }
   }
 

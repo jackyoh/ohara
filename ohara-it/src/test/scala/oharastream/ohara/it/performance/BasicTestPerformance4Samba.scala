@@ -17,7 +17,7 @@
 package oharastream.ohara.it.performance
 
 import java.io.{BufferedWriter, OutputStreamWriter}
-import java.util.concurrent.{Executors, TimeUnit, TimeoutException}
+import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.client.filesystem.FileSystem
@@ -74,9 +74,8 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            setupInputData(timeOfFrequenceInputData)
+            setupInputData(timeoutOfInputData)
           } catch {
-            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
             case interrupException: InterruptedException => {
               log.error("interrup exception", interrupException)
               break
@@ -85,11 +84,10 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
           }
         }
       })
-      () =>
-        if (pool != null) {
-          pool.shutdownNow()
-          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-        }
+      () => {
+        pool.shutdownNow()
+        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      }
     }
   }
 
