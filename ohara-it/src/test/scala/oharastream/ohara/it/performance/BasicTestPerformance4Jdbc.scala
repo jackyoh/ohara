@@ -18,7 +18,6 @@ package oharastream.ohara.it.performance
 
 import java.io.File
 import java.sql.Timestamp
-import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.common.util.Releasable
@@ -34,7 +33,6 @@ import org.junit.AssumptionViolatedException
 
 import collection.JavaConverters._
 import scala.concurrent.duration._
-import scala.util.control.Breaks._
 
 abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   protected[this] val url: String =
@@ -76,9 +74,8 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         else RdbColumn(columnName, "VARCHAR(45)", false)
     }
 
-  private[this] val totalSizeInBytes            = new LongAdder()
-  private[this] val count                       = new LongAdder()
-  private[this] var inputDataThread: Releasable = _
+  private[this] val totalSizeInBytes = new LongAdder()
+  private[this] val count            = new LongAdder()
 
   @Before
   final def setup(): Unit = {
@@ -101,31 +98,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
     client.createTable(tableName, columnInfos)
   }
 
-  protected[this] def loopInputTableData(): Unit = {
-    inputDataThread = {
-      val pool = Executors.newSingleThreadExecutor()
-
-      pool.execute(() => {
-        while (!Thread.currentThread().isInterrupted()) {
-          try {
-            setupTableData(timeoutOfInputData)
-          } catch {
-            case interrupException: InterruptedException => {
-              log.error("interrup exception", interrupException)
-              break
-            }
-            case e: Throwable => throw e
-          }
-        }
-      })
-      () => {
-        pool.shutdownNow()
-        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      }
-    }
-  }
-
-  protected[this] def setupTableData(timeout: Duration): (String, Long, Long) = {
+  override protected[this] def setupInputData(timeout: Duration): (String, Long, Long) = {
     val flushToDB = 2000
     val client    = DatabaseClient.builder.url(url).user(user).password(password).build
 
@@ -170,9 +143,5 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   @After
   def close(): Unit = {
     Releasable.close(client)
-  }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    Releasable.close(inputDataThread)
   }
 }

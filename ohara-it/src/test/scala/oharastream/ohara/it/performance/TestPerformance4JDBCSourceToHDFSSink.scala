@@ -41,8 +41,8 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
   @Test
   def test(): Unit = {
     createTable()
-    setupTableData(timeoutOfInputData)
-    loopInputTableData()
+    setupInputData(timeoutOfInputData)
+    loopInputData()
     createTopic()
 
     //Running JDBC Source Connector

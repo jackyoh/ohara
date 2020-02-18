@@ -27,7 +27,6 @@ import spray.json.{JsNumber, JsString, JsValue}
 
 import collection.JavaConverters._
 import scala.concurrent.duration._
-import scala.util.control.Breaks.break
 
 abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val ftpHostname = value(PerformanceTestingUtils.FTP_HOSTNAME_KEY)
@@ -72,9 +71,8 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val cleanupTestDataKey   = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected val cleanupTestData: Boolean = value(cleanupTestDataKey).forall(_.toBoolean)
 
-  private[this] val totalSizeInBytes            = new LongAdder()
-  private[this] val count                       = new LongAdder()
-  private[this] var inputDataThread: Releasable = _
+  private[this] val totalSizeInBytes = new LongAdder()
+  private[this] val count            = new LongAdder()
 
   private[this] def ftpClient() =
     FtpClient
@@ -85,31 +83,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .password(ftpPassword)
       .build
 
-  protected[this] def loopInputData(): Unit = {
-    inputDataThread = {
-      val pool = Executors.newSingleThreadExecutor()
-
-      pool.execute(() => {
-        while (!Thread.currentThread().isInterrupted()) {
-          try {
-            setupInputData(timeoutOfInputData)
-          } catch {
-            case interrupException: InterruptedException => {
-              log.error("interrup exception", interrupException)
-              break
-            }
-            case e: Throwable => throw e
-          }
-        }
-      })
-      () => {
-        pool.shutdownNow()
-        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      }
-    }
-  }
-
-  protected def setupInputData(timeout: Duration): (String, Long, Long) = {
+  override protected def setupInputData(timeout: Duration): (String, Long, Long) = {
     val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
     val numberOfRowsToFlush    = 1000
     val client                 = ftpClient()
@@ -205,9 +179,5 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     val client = ftpClient()
     try client.exist(path)
     finally Releasable.close(client)
-  }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    Releasable.close(inputDataThread)
   }
 }

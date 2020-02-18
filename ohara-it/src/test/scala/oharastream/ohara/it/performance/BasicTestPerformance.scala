@@ -115,6 +115,36 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   protected def value(key: String): Option[String] = sys.env.get(key)
   //------------------------------[helper methods]------------------------------//
+
+  private[this] var inputDataThread: Releasable = _
+
+  protected[this] def loopInputData(): Unit = {
+    inputDataThread = {
+      val pool = Executors.newSingleThreadExecutor()
+      pool.execute(() => {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+            setupInputData(timeoutOfInputData)
+          } catch {
+            case interrupException: InterruptedException => {
+              log.error("interrup exception", interrupException)
+              break
+            }
+            case e: Throwable => throw e
+          }
+        }
+      })
+      () => {
+        pool.shutdownNow()
+        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      }
+    }
+  }
+
+  protected def setupInputData(timeoutOfInputData: Duration): (String, Long, Long) = {
+    throw new UnsupportedOperationException("Abstract not support setupInputData function")
+  }
+
   protected def mkdir(folder: File): File = {
     if (!folder.exists() && !folder.mkdirs()) throw new AssertionError(s"failed to create folder on $folder")
     if (folder.exists() && !folder.isDirectory) throw new AssertionError(s"$folder is not a folder")
@@ -216,6 +246,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     */
   protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
     Releasable.close(produceDataThread)
+    Releasable.close(inputDataThread)
   }
 
   /**

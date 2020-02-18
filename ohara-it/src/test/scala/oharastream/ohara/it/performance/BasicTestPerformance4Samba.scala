@@ -17,7 +17,6 @@
 package oharastream.ohara.it.performance
 
 import java.io.{BufferedWriter, OutputStreamWriter}
-import java.util.concurrent.{Executors, TimeUnit}
 import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.client.filesystem.FileSystem
@@ -27,7 +26,6 @@ import spray.json.{JsNumber, JsString, JsValue}
 
 import collection.JavaConverters._
 import scala.concurrent.duration._
-import scala.util.control.Breaks.break
 
 abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val sambaHostname: String = sys.env.getOrElse(
@@ -63,33 +61,8 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val NEED_DELETE_DATA_KEY: String = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected[this] val needDeleteData: Boolean    = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
-  private[this] val totalSizeInBytes            = new LongAdder()
-  private[this] val count                       = new LongAdder()
-  private[this] var inputDataThread: Releasable = _
-
-  protected[this] def loopInputData(): Unit = {
-    inputDataThread = {
-      val pool = Executors.newSingleThreadExecutor()
-
-      pool.execute(() => {
-        while (!Thread.currentThread().isInterrupted()) {
-          try {
-            setupInputData(timeoutOfInputData)
-          } catch {
-            case interrupException: InterruptedException => {
-              log.error("interrup exception", interrupException)
-              break
-            }
-            case e: Throwable => throw e
-          }
-        }
-      })
-      () => {
-        pool.shutdownNow()
-        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      }
-    }
-  }
+  private[this] val totalSizeInBytes = new LongAdder()
+  private[this] val count            = new LongAdder()
 
   protected val sambaSettings: Map[String, JsValue] = Map(
     oharastream.ohara.connector.smb.SMB_HOSTNAME_KEY   -> JsString(sambaHostname),
@@ -118,7 +91,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     finally Releasable.close(client)
   }
 
-  protected def setupInputData(timeout: Duration): (String, Long, Long) = {
+  override protected def setupInputData(timeout: Duration): (String, Long, Long) = {
     val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
     val numberOfRowsToFlush    = 1000
     val client                 = sambaClient()
@@ -148,10 +121,6 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     } finally Releasable.close(client)
 
     (csvOutputFolder, count.longValue(), totalSizeInBytes.longValue())
-  }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    Releasable.close(inputDataThread)
   }
 
   private[this] def sambaClient(): FileSystem =
