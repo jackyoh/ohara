@@ -67,7 +67,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val count                       = new LongAdder()
   private[this] var inputDataThread: Releasable = _
 
-  protected[this] def loopInputTableData(): Unit = {
+  protected[this] def loopInputData(): Unit = {
     inputDataThread = {
       val pool = Executors.newSingleThreadExecutor()
 
@@ -155,9 +155,6 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
 
   override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
     Releasable.close(inputDataThread)
-    println("----------------------------------------")
-    println(s"Total bytes is ${totalSizeInBytes}")
-    println("----------------------------------------")
   }
 
   private[this] def sambaClient(): FileSystem =

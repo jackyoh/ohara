@@ -38,11 +38,12 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
   private[this] val dataDir: String = "/tmp"
   private[this] val completedPath   = "/completed"
   private[this] val errorPath       = "/error"
-  private[this] val (path, _, _)    = setupInputData(sizeOfInputData, timeoutOfSetupInputData)
+  private[this] val (path, _, _)    = setupInputData(timeoutOfSetupInputData)
 
   @Test
   def test(): Unit = {
     createTopic()
+    loopInputData()
     // Running FTP Source Connector
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
@@ -80,8 +81,4 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
         if (fileSystem.exists(path)) fileSystem.delete(path, true)
       } finally Releasable.close(fileSystem)
     }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
-  }
 }

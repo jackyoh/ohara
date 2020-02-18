@@ -32,16 +32,13 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, sizeOfInputData, timeoutOfSetupInputData)
+    produce(topicInfo, timeoutOfSetupInputData)
+    loopProduceData(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[JsonOut].getName,
       settings = Map(oharastream.ohara.connector.jio.BINDING_PORT_KEY -> JsNumber(workerClusterInfo.freePorts.head))
     )
     sleepUntilEnd()
-  }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
   }
 }

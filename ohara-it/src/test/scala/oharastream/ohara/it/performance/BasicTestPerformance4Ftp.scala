@@ -17,15 +17,17 @@
 package oharastream.ohara.it.performance
 
 import java.io.{BufferedWriter, OutputStreamWriter}
-import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
-import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit}
+import java.util.concurrent.atomic.LongAdder
+import java.util.concurrent.{ArrayBlockingQueue, Executors, TimeUnit, TimeoutException}
 
 import oharastream.ohara.client.filesystem.ftp.FtpClient
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
+
 import collection.JavaConverters._
 import scala.concurrent.duration._
+import scala.util.control.Breaks.break
 
 abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val ftpHostname = value(PerformanceTestingUtils.FTP_HOSTNAME_KEY)
@@ -70,6 +72,10 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val cleanupTestDataKey   = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected val cleanupTestData: Boolean = value(cleanupTestDataKey).forall(_.toBoolean)
 
+  private[this] val totalSizeInBytes            = new LongAdder()
+  private[this] val count                       = new LongAdder()
+  private[this] var inputDataThread: Releasable = _
+
   private[this] def ftpClient() =
     FtpClient
       .builder()
@@ -79,52 +85,63 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .password(ftpPassword)
       .build
 
-  protected def setupInputData(dataSize: Long, timeout: Duration): (String, Long, Long) = {
+  protected[this] def loopInputData(): Unit = {
+    inputDataThread = {
+      val pool = Executors.newSingleThreadExecutor()
+
+      pool.execute(() => {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+            TimeUnit.SECONDS.sleep(1)
+            setupInputData(15 seconds)
+          } catch {
+            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
+            case interrupException: InterruptedException => {
+              log.error("interrup exception", interrupException)
+              break
+            }
+            case e: Throwable => throw e
+          }
+        }
+      })
+      () =>
+        if (pool != null) {
+          pool.shutdownNow()
+          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+        }
+    }
+  }
+
+  protected def setupInputData(timeout: Duration): (String, Long, Long) = {
     val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
-
-    val numberOfRowsToFlush = 1000
-    val pool                = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed              = new AtomicBoolean(false)
-    val count               = new LongAdder()
-    val sizeInBytes         = new LongAdder()
-
-    val client = ftpClient()
-    try if (!client.exist(csvOutputFolder)) client.mkdir(csvOutputFolder)
-    finally Releasable.close(client)
+    val numberOfRowsToFlush    = 1000
+    val client                 = ftpClient()
 
     try {
-      (0 until numberOfProducerThread).foreach { _ =>
-        pool.execute(() => {
-          val client = ftpClient()
-          val start  = CommonUtils.current()
+      if (!client.exist(csvOutputFolder)) client.mkdir(csvOutputFolder)
 
-          try while (!closed.get() &&
-                     sizeInBytes.longValue() <= dataSize &&
-                     CommonUtils.current() - start <= timeout.toMillis) {
-            val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
-            val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
-            try {
-              writer
-                .append(cellNames.mkString(","))
-                .append("\n")
-              (0 until numberOfRowsToFlush).foreach { _ =>
-                val content = rowData().cells().asScala.map(_.value).mkString(",")
-                count.increment()
-                sizeInBytes.add(content.length)
-                writer
-                  .append(content)
-                  .append("\n")
-              }
-            } finally Releasable.close(writer)
-          } finally Releasable.close(client)
-        })
+      val start = CommonUtils.current()
+      while (totalSizeInBytes.longValue() <= sizeOfInputData &&
+             CommonUtils.current() - start <= timeout.toMillis) {
+        val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
+        val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
+        try {
+          writer
+            .append(cellNames.mkString(","))
+            .append("\n")
+          (0 until numberOfRowsToFlush).foreach { _ =>
+            val content = rowData().cells().asScala.map(_.value).mkString(",")
+            count.increment()
+            totalSizeInBytes.add(content.length)
+            writer
+              .append(content)
+              .append("\n")
+          }
+        } finally Releasable.close(writer)
       }
-    } finally {
-      pool.shutdown()
-      pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      closed.set(true)
-    }
-    (csvOutputFolder, count.longValue(), sizeInBytes.longValue())
+    } finally Releasable.close(client)
+
+    (csvOutputFolder, count.longValue(), totalSizeInBytes.longValue())
   }
 
   protected def createFtpFolder(path: String): String = {
@@ -191,5 +208,9 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     val client = ftpClient()
     try client.exist(path)
     finally Releasable.close(client)
+  }
+
+  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
+    Releasable.close(inputDataThread)
   }
 }

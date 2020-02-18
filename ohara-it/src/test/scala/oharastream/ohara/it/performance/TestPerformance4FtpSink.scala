@@ -35,7 +35,8 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, sizeOfInputData, timeoutOfSetupInputData)
+    produce(topicInfo, timeoutOfSetupInputData)
+    loopProduceData(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[FtpSink].getName(),
@@ -51,8 +52,4 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
         val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
         if (exists(path)) recursiveRemoveFolder(path)
       }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
-  }
 }

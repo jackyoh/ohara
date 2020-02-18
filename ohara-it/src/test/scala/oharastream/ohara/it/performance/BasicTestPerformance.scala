@@ -17,8 +17,8 @@
 package oharastream.ohara.it.performance
 
 import java.io.{File, FileWriter}
-import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
-import java.util.concurrent.{Executors, TimeUnit}
+import java.util.concurrent.atomic.LongAdder
+import java.util.concurrent.{Executors, TimeUnit, TimeoutException}
 
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
@@ -36,6 +36,7 @@ import spray.json.JsValue
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.util.control.Breaks.break
 
 /**
   * the basic infra to test performance for ohara components.
@@ -84,6 +85,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   private[this] val logMetersFrequencyDefault: Duration = 5 seconds
   protected val logMetersFrequency: Duration =
     value(logMetersFrequencyKey).map(Duration(_)).getOrElse(logMetersFrequencyDefault)
+
+  private[this] val totalSizeInBytes              = new LongAdder()
+  private[this] val count                         = new LongAdder()
+  private[this] var produceDataThread: Releasable = _
 
   //------------------------------[topic properties]------------------------------//
   private[this] val timeoutOfSetupInputDataKey               = PerformanceTestingUtils.SETUPDATA_TIMEOUT_KEY
@@ -209,7 +214,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     * Duration running function for after sleep
     */
   protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // nothing by default
+    Releasable.close(produceDataThread)
+    println("----------------------------------------")
+    println(s"Total bytes is ${totalSizeInBytes}")
+    println("----------------------------------------")
   }
 
   /**
@@ -258,56 +266,70 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     result(connectorApi.get(connectorKey))
   }
 
-  protected def produce(topicInfo: TopicInfo, dataSize: Long, timeout: Duration): (TopicInfo, Long, Long) = {
+  protected[this] def loopProduceData(topicInfo: TopicInfo): Unit = {
+    produceDataThread = {
+      val pool = Executors.newSingleThreadExecutor()
+
+      pool.execute(() => {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+            TimeUnit.SECONDS.sleep(15)
+            produce(topicInfo, 5 seconds)
+          } catch {
+            case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
+            case interrupException: InterruptedException => {
+              log.error("interrup exception", interrupException)
+              break
+            }
+            case e: Throwable => throw e
+          }
+        }
+      })
+      () =>
+        if (pool != null) {
+          pool.shutdownNow()
+          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+        }
+    }
+  }
+
+  protected def produce(topicInfo: TopicInfo, timeout: Duration): (TopicInfo, Long, Long) = {
     val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
     val numberOfRowsToFlush    = 2000
-    val numberOfProducerThread = 4
-    val pool                   = Executors.newFixedThreadPool(numberOfProducerThread)
-    val closed                 = new AtomicBoolean(false)
-    val count                  = new LongAdder()
-    val sizeInBytes            = new LongAdder()
-    try {
-      (0 until numberOfProducerThread).foreach { _ =>
-        pool.execute(() => {
-          val producer = Producer
-            .builder()
-            .keySerializer(Serializer.ROW)
-            .connectionProps(brokerClusterInfo.connectionProps)
-            .build()
-          var cachedRows = 0
-          val start      = CommonUtils.current()
+    val producer = Producer
+      .builder()
+      .keySerializer(Serializer.ROW)
+      .connectionProps(brokerClusterInfo.connectionProps)
+      .build()
+    var cachedRows = 0
+    val start      = CommonUtils.current()
 
-          try while (!closed.get() &&
-                     sizeInBytes.longValue() <= dataSize &&
-                     (CommonUtils.current() - start) <= timeout.toMillis) {
-            producer
-              .sender()
-              .topicName(topicInfo.key.topicNameOnKafka())
-              .key(Row.of(cellNames.map { name =>
-                Cell.of(name, CommonUtils.randomString())
-              }.toSeq: _*))
-              .send()
-              .whenComplete {
-                case (meta, _) =>
-                  if (meta != null) {
-                    sizeInBytes.add(meta.serializedKeySize())
-                    count.add(1)
-                  }
+    try {
+      while (totalSizeInBytes.longValue() <= sizeOfInputData &&
+             (CommonUtils.current() - start) <= timeout.toMillis) {
+        producer
+          .sender()
+          .topicName(topicInfo.key.topicNameOnKafka())
+          .key(Row.of(cellNames.map { name =>
+            Cell.of(name, CommonUtils.randomString())
+          }.toSeq: _*))
+          .send()
+          .whenComplete {
+            case (meta, _) =>
+              if (meta != null) {
+                totalSizeInBytes.add(meta.serializedKeySize())
+                count.add(1)
               }
-            cachedRows += 1
-            if (cachedRows >= numberOfRowsToFlush) {
-              producer.flush()
-              cachedRows = 0
-            }
-          } finally Releasable.close(producer)
-        })
+          }
+        cachedRows += 1
+        if (cachedRows >= numberOfRowsToFlush) {
+          producer.flush()
+          cachedRows = 0
+        }
       }
-    } finally {
-      pool.shutdown()
-      pool.awaitTermination(durationOfPerformanceDefault.toMillis * 10, TimeUnit.MILLISECONDS)
-      closed.set(true)
-    }
-    (topicInfo, count.longValue(), sizeInBytes.longValue())
+    } finally Releasable.close(producer)
+
+    (topicInfo, count.longValue(), totalSizeInBytes.longValue())
   }
 
   protected def rowData(): Row = {

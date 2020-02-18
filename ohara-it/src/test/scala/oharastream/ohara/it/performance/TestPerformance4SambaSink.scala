@@ -35,7 +35,8 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, sizeOfInputData, timeoutOfSetupInputData)
+    produce(topicInfo, timeoutOfSetupInputData)
+    loopProduceData(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[SmbSink].getName(),
@@ -51,8 +52,4 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
         val path = s"${outputDir}/${topicInfo.topicNameOnKafka}"
         if (exists(path)) removeSambaFolder(path)
       }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
-  }
 }

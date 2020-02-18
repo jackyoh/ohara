@@ -32,8 +32,9 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
     createTopic()
     val completedPath = "/completed"
     val errorPath     = "/error"
-    val (path, _, _)  = setupInputData(sizeOfInputData, timeoutOfSetupInputData)
+    val (path, _, _)  = setupInputData(timeoutOfSetupInputData)
     try {
+      loopInputData()
       setupConnector(
         connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[FtpSource].getName,
@@ -48,9 +49,5 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
       removeFtpFolder(completedPath)
       removeFtpFolder(errorPath)
     }
-  }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
   }
 }

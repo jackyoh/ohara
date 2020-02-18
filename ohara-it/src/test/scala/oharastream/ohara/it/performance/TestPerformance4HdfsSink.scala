@@ -44,7 +44,8 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     topicInfo = createTopic()
-    produce(topicInfo, sizeOfInputData, timeoutOfSetupInputData)
+    produce(topicInfo, timeoutOfSetupInputData)
+    loopProduceData(topicInfo)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
@@ -65,8 +66,4 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
         if (fileSystem.exists(path)) fileSystem.delete(path, true)
       } finally Releasable.close(fileSystem)
     }
-
-  override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    // TODO Close the thread
-  }
 }
