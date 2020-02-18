@@ -24,7 +24,6 @@ import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.Test
 import org.junit.experimental.categories.Category
 import spray.json.JsString
-import scala.concurrent.duration._
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
@@ -33,11 +32,10 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
     createTopic()
     val completedPath = "completed"
     val errorPath     = "error"
-    //val (path, _, _)  = setupInputData(timeoutOfSetupInputData)
+    val (path, _, _)  = setupInputData(timeoutOfSetupInputData)
 
-    val (path, _, _) = setupInputData(5 seconds)
-    loopInputTableData()
     try {
+      loopInputTableData()
       setupConnector(
         connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[SmbSource].getName(),

@@ -120,7 +120,11 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
           }
         }
       })
-      () => if (pool != null) pool.shutdownNow()
+      () =>
+        if (pool != null) {
+          pool.shutdownNow()
+          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+        }
     }
   }
 

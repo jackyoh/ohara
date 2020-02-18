@@ -86,7 +86,11 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
           }
         }
       })
-      () => if (pool != null) pool.shutdownNow()
+      () =>
+        if (pool != null) {
+          pool.shutdownNow()
+          pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+        }
     }
   }
 
@@ -151,6 +155,9 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
 
   override protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
     Releasable.close(inputDataThread)
+    println("----------------------------------------")
+    println(s"Total bytes is ${totalSizeInBytes}")
+    println("----------------------------------------")
   }
 
   private[this] def sambaClient(): FileSystem =
