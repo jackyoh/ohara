@@ -17,15 +17,14 @@
 package oharastream.ohara.it.performance
 
 private[performance] object PerformanceTestingUtils {
-  val SETUPDATA_TIMEOUT_KEY             = "ohara.it.performance.setupdata.timeout"
-  val FREQUENCE_INPUTDATA_TIME_KEY      = "ohara.it.performance.frequence.inputdata.time"
-  val FREQUENCE_INPUTDATA_SLEEPTIME_KEY = "ohara.it.performance.frequence.inputdata.sleeptime"
-  val DURATION_KEY                      = "ohara.it.performance.duration"
-  val REPORT_OUTPUT_KEY                 = "ohara.it.performance.report.output"
-  val LOG_METERS_FREQUENCY_KEY          = "ohara.it.performance.log.meters.frequency"
-  val DATA_SIZE_KEY                     = "ohara.it.performance.data.size"
-  val PARTITION_SIZE_KEY                = "ohara.it.performance.topic.partitions"
-  val TASK_SIZE_KEY                     = "ohara.it.performance.connector.tasks"
+  val SETUPDATA_TIMEOUT_KEY        = "ohara.it.performance.setupdata.timeout"
+  val FREQUENCE_INPUTDATA_TIME_KEY = "ohara.it.performance.frequence.inputdata.time"
+  val DURATION_KEY                 = "ohara.it.performance.duration"
+  val REPORT_OUTPUT_KEY            = "ohara.it.performance.report.output"
+  val LOG_METERS_FREQUENCY_KEY     = "ohara.it.performance.log.meters.frequency"
+  val DATA_SIZE_KEY                = "ohara.it.performance.data.size"
+  val PARTITION_SIZE_KEY           = "ohara.it.performance.topic.partitions"
+  val TASK_SIZE_KEY                = "ohara.it.performance.connector.tasks"
 
   // FTP Setting Key
   val FTP_HOSTNAME_KEY: String = "ohara.it.performance.ftp.hostname"

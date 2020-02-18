@@ -79,11 +79,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val timeOfFrequenceInputData: Duration =
     value(timeOfFrequenceInputDataKey).map(Duration(_)).getOrElse(timeOfFrequenceInputDataDefault)
 
-  private[this] val sleepOfFrequenceInputDataKey               = PerformanceTestingUtils.FREQUENCE_INPUTDATA_SLEEPTIME_KEY
-  private[this] val sleepOfFrequenceInputDataDefault: Duration = 5 seconds
-  protected val sleepOfFrequenceInputData: Duration =
-    value(sleepOfFrequenceInputDataKey).map(Duration(_)).getOrElse(sleepOfFrequenceInputDataDefault)
-
   private[this] val wholeTimeout = (durationOfPerformance.toSeconds + timeoutOfSetupInputData.toSeconds) * 2
 
   @Rule
@@ -281,7 +276,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            TimeUnit.SECONDS.sleep(sleepOfFrequenceInputData.toSeconds)
             produce(topicInfo, timeOfFrequenceInputData)
           } catch {
             case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)

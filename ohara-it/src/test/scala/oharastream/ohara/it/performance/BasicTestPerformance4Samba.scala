@@ -74,7 +74,6 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            TimeUnit.SECONDS.sleep(sleepOfFrequenceInputData.toSeconds)
             setupInputData(timeOfFrequenceInputData)
           } catch {
             case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
