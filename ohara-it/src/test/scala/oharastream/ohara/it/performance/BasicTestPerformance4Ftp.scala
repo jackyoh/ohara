@@ -92,8 +92,8 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            TimeUnit.SECONDS.sleep(1)
-            setupInputData(15 seconds)
+            TimeUnit.SECONDS.sleep(sleepOfFrequenceInputData.toSeconds)
+            setupInputData(timeOfFrequenceInputData)
           } catch {
             case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
             case interrupException: InterruptedException => {
