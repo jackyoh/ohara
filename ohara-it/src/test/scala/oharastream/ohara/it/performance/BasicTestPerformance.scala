@@ -243,10 +243,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   }
 
   protected def produceDataMetrics(): Seq[DataInfo] = {
-    if (count.longValue > 0) {
+    if (count.longValue > 0)
       produceDataInfos = produceDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
-      produceDataInfos
-    } else Seq.empty
+
+    produceDataInfos
   }
 
   /**
