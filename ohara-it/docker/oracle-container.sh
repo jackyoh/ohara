@@ -139,7 +139,7 @@ then
   ssh ohara@${host} docker run -d ${volumeArg} -i --name ${containerName} --restart=always -p ${port}:1521 --env DB_SID=${sid} store/oracle/database-enterprise:12.2.0.1
 
   timeoutCount=0
-  while [[ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/Completed:     alter pluggable database all save state/{print}') ]]
+  while [[ -z $(ssh ohara@${host} docker logs ${containerName}|awk '/The database is ready for use/{print}') ]]
   do
     sleep 1m # Sleep the 1 minute
     ((timeoutCount+=1))
@@ -147,7 +147,7 @@ then
     then
       echo "Running oracle database is timeout."
       echo "Please use the docker logs -f ${containerName} check the container message."
-      echo "Confirm container log contain the 'Done ! The database is ready for use ' message."
+      echo "Confirm container log contain the 'The database is ready for use ' message."
       exit 1
     fi
   done
