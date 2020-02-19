@@ -63,7 +63,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     ConnectorApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
-  private[this] var dataInfos: Seq[DataInfo] = Seq()
+  private[this] var produceDataInfos: Seq[DataInfo] = Seq()
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
@@ -187,7 +187,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     )
   }
 
-  private[this] def logInputDatas(inputDataInfos: Seq[DataInfo]): Unit = {
+  private[this] def logDataInfos(inputDataInfos: Seq[DataInfo]): Unit = {
     val file = path("inputdata", logDataInfoFileName)
     if (file.exists() && !file.delete()) throw new RuntimeException(s"failed to remove file:$file")
     val fileWriter = new FileWriter(file)
@@ -238,9 +238,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     durationOfPerformance.toMillis
   }
 
-  protected def dataMetrics(): Seq[DataInfo] = {
-    dataInfos = dataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
-    dataInfos
+  protected def inputDataMetrics(): Seq[DataInfo] = {
+    Seq.empty
+  }
+
+  protected def produceDataMetrics(): Seq[DataInfo] = {
+    if (count.longValue > 0) {
+      produceDataInfos = produceDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
+      produceDataInfos
+    } else Seq.empty
   }
 
   /**
@@ -409,8 +415,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   private[this] def fetchAllLogs(): Seq[PerformanceReport] = {
     val reports = connectorReports()
     fetchConnectorMetrics(reports)
-    val dataInfos = dataMetrics()
-    fetchInputDataMetrics(dataInfos)
+
+    val inputDataInfos = inputDataMetrics()
+    if (inputDataInfos.nonEmpty) fetchDataInfoMetrics(inputDataInfos)
+
+    val produceDataInfos = produceDataMetrics()
+    if (produceDataInfos.nonEmpty) fetchDataInfoMetrics(produceDataInfos)
+
     reports
   }
 
@@ -422,8 +433,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     } finally afterRecodingReports(reports)
   }
 
-  private[this] def fetchInputDataMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
-    try logInputDatas(inputDataInfos)
+  private[this] def fetchDataInfoMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
+    try logDataInfos(inputDataInfos)
     catch {
       case e: Throwable =>
         log.error("failed to log input data metrics", e)

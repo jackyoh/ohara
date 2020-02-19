@@ -124,7 +124,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     (csvOutputFolder, count.longValue(), totalSizeInBytes.longValue())
   }
 
-  override protected def dataMetrics(): Seq[DataInfo] = {
+  override protected def inputDataMetrics(): Seq[DataInfo] = {
     inputDataInfos = inputDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
     inputDataInfos
   }

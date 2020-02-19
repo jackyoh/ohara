@@ -182,7 +182,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     finally Releasable.close(client)
   }
 
-  override protected def dataMetrics(): Seq[DataInfo] = {
+  override protected def inputDataMetrics(): Seq[DataInfo] = {
     inputDataInfos = inputDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
     inputDataInfos
   }
