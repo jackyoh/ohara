@@ -74,8 +74,9 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         else RdbColumn(columnName, "VARCHAR(45)", false)
     }
 
-  private[this] val totalSizeInBytes = new LongAdder()
-  private[this] val count            = new LongAdder()
+  private[this] val totalSizeInBytes              = new LongAdder()
+  private[this] val count                         = new LongAdder()
+  private[this] var inputDataInfos: Seq[DataInfo] = Seq()
 
   @Before
   final def setup(): Unit = {
@@ -138,6 +139,11 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
       Releasable.close(client)
     }
     (tableName, count.longValue(), totalSizeInBytes.longValue())
+  }
+
+  override protected def dataMetrics(): Seq[DataInfo] = {
+    inputDataInfos = inputDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
+    inputDataInfos
   }
 
   @After

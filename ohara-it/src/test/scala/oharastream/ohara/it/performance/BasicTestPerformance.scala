@@ -50,9 +50,10 @@ import scala.util.control.Breaks.break
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger            = Logger(classOf[BasicTestPerformance])
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  protected val log: Logger             = Logger(classOf[BasicTestPerformance])
+  private[this] val logDataInfoFileName = s"${CommonUtils.randomString(5)}.csv"
 
+  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
   protected val topicApi: TopicApi.Access =
     TopicApi.access
       .hostname(configuratorHostname)
@@ -62,6 +63,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     ConnectorApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
+  private[this] var dataInfos: Seq[DataInfo] = Seq()
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
@@ -115,7 +117,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   protected def value(key: String): Option[String] = sys.env.get(key)
   //------------------------------[helper methods]------------------------------//
-
   private[this] var inputDataThread: Releasable = _
 
   protected[this] def loopInputData(): Unit = {
@@ -173,19 +174,32 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     }
   }
 
-  private[this] def logMeters(report: PerformanceReport): Unit = if (report.records.nonEmpty) {
-    def simpleName(className: String): String = {
-      val index = className.lastIndexOf(".")
-      if (index != -1) className.substring(index + 1)
-      else className
-    }
+  private[this] def simpleName(className: String): String = {
+    val index = className.lastIndexOf(".")
+    if (index != -1) className.substring(index + 1)
+    else className
+  }
 
-    def path(className: String): File = {
-      new File(
-        mkdir(new File(mkdir(new File(reportOutputFolder, simpleName(className))), this.getClass.getSimpleName)),
-        s"${report.key.group()}-${report.key.name()}.csv"
-      )
-    }
+  private[this] def path(className: String, fileName: String): File = {
+    new File(
+      mkdir(new File(mkdir(new File(reportOutputFolder, simpleName(className))), this.getClass.getSimpleName)),
+      fileName
+    )
+  }
+
+  private[this] def logInputDatas(inputDataInfos: Seq[DataInfo]): Unit = {
+    val file = path("inputdata", logDataInfoFileName)
+    if (file.exists() && !file.delete()) throw new RuntimeException(s"failed to remove file:$file")
+    val fileWriter = new FileWriter(file)
+    try {
+      fileWriter.write("messageNumber,messageSize\n")
+      inputDataInfos.foreach(inputDataInfo => {
+        fileWriter.write(s"${inputDataInfo.messageNumber},${inputDataInfo.messageSize}\n")
+      })
+    } finally Releasable.close(fileWriter)
+  }
+
+  private[this] def logMeters(report: PerformanceReport): Unit = if (report.records.nonEmpty) {
     // we have to fix the order of key-value
     // if we generate line via map.keys and map.values, the order may be different ...
     val headers = report.records.head._2.keySet.toList
@@ -196,7 +210,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
             throw new RuntimeException(s"$name disappear?? current:${items.keySet.mkString(",")}")
       )
     }
-    val file = path(report.className)
+    val file = path(report.className, s"${report.key.group()}-${report.key.name()}.csv")
     if (file.exists() && !file.delete()) throw new RuntimeException(s"failed to remove file:$file")
     val fileWriter = new FileWriter(file)
     try {
@@ -215,21 +229,18 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     try {
       val end = CommonUtils.current() + durationOfPerformance.toMillis
       while (CommonUtils.current() <= end) {
-        val reports = connectorReports()
-        fetchConnectorMetrics(reports)
-        inputDataMetrics()
+        fetchAllLogs()
         TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
       }
     } finally {
-      val reports = connectorReports()
-      fetchConnectorMetrics(reports)
-      beforeEndSleepUntil(reports)
+      beforeEndSleepUntil(fetchAllLogs())
     }
     durationOfPerformance.toMillis
   }
 
-  protected def inputDataMetrics(): Unit = {
-    // nothing by default
+  protected def dataMetrics(): Seq[DataInfo] = {
+    dataInfos = dataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
+    dataInfos
   }
 
   /**
@@ -395,6 +406,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     afterStoppingConnectors(result(connectorApi.list()), result(topicApi.list()))
   }
 
+  private[this] def fetchAllLogs(): Seq[PerformanceReport] = {
+    val reports = connectorReports()
+    fetchConnectorMetrics(reports)
+    val dataInfos = dataMetrics()
+    fetchInputDataMetrics(dataInfos)
+    reports
+  }
+
   private[this] def fetchConnectorMetrics(reports: Seq[PerformanceReport]): Unit = {
     try reports.foreach(logMeters)
     catch {
@@ -402,4 +421,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         log.error("failed to log meters", e)
     } finally afterRecodingReports(reports)
   }
+
+  private[this] def fetchInputDataMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
+    try logInputDatas(inputDataInfos)
+    catch {
+      case e: Throwable =>
+        log.error("failed to log input data metrics", e)
+    }
+  }
 }
+
+final case class DataInfo(messageNumber: Long, messageSize: Long)

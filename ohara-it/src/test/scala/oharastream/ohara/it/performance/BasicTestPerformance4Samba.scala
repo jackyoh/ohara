@@ -61,8 +61,9 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val NEED_DELETE_DATA_KEY: String = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected[this] val needDeleteData: Boolean    = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
-  private[this] val totalSizeInBytes = new LongAdder()
-  private[this] val count            = new LongAdder()
+  private[this] val totalSizeInBytes              = new LongAdder()
+  private[this] val count                         = new LongAdder()
+  private[this] var inputDataInfos: Seq[DataInfo] = Seq()
 
   protected val sambaSettings: Map[String, JsValue] = Map(
     oharastream.ohara.connector.smb.SMB_HOSTNAME_KEY   -> JsString(sambaHostname),
@@ -121,6 +122,11 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     } finally Releasable.close(client)
 
     (csvOutputFolder, count.longValue(), totalSizeInBytes.longValue())
+  }
+
+  override protected def dataMetrics(): Seq[DataInfo] = {
+    inputDataInfos = inputDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
+    inputDataInfos
   }
 
   private[this] def sambaClient(): FileSystem =
