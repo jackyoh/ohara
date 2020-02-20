@@ -60,9 +60,11 @@ class PerformanceDataMetricsFile {
     if (file.exists() && !file.delete()) throw new RuntimeException(s"failed to remove file:$file")
     val fileWriter = new FileWriter(file)
     try {
-      fileWriter.write("messageNumber,messageSize\n")
+      fileWriter.write("duration,messageNumber,messageSize\n")
       inputDataInfos.foreach(inputDataInfo => {
-        fileWriter.write(s"${inputDataInfo.messageNumber},${inputDataInfo.messageSize}\n")
+        fileWriter.write(
+          s"${inputDataInfo.duration / 1000},${inputDataInfo.messageNumber},${inputDataInfo.messageSize}\n"
+        )
       })
     } finally Releasable.close(fileWriter)
   }

@@ -49,7 +49,9 @@ import scala.util.control.Breaks.break
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger = Logger(classOf[BasicTestPerformance])
+  protected val log: Logger                       = Logger(classOf[BasicTestPerformance])
+  private[this] var inputDataInfos: Seq[DataInfo] = Seq()
+  private[this] val startTime: Long               = CommonUtils.current()
 
   private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
   protected val topicApi: TopicApi.Access =
@@ -216,14 +218,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     }
   }
 
-  /*private[this] def fetchAllLogs(): Seq[PerformanceReport] = {
-    val reports = connectorReports()
-    fetchConnectorMetrics(reports)
-    /*val inputDataInfos = inputDataMetrics()
-    if (inputDataInfos.nonEmpty) fetchDataInfoMetrics(inputDataInfos)*/
-    reports
-  }*/
-
   private[this] def fetchConnectorMetrics(reports: Seq[PerformanceReport]): Unit = {
     try reports.foreach(metricsFile.logMeters)
     catch {
@@ -232,13 +226,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     } finally afterRecodingReports(reports)
   }
 
-  /*private[this] def fetchDataInfoMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
-    try logDataInfos(inputDataInfos)
+  private[this] def fetchDataInfoMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
+    try metricsFile.logDataInfos(inputDataInfos)
     catch {
       case e: Throwable =>
         log.error("failed to log input data metrics", e)
     }
-  }*/
+  }
 
   /**
     * invoked after all metrics of connectors are recorded.
@@ -299,6 +293,10 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       count.add(value._1)
       totalSizeInBytes.add(value._2)
     }
+
+    inputDataInfos = inputDataInfos ++ Seq(
+      DataInfo(CommonUtils.current() - startTime, count.longValue, totalSizeInBytes.longValue())
+    )
     (count.longValue, totalSizeInBytes.longValue)
   }
 
@@ -308,11 +306,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       while (CommonUtils.current() <= end) {
         val reports = connectorReports()
         fetchConnectorMetrics(reports)
+        fetchDataInfoMetrics(inputDataInfos)
         TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
       }
     } finally {
       val reports = connectorReports()
       fetchConnectorMetrics(reports)
+      fetchDataInfoMetrics(inputDataInfos)
       beforeEndSleepUntil(reports)
     }
     durationOfPerformance.toMillis
