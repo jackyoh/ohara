@@ -142,6 +142,31 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     }
   }
 
+  protected[this] def loopProduceData(topicInfo: TopicInfo): Unit = {
+    produceDataThread = {
+      val pool = Executors.newSingleThreadExecutor()
+
+      pool.execute(() => {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+            produce(topicInfo, timeoutOfInputData)
+          } catch {
+            case interrupException: InterruptedException => {
+              log.error("interrup exception", interrupException)
+              break
+            }
+            case e: Throwable => throw e
+          }
+        }
+      })
+
+      () => {
+        pool.shutdownNow()
+        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
+      }
+    }
+  }
+
   protected def setupInputData(timeoutOfInputData: Duration): (String, Long, Long) = {
     throw new UnsupportedOperationException("Abstract not support setupInputData function")
   }
@@ -312,71 +337,58 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     result(connectorApi.get(connectorKey))
   }
 
-  protected[this] def loopProduceData(topicInfo: TopicInfo): Unit = {
-    produceDataThread = {
-      val pool = Executors.newSingleThreadExecutor()
-
-      pool.execute(() => {
-        while (!Thread.currentThread().isInterrupted()) {
-          try {
-            produce(topicInfo, timeoutOfInputData)
-          } catch {
-            case interrupException: InterruptedException => {
-              log.error("interrup exception", interrupException)
-              break
-            }
-            case e: Throwable => throw e
-          }
-        }
-      })
-
-      () => {
-        pool.shutdownNow()
-        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      }
-    }
-  }
-
   protected def produce(topicInfo: TopicInfo, timeout: Duration): (TopicInfo, Long, Long) = {
-    val cellNames: Set[String] = (0 until 10).map(index => s"c$index").toSet
-    val numberOfRowsToFlush    = 2000
+    val numberOfRowsToFlush = 2000
     val producer = Producer
       .builder()
       .keySerializer(Serializer.ROW)
       .connectionProps(brokerClusterInfo.connectionProps)
       .build()
-    var cachedRows = 0
-    val start      = CommonUtils.current()
-
     try {
-      while (totalSizeInBytes.longValue() <= sizeOfInputData &&
-             (CommonUtils.current() - start) <= timeout.toMillis) {
-        producer
-          .sender()
-          .topicName(topicInfo.key.topicNameOnKafka())
-          .key(Row.of(cellNames.map { name =>
-            Cell.of(name, CommonUtils.randomString())
-          }.toSeq: _*))
-          .send()
-          .whenComplete {
-            case (meta, _) =>
-              if (meta != null) {
-                totalSizeInBytes.add(meta.serializedKeySize())
-                count.add(1)
+      val result: (Long, Long) = generateData(
+        numberOfRowsToFlush,
+        timeout,
+        (rows: Seq[Row]) => {
+          val count       = new LongAdder()
+          val sizeInBytes = new LongAdder()
+          rows.foreach(row => {
+            producer
+              .sender()
+              .topicName(topicInfo.key.topicNameOnKafka())
+              .key(row)
+              .send()
+              .whenComplete {
+                case (meta, _) =>
+                  if (meta != null) {
+                    sizeInBytes.add(meta.serializedKeySize())
+                    count.add(1)
+                  }
               }
-          }
-        cachedRows += 1
-        if (cachedRows >= numberOfRowsToFlush) {
+          })
           producer.flush()
-          cachedRows = 0
+          (count.longValue(), sizeInBytes.longValue())
         }
-      }
+      )
+      (topicInfo, result._1, result._2)
     } finally Releasable.close(producer)
-
-    (topicInfo, count.longValue(), totalSizeInBytes.longValue())
   }
 
-  protected def rowData(): Row = {
+  protected[this] def generateData(
+    numberOfRowsToFlush: Int,
+    timeout: Duration,
+    callback: (Seq[Row]) => (Long, Long)
+  ): (Long, Long) = {
+    val start = CommonUtils.current()
+    while (totalSizeInBytes.longValue() <= sizeOfInputData &&
+           CommonUtils.current() - start <= timeout.toMillis) {
+      val value: (Long, Long) = callback((0 until numberOfRowsToFlush).map(_ => rowData()))
+      count.add(value._1)
+      totalSizeInBytes.add(value._2)
+    }
+    (count.longValue, totalSizeInBytes.longValue)
+  }
+
+  protected[this] def rowData(): Row = {
     Row.of(
       (0 until 10).map(index => {
         Cell.of(s"c$index", CommonUtils.randomString())

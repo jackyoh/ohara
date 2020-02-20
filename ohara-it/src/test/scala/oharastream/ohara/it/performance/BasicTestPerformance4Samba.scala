@@ -20,6 +20,7 @@ import java.io.{BufferedWriter, OutputStreamWriter}
 import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.client.filesystem.FileSystem
+import oharastream.ohara.common.data.Row
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
@@ -93,35 +94,39 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   }
 
   override protected def setupInputData(timeout: Duration): (String, Long, Long) = {
-    val cellNames: Set[String] = rowData().cells().asScala.map(_.name).toSet
-    val numberOfRowsToFlush    = 1000
-    val client                 = sambaClient()
-
-    val start = CommonUtils.current()
+    val numberOfRowsToFlush = 1000
+    val client              = sambaClient()
     try {
       if (!client.exists(csvOutputFolder)) createSambaFolder(csvOutputFolder)
 
-      while (totalSizeInBytes.longValue() <= sizeOfInputData &&
-             (CommonUtils.current() - start) <= timeout.toMillis) {
-        val file   = s"$csvOutputFolder/${CommonUtils.randomString()}"
-        val writer = new BufferedWriter(new OutputStreamWriter(client.create(file)))
-        try {
-          writer
-            .append(cellNames.mkString(","))
-            .append("\n")
-          (0 until numberOfRowsToFlush).foreach { _ =>
-            val content = rowData().cells().asScala.map(_.value).mkString(",")
-            count.increment()
-            totalSizeInBytes.add(content.length)
-            writer
-              .append(content)
-              .append("\n")
-          }
-        } finally Releasable.close(writer)
-      }
-    } finally Releasable.close(client)
+      val result = generateData(
+        numberOfRowsToFlush,
+        timeout,
+        (rows: Seq[Row]) => {
+          val file        = s"$csvOutputFolder/${CommonUtils.randomString()}"
+          val writer      = new BufferedWriter(new OutputStreamWriter(client.create(file)))
+          val count       = new LongAdder()
+          val sizeInBytes = new LongAdder()
 
-    (csvOutputFolder, count.longValue(), totalSizeInBytes.longValue())
+          try {
+            val cellNames: Set[String] = rows.head.cells().asScala.map(_.name).toSet
+            writer
+              .append(cellNames.mkString(","))
+              .append("\n")
+            rows.foreach(row => {
+              val content = row.cells().asScala.map(_.value).mkString(",")
+              count.increment()
+              sizeInBytes.add(content.length)
+              writer
+                .append(content)
+                .append("\n")
+            })
+            (count.longValue(), sizeInBytes.longValue())
+          } finally Releasable.close(writer)
+        }
+      )
+      (csvOutputFolder, result._1, result._2)
+    } finally Releasable.close(client)
   }
 
   override protected def inputDataMetrics(): Seq[DataInfo] = {
