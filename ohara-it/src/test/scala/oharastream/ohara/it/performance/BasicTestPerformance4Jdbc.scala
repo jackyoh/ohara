@@ -25,6 +25,7 @@ import org.junit.{After, Before}
 import oharastream.ohara.client.configurator.v0.FileInfoApi
 import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
+import oharastream.ohara.common.data.Row
 import oharastream.ohara.common.setting.ObjectKey
 import oharastream.ohara.common.util.CommonUtils
 
@@ -103,42 +104,40 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
     val flushToDB = 2000
     val client    = DatabaseClient.builder.url(url).user(user).password(password).build
 
-    // 432000000 is 5 days ago
-    val timestampData = new Timestamp(CommonUtils.current() - 432000000)
-    val sql = s"INSERT INTO $tableName VALUES " + columnInfos
-      .map(_ => "?")
-      .mkString("(", ",", ")")
-    val preparedStatement = client.connection.prepareStatement(sql)
-
     try {
-      val start      = CommonUtils.current()
-      var cachedRows = 0
-      while (totalSizeInBytes.longValue() <= sizeOfInputData &&
-             (CommonUtils.current() - start) <= timeout.toMillis) {
-        preparedStatement.setTimestamp(1, timestampData)
-        totalSizeInBytes.add(timestampData.toString().length())
+      // 432000000 is 5 days ago
+      val timestampData = new Timestamp(CommonUtils.current() - 432000000)
+      val sql = s"INSERT INTO $tableName VALUES " + columnInfos
+        .map(_ => "?")
+        .mkString("(", ",", ")")
 
-        rowData().cells().asScala.zipWithIndex.foreach {
-          case (result, index) => {
-            val value = result.value().toString()
-            totalSizeInBytes.add(value.length)
-            preparedStatement.setString(index + 2, value)
-          }
+      val result = generateData(
+        flushToDB,
+        timeout,
+        (rows: Seq[Row]) => {
+          val preparedStatement = client.connection.prepareStatement(sql)
+          try {
+            val count       = new LongAdder()
+            val sizeInBytes = new LongAdder()
+            preparedStatement.setTimestamp(1, timestampData)
+            rows.foreach(row => {
+              row.asScala.zipWithIndex.foreach {
+                case (result, index) => {
+                  val value = result.value().toString()
+                  sizeInBytes.add(value.length)
+                  preparedStatement.setString(index + 2, value)
+                }
+              }
+              preparedStatement.addBatch()
+              count.increment()
+            })
+            preparedStatement.executeBatch()
+            (count.longValue(), sizeInBytes.longValue())
+          } finally Releasable.close(preparedStatement)
         }
-        preparedStatement.addBatch()
-        cachedRows += 1
-        if (cachedRows >= flushToDB) {
-          preparedStatement.executeBatch()
-          cachedRows = 0
-        }
-        count.increment()
-      }
-      preparedStatement.executeBatch()
-    } finally {
-      Releasable.close(preparedStatement)
-      Releasable.close(client)
-    }
-    (tableName, count.longValue(), totalSizeInBytes.longValue())
+      )
+      (tableName, result._1, result._2)
+    } finally Releasable.close(client)
   }
 
   override protected def inputDataMetrics(): Seq[DataInfo] = {
