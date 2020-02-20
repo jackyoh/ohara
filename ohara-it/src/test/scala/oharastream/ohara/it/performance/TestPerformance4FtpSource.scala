@@ -34,7 +34,7 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
     val errorPath     = "/error"
     val (path, _, _)  = setupInputData(timeoutOfInputData)
     try {
-      loopInputData()
+      loopInputDataThread(setupInputData)
       setupConnector(
         connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[FtpSource].getName,

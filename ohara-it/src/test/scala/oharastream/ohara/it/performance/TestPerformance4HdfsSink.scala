@@ -30,22 +30,18 @@ import org.junit.{AssumptionViolatedException, Test}
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4HdfsSink extends BasicTestPerformance {
   private[this] val NEED_DELETE_DATA_KEY: String = PerformanceTestingUtils.DATA_CLEANUP_KEY
-
-  private[this] val dataDir: String = "/tmp"
+  private[this] val dataDir: String              = "/tmp"
   private[this] val hdfsURL: String = sys.env.getOrElse(
     PerformanceTestingUtils.HDFS_URL_KEY,
     throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
-
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
-
-  private[this] var topicInfo: TopicInfo = _
 
   @Test
   def test(): Unit = {
-    topicInfo = createTopic()
-    produce(topicInfo, timeoutOfInputData)
-    loopProduceData(topicInfo)
+    createTopic()
+    produce(timeoutOfInputData)
+    loopInputDataThread(produce)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),

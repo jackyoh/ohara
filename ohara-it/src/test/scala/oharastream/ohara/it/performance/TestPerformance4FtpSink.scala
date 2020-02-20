@@ -29,14 +29,13 @@ import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
-  private[this] val dataDir: String      = "/tmp"
-  private[this] var topicInfo: TopicInfo = _
+  private[this] val dataDir: String = "/tmp"
 
   @Test
   def test(): Unit = {
-    topicInfo = createTopic()
-    produce(topicInfo, timeoutOfInputData)
-    loopProduceData(topicInfo)
+    createTopic()
+    produce(timeoutOfInputData)
+    loopInputDataThread(produce)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[FtpSink].getName(),

@@ -35,7 +35,7 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
     val (path, _, _)  = setupInputData(timeoutOfInputData)
 
     try {
-      loopInputData()
+      loopInputDataThread(setupInputData)
       setupConnector(
         connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[SmbSource].getName(),

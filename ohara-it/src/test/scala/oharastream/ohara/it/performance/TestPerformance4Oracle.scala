@@ -33,7 +33,7 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
   def test(): Unit = {
     createTable()
     setupInputData(timeoutOfInputData)
-    loopInputData()
+    loopInputDataThread(setupInputData)
     createTopic()
     try {
       setupConnector(

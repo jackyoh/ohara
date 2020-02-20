@@ -50,8 +50,8 @@ import scala.util.control.Breaks.break
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger             = Logger(classOf[BasicTestPerformance])
-  private[this] val logDataInfoFileName = s"${CommonUtils.randomString(5)}.csv"
+  protected val log: Logger = Logger(classOf[BasicTestPerformance])
+  //private[this] val logDataInfoFileName = s"${CommonUtils.randomString(5)}.csv"
 
   private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
   protected val topicApi: TopicApi.Access =
@@ -63,7 +63,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     ConnectorApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
-  private[this] var produceDataInfos: Seq[DataInfo] = Seq()
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
@@ -93,10 +92,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val logMetersFrequency: Duration =
     value(logMetersFrequencyKey).map(Duration(_)).getOrElse(logMetersFrequencyDefault)
 
-  private[this] val totalSizeInBytes              = new LongAdder()
-  private[this] val count                         = new LongAdder()
-  private[this] var produceDataThread: Releasable = _
-
+  private[this] val totalSizeInBytes = new LongAdder()
+  private[this] val count            = new LongAdder()
   //------------------------------[topic properties]------------------------------//
 
   private[this] val megabytesOfInputDataKey           = PerformanceTestingUtils.DATA_SIZE_KEY
@@ -119,13 +116,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   //------------------------------[helper methods]------------------------------//
   private[this] var inputDataThread: Releasable = _
 
-  protected[this] def loopInputData(): Unit = {
+  protected[this] def loopInputDataThread(input: Duration => (Any, Long, Long)): Unit = {
     inputDataThread = {
       val pool = Executors.newSingleThreadExecutor()
       pool.execute(() => {
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            setupInputData(timeoutOfInputData)
+            input(timeoutOfInputData)
           } catch {
             case interrupException: InterruptedException => {
               log.error("interrup exception", interrupException)
@@ -140,35 +137,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
       }
     }
-  }
-
-  protected[this] def loopProduceData(topicInfo: TopicInfo): Unit = {
-    produceDataThread = {
-      val pool = Executors.newSingleThreadExecutor()
-
-      pool.execute(() => {
-        while (!Thread.currentThread().isInterrupted()) {
-          try {
-            produce(topicInfo, timeoutOfInputData)
-          } catch {
-            case interrupException: InterruptedException => {
-              log.error("interrup exception", interrupException)
-              break
-            }
-            case e: Throwable => throw e
-          }
-        }
-      })
-
-      () => {
-        pool.shutdownNow()
-        pool.awaitTermination(durationOfPerformance.toMillis * 10, TimeUnit.MILLISECONDS)
-      }
-    }
-  }
-
-  protected def setupInputData(timeoutOfInputData: Duration): (String, Long, Long) = {
-    throw new UnsupportedOperationException("Abstract not support setupInputData function")
   }
 
   protected def mkdir(folder: File): File = {
@@ -212,7 +180,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     )
   }
 
-  private[this] def logDataInfos(inputDataInfos: Seq[DataInfo]): Unit = {
+  /*private[this] def logDataInfos(inputDataInfos: Seq[DataInfo]): Unit = {
     val file = path("inputdata", logDataInfoFileName)
     if (file.exists() && !file.delete()) throw new RuntimeException(s"failed to remove file:$file")
     val fileWriter = new FileWriter(file)
@@ -222,7 +190,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         fileWriter.write(s"${inputDataInfo.messageNumber},${inputDataInfo.messageSize}\n")
       })
     } finally Releasable.close(fileWriter)
-  }
+  }*/
 
   private[this] def logMeters(report: PerformanceReport): Unit = if (report.records.nonEmpty) {
     // we have to fix the order of key-value
@@ -263,17 +231,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     durationOfPerformance.toMillis
   }
 
-  protected def inputDataMetrics(): Seq[DataInfo] = {
-    Seq.empty
-  }
-
-  protected def produceDataMetrics(): Seq[DataInfo] = {
-    if (count.longValue > 0)
-      produceDataInfos = produceDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
-
-    produceDataInfos
-  }
-
   /**
     * invoked after all metrics of connectors are recorded.
     * Noted: it is always invoked even if we fail to record reports
@@ -287,7 +244,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     * Duration running function for after sleep
     */
   protected def beforeEndSleepUntil(reports: Seq[PerformanceReport]): Unit = {
-    Releasable.close(produceDataThread)
     Releasable.close(inputDataThread)
   }
 
@@ -295,7 +251,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     * create and start the topic.
     * @return topic info
     */
-  protected def createTopic(): TopicInfo = {
+  protected[this] def createTopic(): TopicInfo = {
     result(
       topicApi.request
         .key(topicKey)
@@ -337,7 +293,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     result(connectorApi.get(connectorKey))
   }
 
-  protected def produce(topicInfo: TopicInfo, timeout: Duration): (TopicInfo, Long, Long) = {
+  protected def produce(timeout: Duration): (TopicKey, Long, Long) = {
     val numberOfRowsToFlush = 2000
     val producer = Producer
       .builder()
@@ -354,7 +310,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           rows.foreach(row => {
             producer
               .sender()
-              .topicName(topicInfo.key.topicNameOnKafka())
+              .topicName(topicKey.topicNameOnKafka())
               .key(row)
               .send()
               .whenComplete {
@@ -369,7 +325,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
           (count.longValue(), sizeInBytes.longValue())
         }
       )
-      (topicInfo, result._1, result._2)
+      (topicKey, result._1, result._2)
     } finally Releasable.close(producer)
   }
 
@@ -427,13 +383,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   private[this] def fetchAllLogs(): Seq[PerformanceReport] = {
     val reports = connectorReports()
     fetchConnectorMetrics(reports)
-
-    val inputDataInfos = inputDataMetrics()
-    if (inputDataInfos.nonEmpty) fetchDataInfoMetrics(inputDataInfos)
-
-    val produceDataInfos = produceDataMetrics()
-    if (produceDataInfos.nonEmpty) fetchDataInfoMetrics(produceDataInfos)
-
+    /*val inputDataInfos = inputDataMetrics()
+    if (inputDataInfos.nonEmpty) fetchDataInfoMetrics(inputDataInfos)*/
     reports
   }
 
@@ -445,13 +396,13 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     } finally afterRecodingReports(reports)
   }
 
-  private[this] def fetchDataInfoMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
+  /*private[this] def fetchDataInfoMetrics(inputDataInfos: Seq[DataInfo]): Unit = {
     try logDataInfos(inputDataInfos)
     catch {
       case e: Throwable =>
         log.error("failed to log input data metrics", e)
     }
-  }
+  }*/
 }
 
 final case class DataInfo(messageNumber: Long, messageSize: Long)

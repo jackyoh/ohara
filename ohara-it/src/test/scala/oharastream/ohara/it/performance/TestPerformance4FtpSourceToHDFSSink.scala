@@ -43,7 +43,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
     createTopic()
-    loopInputData()
+    loopInputDataThread(setupInputData)
     // Running FTP Source Connector
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),

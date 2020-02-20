@@ -16,7 +16,6 @@
 
 package oharastream.ohara.it.performance
 
-import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
 import oharastream.ohara.common.setting.ConnectorKey
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.connector.jio.JsonOut
@@ -27,13 +26,11 @@ import spray.json.JsNumber
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4JsonOut extends BasicTestPerformance {
-  private[this] var topicInfo: TopicInfo = _
-
   @Test
   def test(): Unit = {
-    topicInfo = createTopic()
-    produce(topicInfo, timeoutOfInputData)
-    loopProduceData(topicInfo)
+    createTopic()
+    produce(timeoutOfInputData)
+    loopInputDataThread(produce)
     setupConnector(
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[JsonOut].getName,

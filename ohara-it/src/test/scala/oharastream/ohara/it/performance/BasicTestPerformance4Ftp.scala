@@ -72,10 +72,6 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val cleanupTestDataKey   = PerformanceTestingUtils.DATA_CLEANUP_KEY
   protected val cleanupTestData: Boolean = value(cleanupTestDataKey).forall(_.toBoolean)
 
-  private[this] val totalSizeInBytes              = new LongAdder()
-  private[this] val count                         = new LongAdder()
-  private[this] var inputDataInfos: Seq[DataInfo] = Seq()
-
   private[this] def ftpClient() =
     FtpClient
       .builder()
@@ -85,7 +81,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .password(ftpPassword)
       .build
 
-  override protected def setupInputData(timeout: Duration): (String, Long, Long) = {
+  protected def setupInputData(timeout: Duration): (String, Long, Long) = {
     val numberOfRowsToFlush = 1000
     val client              = ftpClient()
     try {
@@ -183,10 +179,5 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
     val client = ftpClient()
     try client.exist(path)
     finally Releasable.close(client)
-  }
-
-  override protected def inputDataMetrics(): Seq[DataInfo] = {
-    inputDataInfos = inputDataInfos ++ Seq(DataInfo(count.longValue, totalSizeInBytes.longValue))
-    inputDataInfos
   }
 }
