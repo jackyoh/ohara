@@ -297,6 +297,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       val value: (Long, Long) = callback((0 until numberOfRowsToFlush).map(_ => rowData()))
       count.add(value._1)
       totalSizeInBytes.add(value._2)
+      // Input data metrics write to the memory
       if ((CommonUtils.current() - previous) >= logMetersFrequency.toMillis) {
         inputDataInfos = inputDataInfos ++ Seq(
           DataInfo(CommonUtils.current() - setupStartTime, count.longValue(), totalSizeInBytes.longValue())
@@ -304,13 +305,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         previous = CommonUtils.current()
       }
     }
-
-    val countValue            = count.longValue()
-    val totalSizeInBytesValue = totalSizeInBytes.longValue()
-    inputDataInfos = inputDataInfos ++ Seq(
-      DataInfo(CommonUtils.current() - setupStartTime, countValue, totalSizeInBytesValue)
-    )
-    (countValue, totalSizeInBytesValue)
+    (count.longValue(), totalSizeInBytes.longValue())
   }
 
   protected def sleepUntilEnd(): Long = {
