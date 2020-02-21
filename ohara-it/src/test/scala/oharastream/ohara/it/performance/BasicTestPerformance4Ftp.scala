@@ -82,8 +82,7 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
       .build
 
   protected def setupInputData(timeout: Duration): (String, Long, Long) = {
-    val numberOfRowsToFlush = 1000
-    val client              = ftpClient()
+    val client = ftpClient()
     try {
       if (!client.exist(csvOutputFolder)) client.mkdir(csvOutputFolder)
 

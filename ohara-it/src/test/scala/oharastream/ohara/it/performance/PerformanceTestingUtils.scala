@@ -24,6 +24,7 @@ private[performance] object PerformanceTestingUtils {
   val DATA_SIZE_KEY            = "ohara.it.performance.data.size"
   val PARTITION_SIZE_KEY       = "ohara.it.performance.topic.partitions"
   val TASK_SIZE_KEY            = "ohara.it.performance.connector.tasks"
+  val ROW_FLUSH_NUMBER_KEY     = "ohara.it.performance.row.flush.number"
 
   // FTP Setting Key
   val FTP_HOSTNAME_KEY: String = "ohara.it.performance.ftp.hostname"

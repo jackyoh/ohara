@@ -49,9 +49,9 @@ import scala.util.control.Breaks.break
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger                       = Logger(classOf[BasicTestPerformance])
-  private[this] var inputDataInfos: Seq[DataInfo] = Seq()
-  private[this] val startTime: Long               = CommonUtils.current()
+  protected val log: Logger              = Logger(classOf[BasicTestPerformance])
+  private[this] var inputDataInfos       = mutable.Seq[DataInfo]()
+  private[this] val setupStartTime: Long = CommonUtils.current()
 
   private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
   protected val topicApi: TopicApi.Access =
@@ -74,6 +74,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   private[this] val timeoutOfInputDataDefault: Duration = 30 seconds
   protected val timeoutOfInputData: Duration =
     value(timeoutOfInputDataKey).map(Duration(_)).getOrElse(timeoutOfInputDataDefault)
+
+  private[this] val numberOfRowsToFlushKey             = PerformanceTestingUtils.ROW_FLUSH_NUMBER_KEY
+  private[this] val numberOfRowsToFlushDefault: String = "2000"
+  protected val numberOfRowsToFlush: Int =
+    value(numberOfRowsToFlushKey).getOrElse(numberOfRowsToFlushDefault).toInt
 
   private[this] val wholeTimeout = (durationOfPerformance.toSeconds + timeoutOfInputData.toSeconds) * 2
 
@@ -246,7 +251,6 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   //------------------------------[core functions]------------------------------//
 
   protected def produce(timeout: Duration): (TopicKey, Long, Long) = {
-    val numberOfRowsToFlush = 2000
     val producer = Producer
       .builder()
       .keySerializer(Serializer.ROW)
@@ -281,7 +285,7 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     } finally Releasable.close(producer)
   }
 
-  protected[this] def generateData(
+  final protected[this] def generateData(
     numberOfRowsToFlush: Int,
     timeout: Duration,
     callback: (Seq[Row]) => (Long, Long)
@@ -294,10 +298,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       totalSizeInBytes.add(value._2)
     }
 
+    val countValue            = count.longValue()
+    val totalSizeInBytesValue = totalSizeInBytes.longValue()
     inputDataInfos = inputDataInfos ++ Seq(
-      DataInfo(CommonUtils.current() - startTime, count.longValue, totalSizeInBytes.longValue())
+      DataInfo(CommonUtils.current() - setupStartTime, countValue, totalSizeInBytesValue)
     )
-    (count.longValue, totalSizeInBytes.longValue)
+    (countValue, totalSizeInBytesValue)
   }
 
   protected def sleepUntilEnd(): Long = {

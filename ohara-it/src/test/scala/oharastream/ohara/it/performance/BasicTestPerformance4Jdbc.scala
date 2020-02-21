@@ -97,8 +97,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   }
 
   protected[this] def setupInputData(timeout: Duration): (String, Long, Long) = {
-    val flushToDB = 2000
-    val client    = DatabaseClient.builder.url(url).user(user).password(password).build
+    val client = DatabaseClient.builder.url(url).user(user).password(password).build
 
     try {
       // 432000000 is 5 days ago
@@ -108,7 +107,7 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
         .mkString("(", ",", ")")
 
       val result = generateData(
-        flushToDB,
+        numberOfRowsToFlush,
         timeout,
         (rows: Seq[Row]) => {
           val preparedStatement = client.connection.prepareStatement(sql)

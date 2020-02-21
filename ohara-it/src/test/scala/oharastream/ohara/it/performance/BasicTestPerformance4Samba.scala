@@ -90,8 +90,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   }
 
   protected def setupInputData(timeout: Duration): (String, Long, Long) = {
-    val numberOfRowsToFlush = 1000
-    val client              = sambaClient()
+    val client = sambaClient()
     try {
       if (!client.exists(csvOutputFolder)) createSambaFolder(csvOutputFolder)
 

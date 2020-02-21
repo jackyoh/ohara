@@ -61,11 +61,13 @@ class PerformanceDataMetricsFile {
     val fileWriter = new FileWriter(file)
     try {
       fileWriter.write("duration,messageNumber,messageSize\n")
-      inputDataInfos.foreach(inputDataInfo => {
-        fileWriter.write(
-          s"${inputDataInfo.duration / 1000},${inputDataInfo.messageNumber},${inputDataInfo.messageSize}\n"
-        )
-      })
+      inputDataInfos
+        .sortBy(_.duration)(Ordering[Long].reverse)
+        .foreach(inputDataInfo => {
+          fileWriter.write(
+            s"${inputDataInfo.duration / 1000},${inputDataInfo.messageNumber},${inputDataInfo.messageSize}\n"
+          )
+        })
     } finally Releasable.close(fileWriter)
   }
 
