@@ -290,12 +290,19 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
     timeout: Duration,
     callback: (Seq[Row]) => (Long, Long)
   ): (Long, Long) = {
-    val start = CommonUtils.current()
+    val start    = CommonUtils.current()
+    var previous = CommonUtils.current()
     while (totalSizeInBytes.longValue() <= sizeOfInputData &&
            CommonUtils.current() - start <= timeout.toMillis) {
       val value: (Long, Long) = callback((0 until numberOfRowsToFlush).map(_ => rowData()))
       count.add(value._1)
       totalSizeInBytes.add(value._2)
+      if ((CommonUtils.current() - previous) >= logMetersFrequency.toMillis) {
+        inputDataInfos = inputDataInfos ++ Seq(
+          DataInfo(CommonUtils.current() - setupStartTime, count.longValue(), totalSizeInBytes.longValue())
+        )
+        previous = CommonUtils.current()
+      }
     }
 
     val countValue            = count.longValue()
