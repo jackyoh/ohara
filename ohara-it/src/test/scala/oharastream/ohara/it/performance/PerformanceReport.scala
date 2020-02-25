@@ -58,7 +58,9 @@ object PerformanceReport {
     }
 
     def record(duration: Long, header: String, value: Double): Builder = {
-      records.put(duration, records.getOrElse(duration, Map.empty) + (header -> value))
+      val record: Map[String, Double] = records.getOrElse(duration, Map.empty)
+      val totalValue: Double          = record.getOrElse(header, 0.0) + value
+      records.put(duration, record + (header -> totalValue))
       this
     }
 
