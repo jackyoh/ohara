@@ -37,9 +37,9 @@ RUN rm -f zookeeper-${ZOOKEEPER_VERSION}.tar.gz
 RUN echo "$ZOOKEEPER_VERSION" > $(find "${ZOOKEEPER_DIR}" -maxdepth 1 -type d -name "zookeeper-*")/bin/zookeeper_version
 
 # clone ohara
-ARG BRANCH="master"
+ARG BRANCH="performance_volume"
 ARG COMMIT=$BRANCH
-ARG REPO="https://github.com/oharastream/ohara.git"
+ARG REPO="https://github.com/jackyoh/ohara.git"
 ARG BEFORE_BUILD=""
 WORKDIR /testpatch/ohara
 RUN git clone $REPO /testpatch/ohara

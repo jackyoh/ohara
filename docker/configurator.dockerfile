@@ -22,7 +22,7 @@ LABEL stage=$STAGE
 
 ARG BRANCH="master"
 ARG COMMIT=$BRANCH
-ARG REPO="https://github.com/oharastream/ohara.git"
+ARG REPO="https://github.com/jackyoh/ohara.git"
 ARG BEFORE_BUILD=""
 ARG KAFKA_VERSION=2.4.0
 ARG SCALA_VERSION=2.12
