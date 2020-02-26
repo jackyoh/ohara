@@ -135,8 +135,14 @@ trait BrokerCollie extends Collie {
                 .append(s"advertised.listeners=PLAINTEXT://${newNode.hostname}:${creation.clientPort}")
                 .done
                 .build
-              doCreator(executionContext, containerInfo, newNode, routes, arguments)
-                .map(_ => Some(containerInfo))
+              doCreator(
+                executionContext,
+                containerInfo,
+                newNode,
+                Option("-v /storage:/home/ohara/kafka_2.12-2.4.0/data"),
+                routes,
+                arguments
+              ).map(_ => Some(containerInfo))
                 .recover {
                   case e: Throwable =>
                     log.error(s"failed to create broker container on ${newNode.hostname}", e)

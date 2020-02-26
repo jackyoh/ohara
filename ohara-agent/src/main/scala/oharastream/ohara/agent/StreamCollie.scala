@@ -130,7 +130,7 @@ trait StreamCollie extends Collie {
                         case (k, v) => s"$k=$v"
                       }
 
-                  doCreator(executionContext, containerInfo, newNode, routes, arguments)
+                  doCreator(executionContext, containerInfo, newNode, Option.empty, routes, arguments)
                     .map(_ => Some(containerInfo))
                     .recover {
                       case e: Throwable =>

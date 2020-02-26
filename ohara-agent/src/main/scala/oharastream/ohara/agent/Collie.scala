@@ -130,6 +130,7 @@ trait Collie {
     executionContext: ExecutionContext,
     containerInfo: ContainerInfo,
     node: Node,
+    volume: Option[String],
     routes: Map[String, String],
     arguments: Seq[String]
   ): Future[Unit]

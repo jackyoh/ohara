@@ -145,6 +145,7 @@ object DockerClient {
         imageName: String,
         name: String,
         command: Option[String],
+        volume: Option[String],
         arguments: Seq[String],
         ports: Map[Int, Int],
         envs: Map[String, String],
@@ -175,6 +176,7 @@ object DockerClient {
                 .mkString(" "),
               // add label so we can distinguish the containers from others
               s"--label $LABEL_KEY=$LABEL_VALUE",
+              volume.getOrElse(""),
               Objects.requireNonNull(imageName),
               command.getOrElse(""),
               arguments.map(arg => s"""\"$arg\"""").mkString(" ")

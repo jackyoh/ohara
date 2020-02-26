@@ -164,7 +164,7 @@ trait WorkerCollie extends Collie {
                 .append("connector.client.config.override.policy", "All")
                 .done
                 .build
-              doCreator(executionContext, containerInfo, newNode, routes, arguments)
+              doCreator(executionContext, containerInfo, newNode, Option.empty, routes, arguments)
                 .map(_ => Some(containerInfo))
                 .recover {
                   case e: Throwable =>
