@@ -108,6 +108,7 @@ private abstract class BasicCollieImpl(
     executionContext: ExecutionContext,
     containerInfo: ContainerInfo,
     node: Node,
+    volume: Option[String],
     routes: Map[String, String],
     arguments: Seq[String]
   ): Future[Unit] =
@@ -122,6 +123,7 @@ private abstract class BasicCollieImpl(
       .routes(routes)
       .arguments(arguments)
       .nodeName(node.hostname)
+      .volume(volume)
       .threadPool(executionContext)
       .create()
 
