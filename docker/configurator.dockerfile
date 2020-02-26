@@ -16,9 +16,9 @@
 
 FROM oharastream/ohara:deps as deps
 
-ARG BRANCH="master"
+ARG BRANCH="performance_volume"
 ARG COMMIT=$BRANCH
-ARG REPO="https://github.com/oharastream/ohara.git"
+ARG REPO="https://github.com/jackyoh/ohara.git"
 ARG BEFORE_BUILD=""
 ARG KAFKA_VERSION=2.4.0
 ARG SCALA_VERSION=2.12
