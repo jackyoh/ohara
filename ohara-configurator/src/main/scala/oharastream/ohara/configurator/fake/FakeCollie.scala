@@ -170,6 +170,7 @@ private[configurator] abstract class FakeCollie(val dataCollie: DataCollie) exte
     executionContext: ExecutionContext,
     containerInfo: ContainerInfo,
     node: NodeApi.Node,
+    volume: Option[String],
     route: Map[String, String],
     arguments: Seq[String]
   ): Future[Unit] =

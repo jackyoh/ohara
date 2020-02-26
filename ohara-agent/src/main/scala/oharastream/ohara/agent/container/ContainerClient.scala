@@ -82,6 +82,7 @@ object ContainerClient {
     private[this] var imageName: String                           = _
     private[this] var name: String                                = CommonUtils.randomString()
     private[this] var command: Option[String]                     = None
+    private[this] var mappingPath: Option[String]                 = _
     private[this] var arguments: Seq[String]                      = Seq.empty
     private[this] var ports: Map[Int, Int]                        = Map.empty
     private[this] var envs: Map[String, String]                   = Map.empty
@@ -188,12 +189,19 @@ object ContainerClient {
       this
     }
 
+    @Optional("default is empty")
+    def volume(mappingPath: Option[String]): ContainerCreator.this.type = {
+      this.mappingPath = mappingPath
+      this
+    }
+
     final override def create(): Future[Unit] = doCreate(
       nodeName = CommonUtils.requireNonEmpty(nodeName),
       hostname = CommonUtils.requireNonEmpty(hostname),
       imageName = CommonUtils.requireNonEmpty(imageName),
       name = CommonUtils.requireNonEmpty(name),
       command = Objects.requireNonNull(command),
+      volume = Objects.requireNonNull(mappingPath),
       arguments = Objects.requireNonNull(arguments),
       ports = Objects.requireNonNull(ports),
       envs = Objects.requireNonNull(envs),
@@ -207,6 +215,7 @@ object ContainerClient {
       imageName: String,
       name: String,
       command: Option[String],
+      volume: Option[String],
       arguments: Seq[String],
       ports: Map[Int, Int],
       envs: Map[String, String],

@@ -33,6 +33,7 @@ class TestContainerCreator extends OharaTest {
       imageName: String,
       name: String,
       command: Option[String],
+      volume: Option[String],
       arguments: Seq[String],
       ports: Map[Int, Int],
       envs: Map[String, String],

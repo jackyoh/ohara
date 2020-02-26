@@ -86,6 +86,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, k8sC
     executionContext: ExecutionContext,
     containerInfo: ContainerInfo,
     node: Node,
+    volume: Option[String],
     route: Map[String, String],
     arguments: Seq[String]
   ): Future[Unit] =
