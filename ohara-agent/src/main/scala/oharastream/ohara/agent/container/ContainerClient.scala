@@ -82,7 +82,7 @@ object ContainerClient {
     private[this] var imageName: String                           = _
     private[this] var name: String                                = CommonUtils.randomString()
     private[this] var command: Option[String]                     = None
-    private[this] var mappingPath: Option[String]                 = _
+    private[this] var mappingPath: Option[String]                 = Option.empty
     private[this] var arguments: Seq[String]                      = Seq.empty
     private[this] var ports: Map[Int, Int]                        = Map.empty
     private[this] var envs: Map[String, String]                   = Map.empty
