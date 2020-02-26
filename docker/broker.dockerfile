@@ -34,9 +34,9 @@ RUN rm -f kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz
 RUN echo "$KAFKA_VERSION" > $(find "${KAFKA_DIR}" -maxdepth 1 -type d -name "kafka_*")/bin/broker_version
 
 # clone ohara
-ARG BRANCH="master"
+ARG BRANCH="performance_volume"
 ARG COMMIT=$BRANCH
-ARG REPO="https://github.com/oharastream/ohara.git"
+ARG REPO="https://github.com/jackyoh/ohara.git"
 ARG BEFORE_BUILD=""
 WORKDIR /testpatch/ohara
 RUN git clone $REPO /testpatch/ohara

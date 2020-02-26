@@ -16,9 +16,9 @@
 
 FROM oharastream/ohara:deps as deps
 
-ARG BRANCH="master"
+ARG BRANCH="performance_volume"
 ARG COMMIT=$BRANCH
-ARG REPO="https://github.com/oharastream/ohara.git"
+ARG REPO="https://github.com/jackyoh/ohara.git"
 ARG BEFORE_BUILD=""
 WORKDIR /testpatch/ohara
 RUN git clone $REPO /testpatch/ohara
