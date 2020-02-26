@@ -321,6 +321,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
         previous = CommonUtils.current()
       }
     }
+    if (totalSizeInBytes.longValue() >= sizeOfInputData) {
+      TimeUnit.MILLISECONDS.sleep(logMetersFrequency.toMillis)
+      inputDataInfos = inputDataInfos ++ Seq(
+        DataInfo(CommonUtils.current() - setupStartTime, count.longValue(), totalSizeInBytes.longValue())
+      )
+    }
     (count.longValue(), totalSizeInBytes.longValue())
   }
 
