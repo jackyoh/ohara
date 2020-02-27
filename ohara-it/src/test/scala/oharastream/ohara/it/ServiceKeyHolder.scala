@@ -131,7 +131,7 @@ object ServiceKeyHolder {
           .foreach { container =>
             try {
               println(s"[-----------------------------------${container.name}-----------------------------------]")
-              val containerLogs = try result(client.log(container.name, None))
+              val containerLogs = try result(client.log(container.name, Option(600))) // Before 10 minutes container log
               catch {
                 case e: Throwable =>
                   s"failed to fetch the logs for container:${container.name}. caused by:${e.getMessage}"
