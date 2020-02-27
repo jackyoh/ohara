@@ -131,7 +131,6 @@ object ServiceKeyHolder {
           .foreach { container =>
             try {
               println(s"[-----------------------------------${container.name}-----------------------------------]")
-
               // Before 10 minutes container log. Avoid the OutOfMemory of Java heap
               val containerLogs = try result(client.log(container.name, Option(600)))
               catch {
