@@ -74,4 +74,5 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   private[this] def hdfsClient(): FileSystem = {
     FileSystem.hdfsBuilder.url(PerformanceTestingUtils.hdfsURL).build
   }
+  
 }
