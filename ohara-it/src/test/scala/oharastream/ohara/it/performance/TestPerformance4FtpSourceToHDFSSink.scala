@@ -60,7 +60,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
       className = classOf[HDFSSink].getName(),
       settings = Map(
         oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(2000),
+        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(50000),
         oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(dataDir)
       )
     )
