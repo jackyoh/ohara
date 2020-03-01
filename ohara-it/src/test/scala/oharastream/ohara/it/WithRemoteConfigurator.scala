@@ -22,7 +22,7 @@ import oharastream.ohara.agent.DataCollie
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
-import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
+import oharastream.ohara.common.util.{CommonUtils, VersionUtils}
 import org.junit.{After, Before}
 import org.scalatest.Matchers._
 
