@@ -69,6 +69,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
         )
       )
       sleepUntilEnd()
+      
     } finally {
       Releasable.close(hdfs)
       Releasable.close(ftp)
