@@ -213,6 +213,14 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       val builder  = reportBuilders.getOrElseUpdate(info.key, PerformanceReport.builder)
       builder.connectorKey(info.key)
       builder.className(info.className)
+
+      // Avoid duplication to sum for the metrics
+      info.metrics.meters.foreach(
+        meter =>
+          builder
+            .cleanValue(duration, meter.name)
+            .cleanValue(duration, s"${meter.name}(inPerSec)")
+      )
       info.metrics.meters.foreach(
         meter =>
           builder
