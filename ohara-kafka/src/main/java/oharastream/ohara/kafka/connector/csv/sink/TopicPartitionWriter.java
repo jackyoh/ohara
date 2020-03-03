@@ -179,7 +179,7 @@ public class TopicPartitionWriter implements Releasable {
     LOG.trace("Checking rotation on time with recordCount '{}'", recordCount);
 
     boolean scheduledRotation = rotateIntervalMs > 0 && now >= nextScheduledRotation;
-    LOG.info(
+    LOG.debug(
         "Should apply scheduled rotation: (rotateIntervalMs: '{}', nextScheduledRotation:"
             + " '{}', now: '{}')? {}",
         rotateIntervalMs,
