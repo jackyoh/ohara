@@ -58,16 +58,17 @@ object PerformanceReport {
     }
 
     def cleanValue(duration: Long, header: String): Builder = {
-      if (records.get(duration).nonEmpty) {
-        records.put(duration, records.getOrElse(duration, Map.empty) + (header -> 0.0))
-      }
+      records.put(duration, Map(header -> 0.0))
       this
     }
 
     def record(duration: Long, header: String, value: Double): Builder = {
-      val record: Map[String, Double] = records.getOrElse(duration, Map.empty)
-      val totalValue: Double          = record.getOrElse(header, 0.0) + value
-      records.put(duration, record + (header -> totalValue))
+      val record = records.getOrElse(duration, Map.empty)
+      records.put(
+        duration,
+        record + (header -> (record
+          .getOrElse(header, 0.0) + value))
+      )
       this
     }
 

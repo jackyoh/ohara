@@ -214,7 +214,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       builder.connectorKey(info.key)
       builder.className(info.className)
 
-      // Avoid duplication to sum for the metrics
+      // Different time get the metrics data, the metrics data maybe same.
+      // Must clean the same metrics data, avoid duplication to sum for the metrics
       info.metrics.meters.foreach(
         meter =>
           builder
