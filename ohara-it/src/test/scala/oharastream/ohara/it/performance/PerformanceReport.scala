@@ -57,8 +57,17 @@ object PerformanceReport {
       this
     }
 
+    def resetValue(duration: Long, header: String): Builder = {
+      records.put(duration, Map(header -> 0.0))
+      this
+    }
+
     def record(duration: Long, header: String, value: Double): Builder = {
-      records.put(duration, records.getOrElse(duration, Map.empty) + (header -> value))
+      val record = records.getOrElse(duration, Map(header -> 0.0))
+      records.put(
+        duration,
+        record + (header -> (record.getOrElse(header, 0.0) + value))
+      )
       this
     }
 
