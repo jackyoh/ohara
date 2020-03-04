@@ -66,7 +66,7 @@ object PerformanceReport {
       val record = records.getOrElse(duration, Map(header -> 0.0))
       records.put(
         duration,
-        record + (header -> (record.get(header).get + value))
+        record + (header -> (record.getOrElse(header, 0.0) + value))
       )
       this
     }
