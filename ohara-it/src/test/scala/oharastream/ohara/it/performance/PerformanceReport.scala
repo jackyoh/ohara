@@ -57,7 +57,7 @@ object PerformanceReport {
       this
     }
 
-    def cleanValue(duration: Long, header: String): Builder = {
+    def resetValue(duration: Long, header: String): Builder = {
       records.put(duration, Map(header -> 0.0))
       this
     }

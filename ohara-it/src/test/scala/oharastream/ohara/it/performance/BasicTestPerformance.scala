@@ -219,8 +219,8 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
       info.metrics.meters.foreach(
         meter =>
           builder
-            .cleanValue(duration, meter.name)
-            .cleanValue(duration, s"${meter.name}(inPerSec)")
+            .resetValue(duration, meter.name)
+            .resetValue(duration, s"${meter.name}(inPerSec)")
       )
       info.metrics.meters.foreach(
         meter =>

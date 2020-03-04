@@ -37,7 +37,7 @@ class TestPerformanceReport extends OharaTest {
 
     // After clean value
     report
-      .cleanValue(1, headerName)
+      .resetValue(1, headerName)
       .build
       .records
       .get(1)
@@ -67,11 +67,11 @@ class TestPerformanceReport extends OharaTest {
     report
       .connectorKey(ConnectorKey.of("benchmark", CommonUtils.randomString(5)))
       .className("class")
-      .cleanValue(1, headerName)
+      .resetValue(1, headerName)
       .record(1, headerName, 100)
       .record(1, headerName, 200)
       .record(1, headerName, 300)
-      .cleanValue(1, headerName)
+      .resetValue(1, headerName)
       .record(1, headerName, 100)
       .record(1, headerName, 200)
       .record(1, headerName, 300)
