@@ -20,6 +20,8 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import oharastream.ohara.common.annotations.VisibleForTesting;
 import oharastream.ohara.common.util.Releasable;
 import oharastream.ohara.kafka.connector.RowSourceRecord;
@@ -41,6 +43,9 @@ public abstract class CsvSourceTask extends RowSourceTask {
   private CsvSourceConfig config;
   private DataReader dataReader;
   private FileSystem fs;
+  private int fileNameQueueCapacity = 4096;
+  private BlockingQueue<String> fileNameQueue =
+      new ArrayBlockingQueue<String>(fileNameQueueCapacity);
 
   /**
    * Return the file system for this connector
@@ -59,17 +64,27 @@ public abstract class CsvSourceTask extends RowSourceTask {
 
   @Override
   public final List<RowSourceRecord> pollRecords() {
-    Iterator<String> fileNames = fs.listFileNames(config.inputFolder());
-    while (fileNames.hasNext()) {
-      String fileName = fileNames.next();
-      String path = Paths.get(config.inputFolder(), fileName).toString();
-      // we skip the folder
-      if (fs.fileType(path) == FileType.FILE
-          &&
-          // Avoid more than one Task processing the same file
-          fileName.hashCode() % config.total() == config.hash()) return dataReader.read(path);
+    if (fileNameQueue.size() == 0) {
+      Iterator<String> fileNames = fs.listFileNames(config.inputFolder());
+      while (fileNames.hasNext() && fileNameQueue.size() < fileNameQueueCapacity) {
+        fileNameQueue.add(fileNames.next());
+      }
     }
-    return Collections.emptyList();
+
+    try {
+      for (String fileName : fileNameQueue) {
+        fileNameQueue.take();
+        String path = Paths.get(config.inputFolder(), fileName).toString();
+        // we skip the folder
+        if (fs.fileType(path) == FileType.FILE
+            &&
+            // Avoid more than one Task processing the same file
+            fileName.hashCode() % config.total() == config.hash()) return dataReader.read(path);
+      }
+      return Collections.emptyList();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
