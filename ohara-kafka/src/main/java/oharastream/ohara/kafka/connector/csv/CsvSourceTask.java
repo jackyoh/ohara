@@ -76,7 +76,6 @@ public abstract class CsvSourceTask extends RowSourceTask {
 
     try {
       String fileName = fileNameQueue.poll(5, TimeUnit.SECONDS);
-
       if (fileName != null) {
         String path = Paths.get(config.inputFolder(), fileName).toString();
 
@@ -97,6 +96,11 @@ public abstract class CsvSourceTask extends RowSourceTask {
   @Override
   public final void terminate() {
     Releasable.close(fs);
+  }
+
+  @VisibleForTesting
+  public BlockingQueue<String> getFileNameQueue() {
+    return fileNameQueue;
   }
 
   @VisibleForTesting
