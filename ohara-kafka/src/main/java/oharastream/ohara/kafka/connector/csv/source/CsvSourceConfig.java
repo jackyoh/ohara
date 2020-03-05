@@ -16,13 +16,7 @@
 
 package oharastream.ohara.kafka.connector.csv.source;
 
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.COMPLETED_FOLDER_KEY;
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.ERROR_FOLDER_KEY;
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.FILE_ENCODE_DEFAULT;
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.FILE_ENCODE_KEY;
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.INPUT_FOLDER_KEY;
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.TASK_HASH_KEY;
-import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.TASK_TOTAL_KEY;
+import static oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions.*;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +35,9 @@ public interface CsvSourceConfig {
 
   /** @return the folder containing the csv files */
   String inputFolder();
+
+  /** @return list the file queue number */
+  int listFileQueueNumber();
 
   /** @return the folder storing the processed csv files */
   Optional<String> completedFolder();
@@ -85,6 +82,11 @@ public interface CsvSourceConfig {
       @Override
       public String inputFolder() {
         return setting.stringValue(INPUT_FOLDER_KEY);
+      }
+
+      @Override
+      public int listFileQueueNumber() {
+        return setting.intOption(LIST_FILE_QUEUE_NUMBER_KEY).orElse(LIST_FILE_QUEUE_NUMBER_DEFAULT);
       }
 
       @Override

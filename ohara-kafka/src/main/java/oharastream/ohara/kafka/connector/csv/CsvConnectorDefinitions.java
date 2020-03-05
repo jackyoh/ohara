@@ -108,6 +108,17 @@ public final class CsvConnectorDefinitions {
           .orderInGroup(COUNTER.getAndIncrement())
           .build();
 
+  public static final String LIST_FILE_QUEUE_NUMBER_KEY = "listfilequeue.number";
+  public static final int LIST_FILE_QUEUE_NUMBER_DEFAULT = 4096;
+  public static final SettingDef LIST_FILE_QUEUE_DEFINITION =
+      SettingDef.builder()
+          .displayName("List File Queue Number")
+          .documentation("Setting the file queue number")
+          .key(LIST_FILE_QUEUE_NUMBER_KEY)
+          .optional(LIST_FILE_QUEUE_NUMBER_DEFAULT)
+          .orderInGroup(COUNTER.getAndIncrement())
+          .build();
+
   public static final String TASK_TOTAL_KEY = "task.total";
   public static final String TASK_HASH_KEY = "task.hash";
 
