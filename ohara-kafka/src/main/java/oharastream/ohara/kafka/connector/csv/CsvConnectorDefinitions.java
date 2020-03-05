@@ -18,6 +18,7 @@ package oharastream.ohara.kafka.connector.csv;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import oharastream.ohara.common.setting.SettingDef;
+import oharastream.ohara.common.util.CommonUtils;
 
 /** this class maintains all available definitions for both csv source and csv sink. */
 public final class CsvConnectorDefinitions {
@@ -108,14 +109,16 @@ public final class CsvConnectorDefinitions {
           .orderInGroup(COUNTER.getAndIncrement())
           .build();
 
-  public static final String LIST_FILE_QUEUE_NUMBER_KEY = "listfilequeue.number";
-  public static final int LIST_FILE_QUEUE_NUMBER_DEFAULT = 4096;
-  public static final SettingDef LIST_FILE_QUEUE_DEFINITION =
+  public static final String FILE_CACHE_SIZE_KEY = "listfilequeue.number";
+  public static final int FILE_CACHE_SIZE_DEFAULT = 4096;
+  public static final SettingDef FILE_CACHE_SIZE_DEFINITION =
       SettingDef.builder()
-          .displayName("List File Queue Number")
-          .documentation("Setting the file queue number")
-          .key(LIST_FILE_QUEUE_NUMBER_KEY)
-          .optional(LIST_FILE_QUEUE_NUMBER_DEFAULT)
+          .displayName("Size of file cache")
+          .documentation(
+              "The files listed from remote server are cached in the connector "
+                  + " so as to reduce the count of sending expensive list operation.")
+          .key(FILE_CACHE_SIZE_KEY)
+          .optional(CommonUtils.requirePositiveInt(FILE_CACHE_SIZE_DEFAULT))
           .orderInGroup(COUNTER.getAndIncrement())
           .build();
 

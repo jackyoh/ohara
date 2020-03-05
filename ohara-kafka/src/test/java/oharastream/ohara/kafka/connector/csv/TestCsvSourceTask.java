@@ -41,29 +41,29 @@ public class TestCsvSourceTask extends OharaTest {
     map.put(INPUT_FOLDER_KEY, "/input");
     map.put(TASK_TOTAL_KEY, "1");
     map.put(TASK_HASH_KEY, "10");
-    map.put(LIST_FILE_QUEUE_NUMBER_KEY, "3");
+    map.put(FILE_CACHE_SIZE_KEY, "3");
 
     sourceTask.run(TaskSetting.of(map));
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 0);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 0);
 
     sourceTask.pollRecords();
     // First poll the element, so queue size is 3 - 1 equals 2
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 2);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 2);
 
     sourceTask.pollRecords();
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 1);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 1);
 
     sourceTask.pollRecords();
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 0);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 0);
 
     sourceTask.pollRecords();
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 2);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 2);
 
     sourceTask.pollRecords();
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 1);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 1);
 
     sourceTask.pollRecords();
-    Assert.assertEquals(sourceTask.getFileNameQueue().size(), 0);
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 0);
   }
 }
 

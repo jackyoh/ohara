@@ -36,8 +36,8 @@ public interface CsvSourceConfig {
   /** @return the folder containing the csv files */
   String inputFolder();
 
-  /** @return list the file queue number */
-  int listFileQueueNumber();
+  /** @return size of file cache */
+  int fileCacheSize();
 
   /** @return the folder storing the processed csv files */
   Optional<String> completedFolder();
@@ -85,8 +85,8 @@ public interface CsvSourceConfig {
       }
 
       @Override
-      public int listFileQueueNumber() {
-        return setting.intOption(LIST_FILE_QUEUE_NUMBER_KEY).orElse(LIST_FILE_QUEUE_NUMBER_DEFAULT);
+      public int fileCacheSize() {
+        return setting.intOption(FILE_CACHE_SIZE_KEY).orElse(FILE_CACHE_SIZE_DEFAULT);
       }
 
       @Override

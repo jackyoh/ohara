@@ -44,8 +44,8 @@ public abstract class CsvSourceTask extends RowSourceTask {
   private CsvSourceConfig config;
   private DataReader dataReader;
   private FileSystem fs;
-  private int fileNameQueueCapacity;
-  private BlockingQueue<String> fileNameQueue;
+  private int fileNameCacheCapacity;
+  private BlockingQueue<String> fileNameCache;
 
   /**
    * Return the file system for this connector
@@ -60,22 +60,22 @@ public abstract class CsvSourceTask extends RowSourceTask {
     fs = fileSystem(setting);
     config = CsvSourceConfig.of(setting);
     dataReader = CsvDataReader.of(fs, config, rowContext);
-    fileNameQueueCapacity = config.listFileQueueNumber();
-    fileNameQueue = new ArrayBlockingQueue<String>(fileNameQueueCapacity);
+    fileNameCacheCapacity = config.fileCacheSize();
+    fileNameCache = new ArrayBlockingQueue<String>(fileNameCacheCapacity);
   }
 
   @Override
   public final List<RowSourceRecord> pollRecords() {
-    if (fileNameQueue.isEmpty()) {
+    if (fileNameCache.isEmpty()) {
       Iterator<String> fileNames = fs.listFileNames(config.inputFolder());
       while (fileNames.hasNext()) {
-        if (fileNameQueueCapacity <= fileNameQueue.size()) break;
-        else fileNameQueue.offer(fileNames.next());
+        if (fileNameCacheCapacity <= fileNameCache.size()) break;
+        else fileNameCache.offer(fileNames.next());
       }
     }
 
     try {
-      String fileName = fileNameQueue.poll(5, TimeUnit.SECONDS);
+      String fileName = fileNameCache.poll(5, TimeUnit.SECONDS);
       if (fileName != null) {
         String path = Paths.get(config.inputFolder(), fileName).toString();
 
@@ -99,12 +99,12 @@ public abstract class CsvSourceTask extends RowSourceTask {
   }
 
   @VisibleForTesting
-  public BlockingQueue<String> getFileNameQueue() {
-    return fileNameQueue;
+  int fileNameCacheSize() {
+    return fileNameCache.size();
   }
 
   @VisibleForTesting
-  public DataReader getDataReader() {
+  public DataReader dataReader() {
     return dataReader;
   }
 }

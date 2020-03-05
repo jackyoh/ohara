@@ -100,7 +100,7 @@ class TestFtpSourceTask extends OharaTest {
   @Test
   def testGetDataReader(): Unit = {
     val task = createTask(settings)
-    task.getDataReader().getClass shouldBe classOf[CsvDataReader]
+    task.dataReader().getClass shouldBe classOf[CsvDataReader]
   }
 
   @Test
@@ -108,7 +108,7 @@ class TestFtpSourceTask extends OharaTest {
     val settings = Map.empty[String, String]
     intercept[NoSuchElementException] {
       val task = createTask(settings)
-      task.getDataReader()
+      task.dataReader()
     }
   }
 

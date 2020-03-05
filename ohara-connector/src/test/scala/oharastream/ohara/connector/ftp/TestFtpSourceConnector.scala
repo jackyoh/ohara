@@ -100,13 +100,13 @@ class TestFtpSourceConnector extends With3Brokers3Workers {
           .columns(schema)
           .settings(
             Map(
-              INPUT_FOLDER_KEY           -> inputFolder,
-              COMPLETED_FOLDER_KEY       -> completedFolder,
-              FTP_HOSTNAME_KEY           -> testUtil.ftpServer.hostname(),
-              FTP_PORT_KEY               -> testUtil.ftpServer.port().toString,
-              FTP_USER_NAME_KEY          -> testUtil.ftpServer.user(),
-              FTP_PASSWORD_KEY           -> testUtil.ftpServer.password,
-              LIST_FILE_QUEUE_NUMBER_KEY -> "3"
+              INPUT_FOLDER_KEY     -> inputFolder,
+              COMPLETED_FOLDER_KEY -> completedFolder,
+              FTP_HOSTNAME_KEY     -> testUtil.ftpServer.hostname(),
+              FTP_PORT_KEY         -> testUtil.ftpServer.port().toString,
+              FTP_USER_NAME_KEY    -> testUtil.ftpServer.user(),
+              FTP_PASSWORD_KEY     -> testUtil.ftpServer.password,
+              FILE_CACHE_SIZE_KEY  -> "3"
             )
           )
           .create(),
