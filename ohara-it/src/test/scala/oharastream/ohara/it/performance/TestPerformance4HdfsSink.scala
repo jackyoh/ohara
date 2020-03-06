@@ -35,6 +35,14 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
     PerformanceTestingUtils.HDFS_URL_KEY,
     throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
+
+  private[this] val hdfsFileFlushSize: Int = sys.env
+    .getOrElse(
+      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_KEY,
+      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_DEFAULT
+    )
+    .toInt
+
   private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
   @Test
@@ -47,7 +55,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
       className = classOf[HDFSSink].getName(),
       settings = Map(
         oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(2000),
+        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(hdfsFileFlushSize),
         oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(dataDir)
       )
     )

@@ -31,6 +31,14 @@ import spray.json.{JsNumber, JsString}
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
   private[this] val dataDir: String = "/tmp"
+
+  private[this] val hdfsFileFlushSize: Int = sys.env
+    .getOrElse(
+      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_KEY,
+      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_DEFAULT
+    )
+    .toInt
+
   private[this] val hdfsURL: String = sys.env.getOrElse(
     PerformanceTestingUtils.HDFS_URL_KEY,
     throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
@@ -67,7 +75,7 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       className = classOf[HDFSSink].getName(),
       settings = Map(
         oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(2000),
+        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(hdfsFileFlushSize),
         oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(dataDir)
       )
     )
