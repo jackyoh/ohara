@@ -74,9 +74,11 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
       settings = Map(
-        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY      -> JsString(hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY    -> JsNumber(hdfsFileFlushSize),
-        oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(dataDir)
+        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
+        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(hdfsFileFlushSize),
+        oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
+          PerformanceHDFSUtils.createFolder(hdfsURL, dataDir)
+        )
       )
     )
     sleepUntilEnd()
@@ -88,10 +90,9 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       client.dropTable(tableName)
 
       //Delete file for the HDFS
-      val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
-      try topicInfos.foreach { topicInfo =>
+      topicInfos.foreach { topicInfo =>
         val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
-        if (fileSystem.exists(path)) fileSystem.delete(path, true)
-      } finally Releasable.close(fileSystem)
+        PerformanceHDFSUtils.deleteFolder(hdfsURL, path)
+      }
     }
 }
