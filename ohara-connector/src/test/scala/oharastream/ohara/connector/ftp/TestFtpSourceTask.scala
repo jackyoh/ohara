@@ -24,7 +24,6 @@ import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
-import oharastream.ohara.kafka.connector.csv.source.CsvDataReader
 import oharastream.ohara.kafka.connector.json.ConnectorFormatter
 import oharastream.ohara.testing.service.FtpServer
 import org.junit.{After, Before, Test}
@@ -82,34 +81,6 @@ class TestFtpSourceTask extends OharaTest {
         .raw()
     )
     task
-  }
-
-  private[this] def createTask(settings: Map[String, String]) = {
-    val task = new FtpSourceTask()
-    task.start(
-      ConnectorFormatter
-        .of()
-        .connectorKey(ConnectorKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5)))
-        .topicKey(TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5)))
-        .settings(settings.asJava)
-        .raw()
-    )
-    task
-  }
-
-  @Test
-  def testGetDataReader(): Unit = {
-    val task = createTask(settings)
-    task.dataReader().getClass shouldBe classOf[CsvDataReader]
-  }
-
-  @Test
-  def testGetDataReader_WithEmptyConfig(): Unit = {
-    val settings = Map.empty[String, String]
-    intercept[NoSuchElementException] {
-      val task = createTask(settings)
-      task.dataReader()
-    }
   }
 
   @Test

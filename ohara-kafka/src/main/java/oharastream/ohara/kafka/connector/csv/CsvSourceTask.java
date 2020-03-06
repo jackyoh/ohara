@@ -104,7 +104,7 @@ public abstract class CsvSourceTask extends RowSourceTask {
   }
 
   @VisibleForTesting
-  public DataReader dataReader() {
+  DataReader dataReader() {
     return dataReader;
   }
 }
