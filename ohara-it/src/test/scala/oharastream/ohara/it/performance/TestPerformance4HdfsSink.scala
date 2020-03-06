@@ -18,32 +18,18 @@ package oharastream.ohara.it.performance
 
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
-import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.common.setting.ConnectorKey
-import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.connector.hdfs.sink.HDFSSink
 import oharastream.ohara.it.category.PerformanceGroup
 import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
-import org.junit.{AssumptionViolatedException, Test}
+import org.junit.Test
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4HdfsSink extends BasicTestPerformance {
   private[this] val NEED_DELETE_DATA_KEY: String = PerformanceTestingUtils.DATA_CLEANUP_KEY
-  private[this] val dataDir: String              = "/tmp"
-  private[this] val hdfsURL: String = sys.env.getOrElse(
-    PerformanceTestingUtils.HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
-  )
-
-  private[this] val hdfsFileFlushSize: Int = sys.env
-    .getOrElse(
-      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_KEY,
-      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_DEFAULT
-    )
-    .toInt
-
-  private[this] val needDeleteData: Boolean = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
+  private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
   @Test
   def test(): Unit = {
@@ -54,10 +40,10 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
       settings = Map(
-        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(hdfsFileFlushSize),
+        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceHDFSUtils.hdfsURL),
+        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(PerformanceHDFSUtils.hdfsFileFlushSize),
         oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
-          PerformanceHDFSUtils.createFolder(hdfsURL, dataDir)
+          PerformanceHDFSUtils.createFolder(PerformanceHDFSUtils.hdfsURL, PerformanceHDFSUtils.dataDir)
         )
       )
     )
@@ -66,9 +52,10 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
 
   override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
     if (needDeleteData) {
+      //Delete file from the HDFS
       topicInfos.foreach { topicInfo =>
-        val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
-        PerformanceHDFSUtils.deleteFolder(hdfsURL, path)
+        val path = s"${PerformanceHDFSUtils.dataDir}/${topicInfo.topicNameOnKafka}"
+        PerformanceHDFSUtils.deleteFolder(PerformanceHDFSUtils.hdfsURL, path)
       }
     }
 }

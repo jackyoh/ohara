@@ -18,32 +18,17 @@ package oharastream.ohara.it.performance
 
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
-import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.common.setting.ConnectorKey
-import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.connector.hdfs.sink.HDFSSink
 import oharastream.ohara.connector.jdbc.source.JDBCSourceConnector
 import oharastream.ohara.it.category.PerformanceGroup
 import org.junit.experimental.categories.Category
-import org.junit.{AssumptionViolatedException, Test}
+import org.junit.Test
 import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
-  private[this] val dataDir: String = "/tmp"
-
-  private[this] val hdfsFileFlushSize: Int = sys.env
-    .getOrElse(
-      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_KEY,
-      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_DEFAULT
-    )
-    .toInt
-
-  private[this] val hdfsURL: String = sys.env.getOrElse(
-    PerformanceTestingUtils.HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
-  )
-
   override protected val tableName: String = s"TABLE${CommonUtils.randomString().toUpperCase()}"
 
   @Test
@@ -74,10 +59,10 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
       settings = Map(
-        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(hdfsFileFlushSize),
+        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceHDFSUtils.hdfsURL),
+        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(PerformanceHDFSUtils.hdfsFileFlushSize),
         oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
-          PerformanceHDFSUtils.createFolder(hdfsURL, dataDir)
+          PerformanceHDFSUtils.createFolder(PerformanceHDFSUtils.hdfsURL, PerformanceHDFSUtils.dataDir)
         )
       )
     )
@@ -89,10 +74,10 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
       //Drop table for the database
       client.dropTable(tableName)
 
-      //Delete file for the HDFS
+      //Delete file from the HDFS
       topicInfos.foreach { topicInfo =>
-        val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
-        PerformanceHDFSUtils.deleteFolder(hdfsURL, path)
+        val path = s"${PerformanceHDFSUtils.dataDir}/${topicInfo.topicNameOnKafka}"
+        PerformanceHDFSUtils.deleteFolder(PerformanceHDFSUtils.hdfsURL, path)
       }
     }
 }
