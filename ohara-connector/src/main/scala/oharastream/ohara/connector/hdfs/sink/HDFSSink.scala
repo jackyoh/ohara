@@ -31,9 +31,12 @@ import scala.collection.JavaConverters._
 class HDFSSink extends CsvSinkConnector {
   private[this] var settings: TaskSetting = _
 
-  override def fileSystem(setting: TaskSetting): storage.FileSystem =
-    FileSystem.hdfsBuilder.url(HDFSSinkProps(setting).hdfsURL).build
-
+  override def fileSystem(setting: TaskSetting): storage.FileSystem = {
+    FileSystem.hdfsBuilder
+      .url(HDFSSinkProps(setting).hdfsURL)
+      .replicationNumber(HDFSSinkProps(setting).replicationNumber)
+      .build
+  }
   override protected def execute(settings: TaskSetting): Unit = {
     this.settings = settings
   }

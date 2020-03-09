@@ -18,13 +18,17 @@ package oharastream.ohara.connector.hdfs.sink
 
 import oharastream.ohara.kafka.connector.TaskSetting
 
-case class HDFSSinkProps(hdfsURL: String) {
-  def toMap: Map[String, String] = Map(HDFS_URL_KEY -> hdfsURL)
+case class HDFSSinkProps(hdfsURL: String, replicationNumber: Int) {
+  def toMap: Map[String, String] =
+    Map(HDFS_URL_KEY -> hdfsURL, HDFS_REPLICATION_NUMBER_KEY -> replicationNumber.toString())
 }
 
 object HDFSSinkProps {
   val FS_DEFAULT: String = "fs.defaultFS"
   def apply(settings: TaskSetting): HDFSSinkProps = {
-    HDFSSinkProps(hdfsURL = settings.stringValue(HDFS_URL_KEY))
+    HDFSSinkProps(
+      hdfsURL = settings.stringValue(HDFS_URL_KEY),
+      replicationNumber = settings.intOption(HDFS_REPLICATION_NUMBER_KEY).orElse(HDFS_REPLICATION_NUMBER_DEFAULT)
+    )
   }
 }

@@ -32,7 +32,14 @@ class TestHDFSSinkConfig extends OharaTest {
   @Test
   def testGetDataDir(): Unit = {
     val hdfsSinkConfig: HDFSSinkProps = hdfsConfig(Map(HDFS_URL_KEY -> HDFS_URL_VALUE))
-
     hdfsSinkConfig.hdfsURL shouldBe HDFS_URL_VALUE
+  }
+
+  @Test
+  def testReplication(): Unit = {
+    val hdfsSinkConfig: HDFSSinkProps = hdfsConfig(
+      Map(HDFS_URL_KEY -> HDFS_URL_VALUE, HDFS_REPLICATION_NUMBER_KEY -> "2")
+    )
+    hdfsSinkConfig.replicationNumber shouldBe 2
   }
 }

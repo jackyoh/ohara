@@ -33,17 +33,24 @@ private[filesystem] object HdfsFileSystem {
   def builder: Builder = new Builder
 
   class Builder private[filesystem] extends oharastream.ohara.common.pattern.Builder[FileSystem] {
-    private[this] val LOG         = Logger(classOf[FileSystem])
-    private[this] var url: String = _
+    private[this] val LOG                    = Logger(classOf[FileSystem])
+    private[this] var url: String            = _
+    private[this] var replicationNumber: Int = 3
 
     def url(value: String): Builder = {
       this.url = CommonUtils.requireNonEmpty(value)
       this
     }
 
+    def replicationNumber(number: Int): Builder = {
+      this.replicationNumber = CommonUtils.requirePositiveInt(number);
+      this
+    }
+
     override def build: FileSystem = {
       val config = new Configuration()
       config.set("fs.defaultFS", url)
+      config.set("dfs.replication", this.replicationNumber.toString())
       new HdfsFileSystemImpl(org.apache.hadoop.fs.FileSystem.get(config))
     }
 
@@ -98,7 +105,7 @@ private[filesystem] object HdfsFileSystem {
         * @return an output stream associated with the new file
         */
       override def create(path: String): OutputStream = wrap { () =>
-        println(s"Harry: HdfsFileSystem.create(${path})")
+        println(s"HdfsFileSystem.create(${path})")
         if (exists(path)) throw new IllegalArgumentException(s"The path $path already exists")
         val parent = Paths.get(path).getParent.toString
         if (nonExists(parent)) mkdirs(parent)

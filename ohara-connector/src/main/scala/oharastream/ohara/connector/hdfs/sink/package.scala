@@ -37,6 +37,17 @@ package object sink {
     .orderInGroup(COUNTER.getAndIncrement())
     .build()
 
+  val HDFS_REPLICATION_NUMBER_KEY: String  = "hdfs.replication"
+  val HDFS_REPLICATION_NUMBER_DEFAULT: Int = 3
+  val HDFS_REPLICATION_NUMBER_DEFINITION = SettingDef
+    .builder()
+    .displayName("HDFS Replication Number")
+    .documentation("Setting the hdfs block replication number")
+    .positiveNumber(HDFS_REPLICATION_NUMBER_DEFAULT)
+    .key(HDFS_REPLICATION_NUMBER_KEY)
+    .orderInGroup(COUNTER.getAndIncrement())
+    .build()
+
   /**
     * the core settings for HDFSSink.
     */

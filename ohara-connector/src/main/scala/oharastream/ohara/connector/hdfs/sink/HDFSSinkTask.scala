@@ -22,5 +22,8 @@ import oharastream.ohara.kafka.connector.{TaskSetting, storage}
 
 class HDFSSinkTask extends CsvSinkTask {
   override def fileSystem(setting: TaskSetting): storage.FileSystem =
-    FileSystem.hdfsBuilder.url(HDFSSinkProps(setting).hdfsURL).build
+    FileSystem.hdfsBuilder
+      .url(HDFSSinkProps(setting).hdfsURL)
+      .replicationNumber(HDFSSinkProps(setting).replicationNumber)
+      .build
 }
