@@ -22,6 +22,7 @@ import oharastream.ohara.common.setting.ConnectorKey
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.connector.hdfs.sink.HDFSSink
 import oharastream.ohara.it.category.PerformanceGroup
+import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
 import org.junit.Test
@@ -40,8 +41,8 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[HDFSSink].getName(),
       settings = Map(
-        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceHDFSUtils.hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(PerformanceHDFSUtils.hdfsFileFlushSize),
+        CsvConnectorDefinitions.FLUSH_SIZE_KEY             -> JsNumber(numberOfCsvFileToFlush),
+        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY -> JsString(PerformanceHDFSUtils.hdfsURL),
         oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
           PerformanceHDFSUtils.createFolder(PerformanceHDFSUtils.hdfsURL, PerformanceHDFSUtils.dataDir)
         )

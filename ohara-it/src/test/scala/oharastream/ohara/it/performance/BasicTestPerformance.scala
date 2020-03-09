@@ -80,6 +80,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val numberOfRowsToFlush: Int =
     value(numberOfRowsToFlushKey).getOrElse(numberOfRowsToFlushDefault).toInt
 
+  private[this] val numberOfCsvFileToFlushKey             = PerformanceTestingUtils.CSV_FILE_FLUSH_SIZE_KEY
+  private[this] val numberOfCsvFileToFlushDefault: String = "10000"
+  protected val numberOfCsvFileToFlush: Int =
+    value(numberOfCsvFileToFlushKey).getOrElse(numberOfCsvFileToFlushDefault).toInt
+
   private[this] val wholeTimeout = (durationOfPerformance.toSeconds + timeoutOfInputData.toSeconds) * 2
 
   @Rule

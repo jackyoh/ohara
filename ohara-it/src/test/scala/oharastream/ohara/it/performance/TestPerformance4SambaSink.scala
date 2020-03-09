@@ -25,7 +25,7 @@ import oharastream.ohara.it.category.PerformanceGroup
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.Test
 import org.junit.experimental.categories.Category
-import spray.json.JsString
+import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
@@ -40,7 +40,8 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
       connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
       className = classOf[SmbSink].getName(),
       settings = sambaSettings
-        + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)))
+        + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)),
+        CsvConnectorDefinitions.FLUSH_SIZE_KEY       -> JsNumber(numberOfCsvFileToFlush))
     )
     sleepUntilEnd()
   }

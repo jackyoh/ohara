@@ -28,13 +28,6 @@ object PerformanceHDFSUtils {
     throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
 
-  val hdfsFileFlushSize: Int = sys.env
-    .getOrElse(
-      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_KEY,
-      PerformanceTestingUtils.HDFS_FILE_FLUSH_SIZE_DEFAULT
-    )
-    .toInt
-
   def createFolder(hdfsURL: String, path: String): String = {
     val fileSystem = FileSystem.hdfsBuilder.url(hdfsURL).build
     try {

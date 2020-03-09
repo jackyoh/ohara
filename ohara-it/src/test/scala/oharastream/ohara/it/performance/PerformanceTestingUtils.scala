@@ -46,10 +46,10 @@ private[performance] object PerformanceTestingUtils {
   val JAR_FOLDER_KEY: String   = "ohara.it.jar.folder"
 
   // HDFS Setting Key
-  val HDFS_URL_KEY: String                 = "ohara.it.performance.hdfs.url"
-  val HDFS_FILE_FLUSH_SIZE_KEY: String     = "ohara.it.performance.hdfs.file.flush.size"
-  val HDFS_FILE_FLUSH_SIZE_DEFAULT: String = "10000"
+  val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
 
-  val CSV_INPUT_KEY: String    = "ohara.it.performance.csv.input"
+  val CSV_FILE_FLUSH_SIZE_KEY: String = "ohara.it.performance.csv.file.flush.size"
+  val CSV_INPUT_KEY: String           = "ohara.it.performance.csv.input"
+
   val DATA_CLEANUP_KEY: String = "ohara.it.performance.cleanup"
 }
