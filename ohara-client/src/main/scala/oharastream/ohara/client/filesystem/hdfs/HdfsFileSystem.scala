@@ -105,7 +105,7 @@ private[filesystem] object HdfsFileSystem {
         * @return an output stream associated with the new file
         */
       override def create(path: String): OutputStream = wrap { () =>
-        LOG.info(s"HdfsFileSystem.create(${path})")
+        LOG.debug(s"HdfsFileSystem.create(${path})")
         if (exists(path)) throw new IllegalArgumentException(s"The path $path already exists")
         val parent = Paths.get(path).getParent.toString
         if (nonExists(parent)) mkdirs(parent)
