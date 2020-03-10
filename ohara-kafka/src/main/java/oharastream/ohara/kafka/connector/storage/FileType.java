@@ -19,5 +19,6 @@ package oharastream.ohara.kafka.connector.storage;
 /** the common file types to all file systems. */
 public enum FileType {
   FILE,
-  FOLDER
+  FOLDER,
+  UNKNOWN
 }
