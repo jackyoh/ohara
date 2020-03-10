@@ -19,7 +19,7 @@ package oharastream.ohara.it.performance
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
 import oharastream.ohara.common.setting.ConnectorKey
-import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.smb.SmbSink
 import oharastream.ohara.it.category.PerformanceGroup
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -33,23 +33,31 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
 
   @Test
   def test(): Unit = {
-    createTopic()
-    produce(timeoutOfInputData)
-    loopInputDataThread(produce)
-    setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
-      className = classOf[SmbSink].getName(),
-      settings = sambaSettings
-        + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createSambaFolder(outputDir)),
-        CsvConnectorDefinitions.FLUSH_SIZE_KEY       -> JsNumber(numberOfCsvFileToFlush))
-    )
-    sleepUntilEnd()
+    val samba = sambaClient()
+    try {
+      createTopic()
+      produce(timeoutOfInputData)
+      loopInputDataThread(produce)
+      setupConnector(
+        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        className = classOf[SmbSink].getName(),
+        settings = sambaSettings
+          + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(
+            PerformanceTestingUtils.createFolder(samba, outputDir)
+          ),
+          CsvConnectorDefinitions.FLUSH_SIZE_KEY -> JsNumber(numberOfCsvFileToFlush))
+      )
+      sleepUntilEnd()
+    } finally Releasable.close(samba)
   }
 
   override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
     if (needDeleteData)
       topicInfos.foreach { topicInfo =>
-        val path = s"${outputDir}/${topicInfo.topicNameOnKafka}"
-        if (exists(path)) removeSambaFolder(path)
+        val path  = s"${outputDir}/${topicInfo.topicNameOnKafka}"
+        val samba = sambaClient()
+        try {
+          if (PerformanceTestingUtils.exists(samba, path)) PerformanceTestingUtils.deleteFolder(samba, path)
+        } finally Releasable.close(samba)
       }
 }

@@ -29,6 +29,7 @@ import spray.json.JsString
 class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
   @Test
   def test(): Unit = {
+    val samba = sambaClient()
     createTopic()
     val completedPath = "completed"
     val errorPath     = "error"
@@ -40,15 +41,19 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
         connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
         className = classOf[SmbSource].getName(),
         settings = sambaSettings
-          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
-          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createSambaFolder(completedPath)))
-          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createSambaFolder(errorPath)))
+          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))
+          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(
+            PerformanceTestingUtils.createFolder(samba, completedPath)
+          ))
+          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY -> JsString(
+            PerformanceTestingUtils.createFolder(samba, errorPath)
+          ))
       )
       sleepUntilEnd()
     } finally if (needDeleteData) {
-      removeSambaFolder(path)
-      removeSambaFolder(completedPath)
-      removeSambaFolder(errorPath)
+      PerformanceTestingUtils.deleteFolder(samba, path)
+      PerformanceTestingUtils.deleteFolder(samba, completedPath)
+      PerformanceTestingUtils.deleteFolder(samba, errorPath)
     }
   }
 }

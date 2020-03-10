@@ -17,7 +17,7 @@
 package oharastream.ohara.it.performance
 
 import oharastream.ohara.common.setting.ConnectorKey
-import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.ftp.FtpSource
 import oharastream.ohara.it.category.PerformanceGroup
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -29,25 +29,32 @@ import spray.json.JsString
 class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
-    createTopic()
-    val completedPath = "/completed"
-    val errorPath     = "/error"
-    val (path, _, _)  = setupInputData(timeoutOfInputData)
+    val ftp = ftpClient()
     try {
-      loopInputDataThread(setupInputData)
-      setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
-        className = classOf[FtpSource].getName,
-        settings = ftpSettings
-          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY     -> JsString(path))
-          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(createFtpFolder(completedPath)))
-          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY     -> JsString(createFtpFolder(errorPath)))
-      )
-      sleepUntilEnd()
-    } finally if (cleanupTestData) {
-      removeFtpFolder(path)
-      removeFtpFolder(completedPath)
-      removeFtpFolder(errorPath)
-    }
+      createTopic()
+      val completedPath = "/completed"
+      val errorPath     = "/error"
+      val (path, _, _)  = setupInputData(timeoutOfInputData)
+      try {
+        loopInputDataThread(setupInputData)
+        setupConnector(
+          connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+          className = classOf[FtpSource].getName,
+          settings = ftpSettings
+            + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))
+            + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(
+              PerformanceTestingUtils.createFolder(ftp, completedPath)
+            ))
+            + (CsvConnectorDefinitions.ERROR_FOLDER_KEY -> JsString(
+              PerformanceTestingUtils.createFolder(ftp, errorPath)
+            ))
+        )
+        sleepUntilEnd()
+      } finally if (cleanupTestData) {
+        PerformanceTestingUtils.deleteFolder(ftp, path)
+        PerformanceTestingUtils.deleteFolder(ftp, completedPath)
+        PerformanceTestingUtils.deleteFolder(ftp, errorPath)
+      }
+    } finally Releasable.close(ftp)
   }
 }

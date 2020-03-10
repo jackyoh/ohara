@@ -16,6 +16,9 @@
 
 package oharastream.ohara.it.performance
 
+import oharastream.ohara.client.filesystem.FileSystem
+import org.junit.AssumptionViolatedException
+
 private[performance] object PerformanceTestingUtils {
   val INPUTDATA_TIMEOUT_KEY    = "ohara.it.performance.input.data.timeout"
   val DURATION_KEY             = "ohara.it.performance.duration"
@@ -47,9 +50,28 @@ private[performance] object PerformanceTestingUtils {
 
   // HDFS Setting Key
   val HDFS_URL_KEY: String = "ohara.it.performance.hdfs.url"
+  val dataDir: String      = "/tmp"
+
+  val hdfsURL: String = sys.env.getOrElse(
+    PerformanceTestingUtils.HDFS_URL_KEY,
+    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
+  )
 
   val CSV_FILE_FLUSH_SIZE_KEY: String = "ohara.it.performance.csv.file.flush.size"
   val CSV_INPUT_KEY: String           = "ohara.it.performance.csv.input"
 
   val DATA_CLEANUP_KEY: String = "ohara.it.performance.cleanup"
+
+  def createFolder(fileSystem: FileSystem, path: String): String = {
+    if (fileSystem.nonExists(path)) fileSystem.mkdirs(path)
+    path
+  }
+
+  def deleteFolder(fileSystem: FileSystem, path: String): Unit = {
+    if (fileSystem.exists(path)) fileSystem.delete(path, true)
+  }
+
+  def exists(fileSystem: FileSystem, path: String): Boolean = {
+    fileSystem.exists(path)
+  }
 }

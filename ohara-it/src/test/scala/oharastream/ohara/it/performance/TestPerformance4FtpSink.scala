@@ -19,7 +19,7 @@ package oharastream.ohara.it.performance
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
 import oharastream.ohara.common.setting.ConnectorKey
-import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.ftp.FtpSink
 import oharastream.ohara.it.category.PerformanceGroup
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -33,23 +33,28 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
 
   @Test
   def test(): Unit = {
-    createTopic()
-    produce(timeoutOfInputData)
-    loopInputDataThread(produce)
-    setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
-      className = classOf[FtpSink].getName(),
-      settings = ftpSettings
-        + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(createFtpFolder(dataDir)),
-        CsvConnectorDefinitions.FLUSH_SIZE_KEY       -> JsNumber(numberOfCsvFileToFlush))
-    )
-    sleepUntilEnd()
+    val ftp = ftpClient()
+    try {
+      createTopic()
+      produce(timeoutOfInputData)
+      loopInputDataThread(produce)
+      setupConnector(
+        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        className = classOf[FtpSink].getName(),
+        settings = ftpSettings
+          + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(PerformanceTestingUtils.createFolder(ftp, dataDir)),
+          CsvConnectorDefinitions.FLUSH_SIZE_KEY       -> JsNumber(numberOfCsvFileToFlush))
+      )
+      sleepUntilEnd()
+    } finally Releasable.close(ftp)
   }
 
   override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
     if (cleanupTestData)
       topicInfos.foreach { topicInfo =>
         val path = s"${dataDir}/${topicInfo.topicNameOnKafka}"
-        if (exists(path)) recursiveRemoveFolder(path)
+        val ftp  = ftpClient()
+        try if (PerformanceTestingUtils.exists(ftp, path)) PerformanceTestingUtils.deleteFolder(ftp, path)
+        finally Releasable.close(ftp)
       }
 }

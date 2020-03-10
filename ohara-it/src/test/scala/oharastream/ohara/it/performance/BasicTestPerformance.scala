@@ -66,12 +66,12 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
 
   //------------------------------[global properties]------------------------------//
   private[this] val durationOfPerformanceKey     = PerformanceTestingUtils.DURATION_KEY
-  private[this] val durationOfPerformanceDefault = 120 seconds
+  private[this] val durationOfPerformanceDefault = 50 seconds
   protected val durationOfPerformance: Duration =
     value(durationOfPerformanceKey).map(Duration.apply).getOrElse(durationOfPerformanceDefault)
 
   private[this] val timeoutOfInputDataKey               = PerformanceTestingUtils.INPUTDATA_TIMEOUT_KEY
-  private[this] val timeoutOfInputDataDefault: Duration = 30 seconds
+  private[this] val timeoutOfInputDataDefault: Duration = 10 seconds
   protected val timeoutOfInputData: Duration =
     value(timeoutOfInputDataKey).map(Duration(_)).getOrElse(timeoutOfInputDataDefault)
 

@@ -70,29 +70,10 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     oharastream.ohara.connector.smb.SMB_SHARE_NAME_KEY -> JsString(sambaShare)
   )
 
-  protected def createSambaFolder(path: String): String = {
-    val client = sambaClient()
-    try if (!client.exists(path)) client.mkdirs(path)
-    finally Releasable.close(client)
-    path
-  }
-
-  protected def removeSambaFolder(path: String): Unit = {
-    val client = sambaClient()
-    try client.delete(path, true)
-    finally Releasable.close(client)
-  }
-
-  protected def exists(path: String): Boolean = {
-    val client = sambaClient()
-    try client.exists(path)
-    finally Releasable.close(client)
-  }
-
   protected def setupInputData(timeout: Duration): (String, Long, Long) = {
     val client = sambaClient()
     try {
-      if (!client.exists(csvOutputFolder)) createSambaFolder(csvOutputFolder)
+      if (!client.exists(csvOutputFolder)) PerformanceTestingUtils.createFolder(client, csvOutputFolder)
 
       val result = generateData(
         numberOfRowsToFlush,
@@ -124,7 +105,7 @@ abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
     } finally Releasable.close(client)
   }
 
-  private[this] def sambaClient(): FileSystem =
+  protected[this] def sambaClient(): FileSystem =
     FileSystem.smbBuilder
       .hostname(sambaHostname)
       .port(sambaPort)

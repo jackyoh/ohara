@@ -18,8 +18,9 @@ package oharastream.ohara.it.performance
 
 import oharastream.ohara.client.configurator.v0.ConnectorApi.ConnectorInfo
 import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
+import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.common.setting.ConnectorKey
-import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.hdfs.sink.HDFSSink
 import oharastream.ohara.connector.jdbc.source.JDBCSourceConnector
 import oharastream.ohara.it.category.PerformanceGroup
@@ -33,51 +34,65 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
 
   @Test
   def test(): Unit = {
-    createTable()
-    setupInputData(timeoutOfInputData)
-    loopInputDataThread(setupInputData)
-    createTopic()
+    val hdfs = hdfsClient()
+    try {
+      createTable()
+      setupInputData(timeoutOfInputData)
+      loopInputDataThread(setupInputData)
+      createTopic()
 
-    //Running JDBC Source Connector
-    setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
-      className = classOf[JDBCSourceConnector].getName(),
-      settings = Map(
-        oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
-        oharastream.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
-        oharastream.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
-        oharastream.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
-        oharastream.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
-        oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
-        oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
-        oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
-      )
-    )
-
-    //Running HDFS Sink Connector
-    setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
-      className = classOf[HDFSSink].getName(),
-      settings = Map(
-        oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceHDFSUtils.hdfsURL),
-        oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(numberOfCsvFileToFlush),
-        oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
-          PerformanceHDFSUtils.createFolder(PerformanceHDFSUtils.hdfsURL, PerformanceHDFSUtils.dataDir)
+      //Running JDBC Source Connector
+      setupConnector(
+        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        className = classOf[JDBCSourceConnector].getName(),
+        settings = Map(
+          oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
+          oharastream.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
+          oharastream.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
+          oharastream.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
+          oharastream.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
+          oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
+          oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
+          oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
         )
       )
-    )
-    sleepUntilEnd()
+
+      //Running HDFS Sink Connector
+      setupConnector(
+        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        className = classOf[HDFSSink].getName(),
+        settings = Map(
+          oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceTestingUtils.hdfsURL),
+          oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(numberOfCsvFileToFlush),
+          oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
+            PerformanceTestingUtils.createFolder(hdfs, PerformanceTestingUtils.dataDir)
+          )
+        )
+      )
+      sleepUntilEnd()
+    } finally Releasable.close(hdfs)
   }
 
-  override protected def afterStoppingConnectors(connectorInfos: Seq[ConnectorInfo], topicInfos: Seq[TopicInfo]): Unit =
+  override protected def afterStoppingConnectors(
+    connectorInfos: Seq[ConnectorInfo],
+    topicInfos: Seq[TopicInfo]
+  ): Unit = {
     if (needDeleteData) {
       //Drop table for the database
       client.dropTable(tableName)
 
       //Delete file from the HDFS
-      topicInfos.foreach { topicInfo =>
-        val path = s"${PerformanceHDFSUtils.dataDir}/${topicInfo.topicNameOnKafka}"
-        PerformanceHDFSUtils.deleteFolder(PerformanceHDFSUtils.hdfsURL, path)
-      }
+      val hdfs = hdfsClient()
+      try {
+        topicInfos.foreach { topicInfo =>
+          val path = s"${PerformanceTestingUtils.dataDir}/${topicInfo.topicNameOnKafka}"
+          PerformanceTestingUtils.deleteFolder(hdfs, path)
+        }
+      } finally Releasable.close(hdfs)
     }
+  }
+
+  private[this] def hdfsClient(): FileSystem = {
+    FileSystem.hdfsBuilder.url(PerformanceTestingUtils.hdfsURL).build
+  }
 }
