@@ -497,7 +497,7 @@ object FtpClient {
         } else {
           // throw new IllegalArgumentException(s"$path doesn't exist")
           LOG.info(s"$path doesn't exist")
-          FileType.UNKNOWN
+          FileType.FOLDER
         }
 
       override def status(): String = connectIfNeeded().getStatus
