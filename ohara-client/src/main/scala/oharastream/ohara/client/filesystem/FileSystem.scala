@@ -22,7 +22,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import oharastream.ohara.client.filesystem.ftp.FtpFileSystem
 import oharastream.ohara.client.filesystem.hdfs.HdfsFileSystem
 import oharastream.ohara.client.filesystem.smb.SmbFileSystem
-import oharastream.ohara.common.exception.OharaFileSystemException
+import oharastream.ohara.common.exception.FileSystemException
 
 trait FileSystem extends oharastream.ohara.kafka.connector.storage.FileSystem {
   /**
@@ -91,8 +91,8 @@ trait FileSystem extends oharastream.ohara.kafka.connector.storage.FileSystem {
     try {
       f()
     } catch {
-      case e: IOException           => throw new OharaFileSystemException(e.getMessage, e)
-      case e: IllegalStateException => throw new OharaFileSystemException(e.getMessage, e)
+      case e: IOException           => throw new FileSystemException(e.getMessage, e)
+      case e: IllegalStateException => throw new FileSystemException(e.getMessage, e)
     }
 }
 

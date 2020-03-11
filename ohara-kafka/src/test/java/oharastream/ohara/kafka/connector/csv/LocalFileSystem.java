@@ -25,8 +25,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
+import oharastream.ohara.common.exception.FileSystemException;
 import oharastream.ohara.common.exception.NoSuchFileException;
-import oharastream.ohara.common.exception.OharaFileSystemException;
 import oharastream.ohara.kafka.connector.storage.FileSystem;
 import oharastream.ohara.kafka.connector.storage.FileType;
 
@@ -48,7 +48,7 @@ public class LocalFileSystem implements FileSystem {
       }
       return Files.list(Paths.get(dir)).map(f -> f.getFileName().toString()).iterator();
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 
@@ -69,7 +69,7 @@ public class LocalFileSystem implements FileSystem {
       }
       return Files.newOutputStream(Paths.get(path));
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 
@@ -86,7 +86,7 @@ public class LocalFileSystem implements FileSystem {
       }
       return Files.newInputStream(Paths.get(path));
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 
@@ -107,7 +107,7 @@ public class LocalFileSystem implements FileSystem {
 
       return true;
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 
@@ -131,7 +131,7 @@ public class LocalFileSystem implements FileSystem {
       Files.move(Paths.get(sourcePath), Paths.get(targetPath));
       return exists(targetPath);
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 
@@ -156,7 +156,7 @@ public class LocalFileSystem implements FileSystem {
         Files.delete(Paths.get(path));
       }
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 
@@ -165,7 +165,7 @@ public class LocalFileSystem implements FileSystem {
     try {
       Files.createDirectories(Paths.get(dir));
     } catch (IOException e) {
-      throw new OharaFileSystemException(e);
+      throw new FileSystemException(e);
     }
   }
 

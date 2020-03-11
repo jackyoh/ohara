@@ -20,7 +20,7 @@ import java.io.{BufferedWriter, File, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 
 import oharastream.ohara.client.filesystem.{FileFilter, FileSystem, FileSystemTestBase}
-import oharastream.ohara.common.exception.OharaFileSystemException
+import oharastream.ohara.common.exception.FileSystemException
 import oharastream.ohara.common.util.CommonUtils
 import org.junit.Test
 import org.scalatest.Matchers._
@@ -40,7 +40,7 @@ class TestHdfsFileSystem extends FileSystemTestBase {
     val file = randomFile()
     fileSystem.create(file).close()
 
-    intercept[OharaFileSystemException] {
+    intercept[FileSystemException] {
       fileSystem.append(file)
     }.getMessage shouldBe "Not supported"
   }

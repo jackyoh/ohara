@@ -29,14 +29,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import oharastream.ohara.common.annotations.VisibleForTesting;
-import oharastream.ohara.common.exception.OharaConfigException;
+import oharastream.ohara.common.exception.ConfigException;
 import oharastream.ohara.common.setting.SettingDef;
 import oharastream.ohara.common.setting.SettingDef.Reference;
 import oharastream.ohara.common.setting.SettingDef.Type;
 import oharastream.ohara.common.setting.TableColumn;
 import oharastream.ohara.kafka.RowDefaultPartitioner;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.runtime.rest.entities.ConfigKeyInfo;
 
 /**
@@ -327,12 +326,12 @@ public final class ConnectorDefUtils {
           // TODO move this to RouteUtils in #2191
           try {
             def.checker().accept(value);
-          } catch (OharaConfigException e) {
-            // wrap OharaConfigException to ConfigException in order to pass this checker to kafka
-            throw new ConfigException(e.getMessage());
+          } catch (ConfigException e) {
+            // wrap Ohara ConfigException to ConfigException in order to pass this checker to kafka
+            throw new org.apache.kafka.common.config.ConfigException(e.getMessage());
           } catch (Throwable e) {
             // Except for ConfigException, other exceptions are not allowed by kafka.
-            throw new OharaConfigException(key, value, e.getMessage());
+            throw new ConfigException(key, value, e.getMessage());
           }
         },
         ConfigDef.Importance.MEDIUM,

@@ -33,7 +33,7 @@ import com.hierynomus.smbj.share.DiskShare
 import com.hierynomus.smbj.{SMBClient, SmbConfig}
 import oharastream.ohara.client.filesystem.{FileFilter, FileSystem}
 import oharastream.ohara.common.annotations.Optional
-import oharastream.ohara.common.exception.{NoSuchFileException, OharaFileSystemException}
+import oharastream.ohara.common.exception.{NoSuchFileException, FileSystemException}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 
@@ -121,9 +121,9 @@ private[filesystem] object SmbFileSystem {
         try {
           f()
         } catch {
-          case e: IOException           => throw new OharaFileSystemException(e.getMessage, e)
-          case e: IllegalStateException => throw new OharaFileSystemException(e.getMessage, e)
-          case e: SMBRuntimeException   => throw new OharaFileSystemException(e.getMessage, e)
+          case e: IOException           => throw new FileSystemException(e.getMessage, e)
+          case e: IllegalStateException => throw new FileSystemException(e.getMessage, e)
+          case e: SMBRuntimeException   => throw new FileSystemException(e.getMessage, e)
         }
 
       private[this] def connectShare[T](f: (DiskShare) => T): T = wrap { () =>

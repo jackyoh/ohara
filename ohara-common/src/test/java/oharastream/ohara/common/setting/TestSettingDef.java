@@ -26,7 +26,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import oharastream.ohara.common.data.Serializer;
-import oharastream.ohara.common.exception.OharaConfigException;
+import oharastream.ohara.common.exception.ConfigException;
 import oharastream.ohara.common.json.JsonUtils;
 import oharastream.ohara.common.rule.OharaTest;
 import oharastream.ohara.common.util.CommonUtils;
@@ -186,13 +186,13 @@ public class TestSettingDef extends OharaTest {
     // there is default value so null is ok
     settingDef.checker().accept(null);
     // illegal format
-    assertException(OharaConfigException.class, () -> settingDef.checker().accept(123));
+    assertException(ConfigException.class, () -> settingDef.checker().accept(123));
     // illegal format
     assertException(
-        OharaConfigException.class, () -> settingDef.checker().accept(Collections.emptyList()));
+        ConfigException.class, () -> settingDef.checker().accept(Collections.emptyList()));
     // neglect column "b"
     assertException(
-        OharaConfigException.class,
+        ConfigException.class,
         () ->
             settingDef
                 .checker()
@@ -207,7 +207,7 @@ public class TestSettingDef extends OharaTest {
     Map<String, String> illegalColumnMap = new HashMap<>(goodMap);
     illegalColumnMap.put("dddd", "fff");
     assertException(
-        OharaConfigException.class,
+        ConfigException.class,
         () ->
             settingDef
                 .checker()
@@ -221,10 +221,10 @@ public class TestSettingDef extends OharaTest {
             .key(CommonUtils.randomString())
             .required(SettingDef.Type.DURATION)
             .build();
-    assertException(OharaConfigException.class, () -> settingDef.checker().accept(null));
-    assertException(OharaConfigException.class, () -> settingDef.checker().accept(123));
+    assertException(ConfigException.class, () -> settingDef.checker().accept(null));
+    assertException(ConfigException.class, () -> settingDef.checker().accept(123));
     assertException(
-        OharaConfigException.class, () -> settingDef.checker().accept(Collections.emptyList()));
+        ConfigException.class, () -> settingDef.checker().accept(Collections.emptyList()));
     settingDef.checker().accept(Duration.ofHours(3).toString());
     settingDef.checker().accept("10 MILLISECONDS");
     settingDef.checker().accept("10 SECONDS");
@@ -248,9 +248,9 @@ public class TestSettingDef extends OharaTest {
         SettingDef.builder().required(SettingDef.Type.REMOTE_PORT).key("port.key").build();
     // pass
     s.checker().accept(100);
-    assertException(OharaConfigException.class, () -> s.checker().accept(-1));
-    assertException(OharaConfigException.class, () -> s.checker().accept(0));
-    assertException(OharaConfigException.class, () -> s.checker().accept(100000000));
+    assertException(ConfigException.class, () -> s.checker().accept(-1));
+    assertException(ConfigException.class, () -> s.checker().accept(0));
+    assertException(ConfigException.class, () -> s.checker().accept(100000000));
   }
 
   @Test
@@ -261,10 +261,9 @@ public class TestSettingDef extends OharaTest {
     s.checker().accept("{\"123\":456}");
     s.checker().accept(Collections.emptyList());
     // not a jsonObject
-    assertException(
-        OharaConfigException.class, () -> s.checker().accept(CommonUtils.randomString()));
-    assertException(OharaConfigException.class, () -> s.checker().accept("{abc}"));
-    assertException(OharaConfigException.class, () -> s.checker().accept("{\"123\"}"));
+    assertException(ConfigException.class, () -> s.checker().accept(CommonUtils.randomString()));
+    assertException(ConfigException.class, () -> s.checker().accept("{abc}"));
+    assertException(ConfigException.class, () -> s.checker().accept("{\"123\"}"));
   }
 
   @Test
@@ -289,11 +288,10 @@ public class TestSettingDef extends OharaTest {
                 Collections.singleton(
                     TopicKey.of(CommonUtils.randomString(), CommonUtils.randomString()))));
     // empty array is illegal
-    assertException(OharaConfigException.class, () -> def.checker().accept("[]"));
-    assertException(OharaConfigException.class, () -> def.checker().accept("{}"));
-    assertException(
-        OharaConfigException.class, () -> def.checker().accept(CommonUtils.randomString()));
-    assertException(OharaConfigException.class, () -> def.checker().accept(100000000));
+    assertException(ConfigException.class, () -> def.checker().accept("[]"));
+    assertException(ConfigException.class, () -> def.checker().accept("{}"));
+    assertException(ConfigException.class, () -> def.checker().accept(CommonUtils.randomString()));
+    assertException(ConfigException.class, () -> def.checker().accept(100000000));
   }
 
   @Test
@@ -308,7 +306,7 @@ public class TestSettingDef extends OharaTest {
             .contains("\"defaultValue\":" + "\"" + duration.toMillis() + " milliseconds\""));
   }
 
-  @Test(expected = OharaConfigException.class)
+  @Test(expected = ConfigException.class)
   public void testRejectNullValue() {
     SettingDef.builder().key(CommonUtils.randomString()).build().checker().accept(null);
   }
@@ -343,9 +341,9 @@ public class TestSettingDef extends OharaTest {
             .required(SettingDef.Type.BOOLEAN)
             .build();
     // only accept "true" or "false"
-    assertException(OharaConfigException.class, () -> def.checker().accept("aaa"));
-    assertException(OharaConfigException.class, () -> def.checker().accept(123));
-    assertException(OharaConfigException.class, () -> def.checker().accept(null));
+    assertException(ConfigException.class, () -> def.checker().accept("aaa"));
+    assertException(ConfigException.class, () -> def.checker().accept(123));
+    assertException(ConfigException.class, () -> def.checker().accept(null));
     def.checker().accept(false);
     def.checker().accept("true");
     // case in-sensitive
@@ -358,8 +356,8 @@ public class TestSettingDef extends OharaTest {
             .optional(SettingDef.Type.BOOLEAN)
             .build();
     // only accept "true" or "false"
-    assertException(OharaConfigException.class, () -> defOption.checker().accept("aaa"));
-    assertException(OharaConfigException.class, () -> defOption.checker().accept(123));
+    assertException(ConfigException.class, () -> defOption.checker().accept("aaa"));
+    assertException(ConfigException.class, () -> defOption.checker().accept(123));
     // since we don't have any default value, the "null" will be passed since it is optional
     defOption.checker().accept(null);
     defOption.checker().accept(false);
@@ -405,10 +403,10 @@ public class TestSettingDef extends OharaTest {
 
     def.checker().accept(111);
 
-    assertException(OharaConfigException.class, () -> def.checker().accept(""));
-    assertException(OharaConfigException.class, () -> def.checker().accept("abc"));
-    assertException(OharaConfigException.class, () -> def.checker().accept(11111111111L));
-    assertException(OharaConfigException.class, () -> def.checker().accept(2.2));
+    assertException(ConfigException.class, () -> def.checker().accept(""));
+    assertException(ConfigException.class, () -> def.checker().accept("abc"));
+    assertException(ConfigException.class, () -> def.checker().accept(11111111111L));
+    assertException(ConfigException.class, () -> def.checker().accept(2.2));
   }
 
   @Test
@@ -418,10 +416,10 @@ public class TestSettingDef extends OharaTest {
 
     def.checker().accept(111);
 
-    assertException(OharaConfigException.class, () -> def.checker().accept(""));
-    assertException(OharaConfigException.class, () -> def.checker().accept("abc"));
-    assertException(OharaConfigException.class, () -> def.checker().accept(11111111111L));
-    assertException(OharaConfigException.class, () -> def.checker().accept(2.2));
+    assertException(ConfigException.class, () -> def.checker().accept(""));
+    assertException(ConfigException.class, () -> def.checker().accept("abc"));
+    assertException(ConfigException.class, () -> def.checker().accept(11111111111L));
+    assertException(ConfigException.class, () -> def.checker().accept(2.2));
   }
 
   @Test
@@ -432,9 +430,9 @@ public class TestSettingDef extends OharaTest {
     def.checker().accept(111);
     def.checker().accept(11111111111L);
 
-    assertException(OharaConfigException.class, () -> def.checker().accept(""));
-    assertException(OharaConfigException.class, () -> def.checker().accept("abc"));
-    assertException(OharaConfigException.class, () -> def.checker().accept(2.2));
+    assertException(ConfigException.class, () -> def.checker().accept(""));
+    assertException(ConfigException.class, () -> def.checker().accept("abc"));
+    assertException(ConfigException.class, () -> def.checker().accept(2.2));
   }
 
   @Test
@@ -449,8 +447,8 @@ public class TestSettingDef extends OharaTest {
     def.checker().accept(11111111111L);
     def.checker().accept(2.2);
 
-    assertException(OharaConfigException.class, () -> def.checker().accept("abc"));
-    assertException(OharaConfigException.class, () -> def.checker().accept(""));
+    assertException(ConfigException.class, () -> def.checker().accept("abc"));
+    assertException(ConfigException.class, () -> def.checker().accept(""));
   }
 
   @Test
@@ -501,8 +499,7 @@ public class TestSettingDef extends OharaTest {
 
     int port = CommonUtils.availablePort();
     try (ServerSocket server = new ServerSocket(port)) {
-      assertException(
-          OharaConfigException.class, () -> def.checker().accept(server.getLocalPort()));
+      assertException(ConfigException.class, () -> def.checker().accept(server.getLocalPort()));
     }
     def.checker().accept(port);
   }

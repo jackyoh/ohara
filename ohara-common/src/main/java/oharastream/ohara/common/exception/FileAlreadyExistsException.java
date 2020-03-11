@@ -16,16 +16,20 @@
 
 package oharastream.ohara.common.exception;
 
-public class OharaTimeoutException extends oharastream.ohara.common.exception.Exception {
-  public static final long serialVersionUID = 1L;
+public class FileAlreadyExistsException extends oharastream.ohara.common.exception.Exception {
+  private static final long serialVersionUID = 1L;
 
-  public OharaTimeoutException() {}
+  public FileAlreadyExistsException() {}
 
-  public OharaTimeoutException(Throwable e) {
+  public FileAlreadyExistsException(Throwable e) {
     super(e);
   }
 
-  public OharaTimeoutException(String message, Throwable e) {
+  public FileAlreadyExistsException(String message) {
+    super(message);
+  }
+
+  public FileAlreadyExistsException(String message, Throwable e) {
     super(message, e);
   }
 }

@@ -26,7 +26,7 @@ import oharastream.ohara.client.configurator.v0.ZookeeperApi.ZookeeperClusterInf
 import oharastream.ohara.client.configurator.v0.{BrokerApi, ClusterInfo, ContainerApi, LogApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.common.data.Serializer
-import oharastream.ohara.common.exception.{OharaExecutionException, OharaTimeoutException}
+import oharastream.ohara.common.exception.{ExecutionException, TimeoutException}
 import oharastream.ohara.common.setting.ObjectKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.configurator.Configurator
@@ -422,13 +422,13 @@ abstract class BasicTests4Collie extends IntegrationTest {
             topicAdmin.topicCreator().numberOfPartitions(1).numberOfReplications(1).topicName(topicName).create()
             true
           } catch {
-            case e: OharaExecutionException =>
+            case e: ExecutionException =>
               e.getCause match {
                 // the new broker needs time to sync information to other existed bk nodes.
                 case _: InvalidReplicationFactorException => false
                 case _: Throwable                         => throw e.getCause
               }
-            case e: OharaTimeoutException =>
+            case e: TimeoutException =>
               log.error(s"[BROKER] create topic error ${e.getCause}")
               false
           }

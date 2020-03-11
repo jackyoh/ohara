@@ -39,10 +39,10 @@ public class TestExceptionHandler extends OharaTest {
     ExceptionHandler.builder().with(IOException.class, null);
   }
 
-  @Test(expected = OharaTimeoutException.class)
+  @Test(expected = TimeoutException.class)
   public void testHandle() {
     ExceptionHandler.builder()
-        .with(IOException.class, OharaTimeoutException::new)
+        .with(IOException.class, TimeoutException::new)
         .build()
         .handle(
             () -> {
@@ -53,23 +53,23 @@ public class TestExceptionHandler extends OharaTest {
   @Test(expected = Exception.class)
   public void testDefaultHandle() {
     ExceptionHandler.builder()
-        .with(IOException.class, OharaTimeoutException::new)
+        .with(IOException.class, TimeoutException::new)
         .build()
         .handle(
             () -> {
-              throw new InterruptedException("HELLO WORLD");
+              throw new java.lang.InterruptedException("HELLO WORLD");
             });
   }
 
-  @Test(expected = OharaTimeoutException.class)
+  @Test(expected = TimeoutException.class)
   public void testManyHandlers() {
     ExceptionHandler.builder()
-        .with(InterruptedException.class, OharaTimeoutException::new)
-        .with(IOException.class, OharaExecutionException::new)
+        .with(InterruptedException.class, TimeoutException::new)
+        .with(IOException.class, ExecutionException::new)
         .build()
         .handle(
             () -> {
-              throw new InterruptedException("HELLO WORLD");
+              throw new java.lang.InterruptedException("HELLO WORLD");
             });
   }
 }

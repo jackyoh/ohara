@@ -16,7 +16,7 @@
 
 package oharastream.ohara.client.filesystem
 
-import oharastream.ohara.common.exception.{NoSuchFileException, OharaFileSystemException}
+import oharastream.ohara.common.exception.{NoSuchFileException, FileSystemException}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.{After, Before, Test}
@@ -155,7 +155,7 @@ abstract class FileSystemTestBase extends OharaTest {
     fileSystem.create(file).close()
     fileSystem.listFileNames(dir).asScala.size shouldBe 1
 
-    an[OharaFileSystemException] should be thrownBy fileSystem.delete(dir)
+    an[FileSystemException] should be thrownBy fileSystem.delete(dir)
   }
 
   @Test

@@ -30,19 +30,19 @@ import oharastream.ohara.common.setting.SettingDef;
  * their own exception (like kafka config exception) should be responsible for their exception
  * casting.
  */
-public class OharaConfigException extends RuntimeException {
+public class ConfigException extends RuntimeException {
 
   private static final long serialVersionUID = 1L;
 
-  public OharaConfigException(String message) {
+  public ConfigException(String message) {
     super(message);
   }
 
-  public OharaConfigException(String name, Object value) {
+  public ConfigException(String name, Object value) {
     this(name, value, null);
   }
 
-  public OharaConfigException(String name, Object value, String message) {
+  public ConfigException(String name, Object value, String message) {
     super(
         String.format(
             "Invalid value \"%s\" of type \"%s\" for configuration \"%s\" :\n%s",

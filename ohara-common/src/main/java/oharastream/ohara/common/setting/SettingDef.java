@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import oharastream.ohara.common.annotations.Nullable;
 import oharastream.ohara.common.annotations.Optional;
 import oharastream.ohara.common.annotations.VisibleForTesting;
-import oharastream.ohara.common.exception.OharaConfigException;
+import oharastream.ohara.common.exception.ConfigException;
 import oharastream.ohara.common.json.JsonObject;
 import oharastream.ohara.common.json.JsonUtils;
 import oharastream.ohara.common.util.CommonUtils;
@@ -257,8 +257,7 @@ public class SettingDef implements JsonObject, Serializable {
       // besides the first rule, any other combination of settings should check the value is not
       // null (default or from api)
       final Object trueValue = value == null ? this.defaultValue : value;
-      if (trueValue == null)
-        throw new OharaConfigException("the key [" + this.key + "] is required");
+      if (trueValue == null) throw new ConfigException("the key [" + this.key + "] is required");
 
       // each type checking
       switch (valueType) {
@@ -268,7 +267,7 @@ public class SettingDef implements JsonObject, Serializable {
           // boolean type should only accept two possible values: "true" or "false"
           if (!String.valueOf(trueValue).equalsIgnoreCase("true")
               && !String.valueOf(trueValue).equalsIgnoreCase("false"))
-            throw new OharaConfigException(
+            throw new ConfigException(
                 this.key,
                 trueValue,
                 "The value should equals to case-insensitive string value of 'true' or 'false'");
@@ -278,7 +277,7 @@ public class SettingDef implements JsonObject, Serializable {
           try {
             String.valueOf(trueValue);
           } catch (Exception e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case POSITIVE_SHORT:
@@ -288,10 +287,10 @@ public class SettingDef implements JsonObject, Serializable {
             if (trueValue instanceof Short) v = (short) trueValue;
             else v = Short.parseShort(String.valueOf(trueValue));
             if (valueType == SettingDef.Type.POSITIVE_SHORT && v <= 0)
-              throw new OharaConfigException(
+              throw new ConfigException(
                   this.key, trueValue, "the value must be bigger than zero but actual:" + v);
           } catch (NumberFormatException e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case POSITIVE_INT:
@@ -301,10 +300,10 @@ public class SettingDef implements JsonObject, Serializable {
             if (trueValue instanceof Integer) v = (int) trueValue;
             else v = Integer.parseInt(String.valueOf(trueValue));
             if (valueType == SettingDef.Type.POSITIVE_INT && v <= 0)
-              throw new OharaConfigException(
+              throw new ConfigException(
                   this.key, trueValue, "the value must be bigger than zero but actual:" + v);
           } catch (NumberFormatException e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case POSITIVE_LONG:
@@ -314,10 +313,10 @@ public class SettingDef implements JsonObject, Serializable {
             if (trueValue instanceof Long) v = (long) trueValue;
             else v = Long.parseLong(String.valueOf(trueValue));
             if (valueType == SettingDef.Type.POSITIVE_LONG && v <= 0)
-              throw new OharaConfigException(
+              throw new ConfigException(
                   this.key, trueValue, "the value must be bigger than zero but actual:" + v);
           } catch (NumberFormatException e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case POSITIVE_DOUBLE:
@@ -327,10 +326,10 @@ public class SettingDef implements JsonObject, Serializable {
             if (trueValue instanceof Double) v = (double) trueValue;
             else v = Double.parseDouble(String.valueOf(trueValue));
             if (valueType == SettingDef.Type.POSITIVE_DOUBLE && v <= 0)
-              throw new OharaConfigException(
+              throw new ConfigException(
                   this.key, trueValue, "the value must be bigger than zero but actual:" + v);
           } catch (NumberFormatException e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case ARRAY:
@@ -344,7 +343,7 @@ public class SettingDef implements JsonObject, Serializable {
             try {
               String.valueOf(value).split(",");
             } catch (Exception ex) {
-              throw new OharaConfigException("value not match the array string, actual: " + value);
+              throw new ConfigException("value not match the array string, actual: " + value);
             }
           }
           break;
@@ -378,16 +377,14 @@ public class SettingDef implements JsonObject, Serializable {
                     });
 
           } catch (Exception e) {
-            throw new OharaConfigException(
-                this.key, trueValue, "can't be converted to PropGroup type");
+            throw new ConfigException(this.key, trueValue, "can't be converted to PropGroup type");
           }
           break;
         case DURATION:
           try {
             CommonUtils.toDuration(String.valueOf(trueValue));
           } catch (Exception e) {
-            throw new OharaConfigException(
-                this.key, trueValue, "can't be converted to Duration type");
+            throw new ConfigException(this.key, trueValue, "can't be converted to Duration type");
           }
           break;
         case BINDING_PORT:
@@ -395,26 +392,26 @@ public class SettingDef implements JsonObject, Serializable {
           try {
             int port = Integer.parseInt(String.valueOf(trueValue));
             if (!CommonUtils.isConnectionPort(port))
-              throw new OharaConfigException(
+              throw new ConfigException(
                   "the legal range for port is [1, 65535], but actual port is " + port);
             if (valueType == Type.BINDING_PORT) {
               // tries to bind the port :)
               try (ServerSocket socket = new ServerSocket(port)) {
                 if (port != socket.getLocalPort())
-                  throw new OharaConfigException(
+                  throw new ConfigException(
                       "the port:" + port + " is not available in host:" + CommonUtils.hostname());
               }
             }
           } catch (Exception e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case OBJECT_KEYS:
           try {
             if (TopicKey.toTopicKeys(String.valueOf(trueValue)).isEmpty())
-              throw new OharaConfigException("OBJECT_KEYS can't be empty!!!");
+              throw new ConfigException("OBJECT_KEYS can't be empty!!!");
           } catch (Exception e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case OBJECT_KEY:
@@ -422,7 +419,7 @@ public class SettingDef implements JsonObject, Serializable {
             // try parse the json string to Connector Key
             ObjectKey.toObjectKey(String.valueOf(trueValue));
           } catch (Exception e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         case TAGS:
@@ -431,7 +428,7 @@ public class SettingDef implements JsonObject, Serializable {
             // json object)
             JsonUtils.toObject(String.valueOf(trueValue), new TypeReference<Object>() {});
           } catch (Exception e) {
-            throw new OharaConfigException(this.key, trueValue, e.getMessage());
+            throw new ConfigException(this.key, trueValue, e.getMessage());
           }
           break;
         default:

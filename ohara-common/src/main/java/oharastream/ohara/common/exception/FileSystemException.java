@@ -16,17 +16,21 @@
 
 package oharastream.ohara.common.exception;
 
-public class OharaExecutionException extends oharastream.ohara.common.exception.Exception {
+public class FileSystemException extends oharastream.ohara.common.exception.Exception {
 
   private static final long serialVersionUID = 1L;
 
-  public OharaExecutionException() {}
+  public FileSystemException() {}
 
-  public OharaExecutionException(Throwable e) {
+  public FileSystemException(String message) {
+    super(message);
+  }
+
+  public FileSystemException(Throwable e) {
     super(e);
   }
 
-  public OharaExecutionException(String message, Throwable e) {
+  public FileSystemException(String message, Throwable e) {
     super(message, e);
   }
 }
