@@ -40,8 +40,6 @@ abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val ftpPassword = value(PerformanceTestingUtils.FTP_PASSWORD_KEY)
     .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_PASSWORD_KEY} is required"))
 
-  //private[this] val numberOfProducerThread = 2
-
   /**
     * add the route for ftp hostname to avoid the hostname error from remote services...
     * @return routes routes added to all services
