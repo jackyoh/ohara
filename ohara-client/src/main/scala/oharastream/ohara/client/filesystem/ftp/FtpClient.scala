@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.common.annotations.Optional
-import oharastream.ohara.common.exception.OharaFileNoSuchException
+import oharastream.ohara.common.exception.FileNoSuchException
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 import org.apache.commons.net.ftp.{FTP, FTPClient}
@@ -495,7 +495,7 @@ object FtpClient {
             case 250 => FileType.FOLDER
             case _   => FileType.FILE
           } finally client.cwd(current)
-        } else throw new OharaFileNoSuchException(s"$path doesn't exist")
+        } else throw new FileNoSuchException(s"$path doesn't exist")
 
       override def status(): String = connectIfNeeded().getStatus
 

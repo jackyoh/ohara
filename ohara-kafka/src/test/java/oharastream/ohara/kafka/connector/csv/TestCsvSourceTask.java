@@ -21,7 +21,7 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import oharastream.ohara.common.exception.OharaFileNoSuchException;
+import oharastream.ohara.common.exception.FileNoSuchException;
 import oharastream.ohara.common.rule.OharaTest;
 import oharastream.ohara.common.setting.ConnectorKey;
 import oharastream.ohara.common.setting.TopicKey;
@@ -93,7 +93,7 @@ public class TestCsvSourceTask extends OharaTest {
             return new MockCsvSourceFileSystem() {
               @Override
               public FileType fileType(String path) {
-                throw new OharaFileNoSuchException("File doesn't exists");
+                throw new FileNoSuchException("File doesn't exists");
               }
             };
           }

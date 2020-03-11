@@ -16,20 +16,20 @@
 
 package oharastream.ohara.common.exception;
 
-public class OharaFileNoSuchException extends OharaException {
+public class FileNoSuchException extends OharaException {
   private static final long serialVersionUID = 1L;
 
-  public OharaFileNoSuchException() {}
+  public FileNoSuchException() {}
 
-  public OharaFileNoSuchException(String message) {
+  public FileNoSuchException(String message) {
     super(message);
   }
 
-  public OharaFileNoSuchException(Throwable e) {
+  public FileNoSuchException(Throwable e) {
     super(e);
   }
 
-  public OharaFileNoSuchException(String message, Throwable e) {
+  public FileNoSuchException(String message, Throwable e) {
     super(message, e);
   }
 }
