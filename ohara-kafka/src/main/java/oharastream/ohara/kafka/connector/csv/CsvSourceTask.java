@@ -16,6 +16,7 @@
 
 package oharastream.ohara.kafka.connector.csv;
 
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
@@ -33,6 +34,8 @@ import oharastream.ohara.kafka.connector.csv.source.CsvSourceConfig;
 import oharastream.ohara.kafka.connector.csv.source.DataReader;
 import oharastream.ohara.kafka.connector.storage.FileSystem;
 import oharastream.ohara.kafka.connector.storage.FileType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * CsvSourceTask moveFile files from file system to Kafka topics. The file format must be csv file,
@@ -41,6 +44,7 @@ import oharastream.ohara.kafka.connector.storage.FileType;
  * 100 message in connector topic.
  */
 public abstract class CsvSourceTask extends RowSourceTask {
+  private static final Logger log = LoggerFactory.getLogger(CsvSourceTask.class);
   private CsvSourceConfig config;
   private DataReader dataReader;
   private FileSystem fs;
@@ -87,10 +91,11 @@ public abstract class CsvSourceTask extends RowSourceTask {
           return dataReader.read(path);
         }
       }
-      return Collections.emptyList();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+    } catch (Exception e) {
+      if (e instanceof NoSuchFileException) log.error(e.getMessage(), e);
+      else throw new RuntimeException(e);
     }
+    return Collections.emptyList();
   }
 
   @Override

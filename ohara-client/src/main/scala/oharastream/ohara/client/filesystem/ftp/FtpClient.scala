@@ -18,7 +18,7 @@ package oharastream.ohara.client.filesystem.ftp
 
 import java.io._
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.Files
+import java.nio.file.{Files, NoSuchFileException}
 import java.util.Objects
 import java.util.concurrent.TimeUnit
 
@@ -494,7 +494,7 @@ object FtpClient {
             case 250 => FileType.FOLDER
             case _   => FileType.FILE
           } finally client.cwd(current)
-        } else throw new IllegalArgumentException(s"$path doesn't exist")
+        } else throw new NoSuchFileException(s"$path doesn't exist")
 
       override def status(): String = connectIfNeeded().getStatus
 
