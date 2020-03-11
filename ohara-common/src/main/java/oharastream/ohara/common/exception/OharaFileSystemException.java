@@ -16,7 +16,7 @@
 
 package oharastream.ohara.common.exception;
 
-public class OharaFileSystemException extends OharaException {
+public class OharaFileSystemException extends oharastream.ohara.common.exception.Exception {
 
   private static final long serialVersionUID = 1L;
 

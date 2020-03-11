@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import oharastream.ohara.common.data.Row;
+import oharastream.ohara.common.exception.Exception;
 import oharastream.ohara.common.exception.ExceptionHandler;
-import oharastream.ohara.common.exception.OharaException;
 import oharastream.ohara.common.setting.SettingDef;
 import oharastream.ohara.common.setting.TopicKey;
 import oharastream.ohara.common.setting.WithDefinitions;
@@ -37,9 +37,9 @@ public abstract class Stream implements WithDefinitions {
   // Exception handler
   private static ExceptionHandler handler =
       ExceptionHandler.builder()
-          .with(IOException.class, OharaException::new)
-          .with(MalformedURLException.class, OharaException::new)
-          .with(ClassNotFoundException.class, OharaException::new)
+          .with(IOException.class, Exception::new)
+          .with(MalformedURLException.class, Exception::new)
+          .with(ClassNotFoundException.class, Exception::new)
           .build();
 
   /**
@@ -86,9 +86,9 @@ public abstract class Stream implements WithDefinitions {
    * find main entry of jar in ohara environment container
    *
    * @param lines arguments
-   * @throws OharaException exception
+   * @throws oharastream.ohara.common.exception.Exception exception
    */
-  public static void main(String[] lines) throws OharaException {
+  public static void main(String[] lines) throws Exception {
     Map<String, String> args = CommonUtils.parse(Arrays.asList(lines));
     String className = args.get(StreamDefUtils.CLASS_NAME_DEFINITION.key());
     if (CommonUtils.isEmpty(className))

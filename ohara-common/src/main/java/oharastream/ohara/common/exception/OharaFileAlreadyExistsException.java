@@ -16,7 +16,7 @@
 
 package oharastream.ohara.common.exception;
 
-public class OharaFileAlreadyExistsException extends OharaException {
+public class OharaFileAlreadyExistsException extends oharastream.ohara.common.exception.Exception {
   private static final long serialVersionUID = 1L;
 
   public OharaFileAlreadyExistsException() {}

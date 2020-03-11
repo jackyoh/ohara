@@ -30,7 +30,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import oharastream.ohara.common.exception.OharaException;
+import oharastream.ohara.common.exception.Exception;
 import oharastream.ohara.common.util.CommonUtils;
 import oharastream.ohara.kafka.connector.csv.LocalFileSystem;
 import oharastream.ohara.kafka.connector.storage.FileSystem;
@@ -71,7 +71,7 @@ public abstract class WithFakeStorage extends CsvSourceTestBase {
       folder.create();
       return folder.getRoot().toPath();
     } catch (IOException e) {
-      throw new OharaException(e);
+      throw new Exception(e);
     }
   }
 

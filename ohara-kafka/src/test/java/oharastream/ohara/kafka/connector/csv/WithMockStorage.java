@@ -19,7 +19,7 @@ package oharastream.ohara.kafka.connector.csv;
 import java.io.*;
 import java.util.Collection;
 import java.util.stream.Collectors;
-import oharastream.ohara.common.exception.OharaException;
+import oharastream.ohara.common.exception.Exception;
 import oharastream.ohara.kafka.connector.storage.FileSystem;
 import org.junit.rules.TemporaryFolder;
 
@@ -38,7 +38,7 @@ public abstract class WithMockStorage extends CsvSinkTestBase {
       folder.create();
       return folder.getRoot();
     } catch (IOException e) {
-      throw new OharaException(e);
+      throw new Exception(e);
     }
   }
 

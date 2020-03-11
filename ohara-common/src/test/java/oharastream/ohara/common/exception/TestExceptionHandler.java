@@ -25,13 +25,13 @@ public class TestExceptionHandler extends OharaTest {
   @Test(expected = IllegalArgumentException.class)
   public void addDuplicateFunction() {
     ExceptionHandler.builder()
-        .with(IOException.class, OharaException::new)
-        .with(IOException.class, OharaException::new);
+        .with(IOException.class, Exception::new)
+        .with(IOException.class, Exception::new);
   }
 
   @Test(expected = NullPointerException.class)
   public void nullClass() {
-    ExceptionHandler.builder().with(null, OharaException::new);
+    ExceptionHandler.builder().with(null, Exception::new);
   }
 
   @Test(expected = NullPointerException.class)
@@ -50,7 +50,7 @@ public class TestExceptionHandler extends OharaTest {
             });
   }
 
-  @Test(expected = OharaException.class)
+  @Test(expected = Exception.class)
   public void testDefaultHandle() {
     ExceptionHandler.builder()
         .with(IOException.class, OharaTimeoutException::new)

@@ -55,7 +55,7 @@ public interface ExceptionHandler {
           if (exception instanceof RuntimeException) {
             return (RuntimeException) exception;
           } else {
-            return new OharaException(exception);
+            return new oharastream.ohara.common.exception.Exception(exception);
           }
         };
 
