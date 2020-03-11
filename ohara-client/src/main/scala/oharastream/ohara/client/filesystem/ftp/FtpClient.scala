@@ -18,12 +18,13 @@ package oharastream.ohara.client.filesystem.ftp
 
 import java.io._
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.{Files, NoSuchFileException}
+import java.nio.file.Files
 import java.util.Objects
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.common.annotations.Optional
+import oharastream.ohara.common.exception.OharaFileNoSuchException
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 import org.apache.commons.net.ftp.{FTP, FTPClient}
@@ -494,7 +495,7 @@ object FtpClient {
             case 250 => FileType.FOLDER
             case _   => FileType.FILE
           } finally client.cwd(current)
-        } else throw new NoSuchFileException(s"$path doesn't exist")
+        } else throw new OharaFileNoSuchException(s"$path doesn't exist")
 
       override def status(): String = connectIfNeeded().getStatus
 

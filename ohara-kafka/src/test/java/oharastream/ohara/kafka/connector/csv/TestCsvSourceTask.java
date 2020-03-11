@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import oharastream.ohara.common.exception.OharaFileNoSuchException;
 import oharastream.ohara.common.rule.OharaTest;
 import oharastream.ohara.common.setting.ConnectorKey;
 import oharastream.ohara.common.setting.TopicKey;
@@ -82,6 +83,53 @@ public class TestCsvSourceTask extends OharaTest {
     Assert.assertTrue(task.dataReader() instanceof CsvDataReader);
   }
 
+  @Test
+  public void testNoSuchFile() {
+    CsvSourceTask sourceTask =
+        new MockCsvSourceTask() {
+          @Override
+          public FileSystem fileSystem(TaskSetting settings) {
+            settings.stringValue(MOCK_HOST_NAME_KEY); // For get config test
+            return new MockCsvSourceFileSystem() {
+              @Override
+              public FileType fileType(String path) {
+                throw new OharaFileNoSuchException("File doesn't exists");
+              }
+            };
+          }
+        };
+
+    // Test continue to process other file
+    sourceTask.run(TaskSetting.of(settings));
+    sourceTask.pollRecords();
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 2);
+
+    sourceTask.pollRecords();
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 1);
+
+    sourceTask.pollRecords();
+    Assert.assertEquals(sourceTask.fileNameCacheSize(), 0);
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testOtherRuntimeException() {
+    CsvSourceTask sourceTask =
+        new MockCsvSourceTask() {
+          @Override
+          public FileSystem fileSystem(TaskSetting settings) {
+            settings.stringValue(MOCK_HOST_NAME_KEY); // For get config test
+            return new MockCsvSourceFileSystem() {
+              @Override
+              public FileType fileType(String path) {
+                throw new RuntimeException("runinng exception");
+              }
+            };
+          }
+        };
+    sourceTask.run(TaskSetting.of(settings));
+    sourceTask.pollRecords();
+  }
+
   @Test(expected = NoSuchElementException.class)
   public void testGetDataReader_WithEmptyConfig() {
     Map<String, String> settings = new HashMap<String, String>();
@@ -101,72 +149,74 @@ public class TestCsvSourceTask extends OharaTest {
   }
 }
 
+class MockCsvSourceFileSystem implements FileSystem {
+
+  @Override
+  public boolean exists(String path) {
+    return false;
+  }
+
+  @Override
+  public Iterator<String> listFileNames(String dir) {
+    return IntStream.range(1, 100)
+        .boxed()
+        .map(i -> "file" + i)
+        .collect(Collectors.toList())
+        .iterator();
+  }
+
+  @Override
+  public FileType fileType(String path) {
+    return FileType.FILE;
+  }
+
+  @Override
+  public OutputStream create(String path) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public OutputStream append(String path) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public InputStream open(String path) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public void delete(String path) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public void delete(String path, boolean recursive) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public boolean moveFile(String sourcePath, String targetPath) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public void mkdirs(String dir) {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+
+  @Override
+  public void close() {
+    throw new UnsupportedOperationException("Mock not support this function");
+  }
+}
+
 class MockCsvSourceTask extends CsvSourceTask {
   public static String MOCK_HOST_NAME_KEY = "mock.hostname";
 
   @Override
   public FileSystem fileSystem(TaskSetting settings) {
     settings.stringValue(MOCK_HOST_NAME_KEY); // For get config test
-
-    return new FileSystem() {
-      @Override
-      public boolean exists(String path) {
-        return false;
-      }
-
-      @Override
-      public Iterator<String> listFileNames(String dir) {
-        return IntStream.range(1, 100)
-            .boxed()
-            .map(i -> "file" + i)
-            .collect(Collectors.toList())
-            .iterator();
-      }
-
-      @Override
-      public FileType fileType(String path) {
-        return FileType.FILE;
-      }
-
-      @Override
-      public OutputStream create(String path) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public OutputStream append(String path) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public InputStream open(String path) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public void delete(String path) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public void delete(String path, boolean recursive) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public boolean moveFile(String sourcePath, String targetPath) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public void mkdirs(String dir) {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-
-      @Override
-      public void close() {
-        throw new UnsupportedOperationException("Mock not support this function");
-      }
-    };
+    return new MockCsvSourceFileSystem();
   }
 }

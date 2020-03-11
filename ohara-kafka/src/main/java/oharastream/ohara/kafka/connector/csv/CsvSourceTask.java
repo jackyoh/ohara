@@ -16,7 +16,6 @@
 
 package oharastream.ohara.kafka.connector.csv;
 
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
@@ -25,6 +24,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import oharastream.ohara.common.annotations.VisibleForTesting;
+import oharastream.ohara.common.exception.OharaFileNoSuchException;
 import oharastream.ohara.common.util.Releasable;
 import oharastream.ohara.kafka.connector.RowSourceRecord;
 import oharastream.ohara.kafka.connector.RowSourceTask;
@@ -91,9 +91,10 @@ public abstract class CsvSourceTask extends RowSourceTask {
           return dataReader.read(path);
         }
       }
+    } catch (OharaFileNoSuchException e) {
+      log.error(e.getMessage(), e);
     } catch (Exception e) {
-      if (e instanceof NoSuchFileException) log.error(e.getMessage(), e);
-      else throw new RuntimeException(e);
+      throw new RuntimeException(e);
     }
     return Collections.emptyList();
   }
