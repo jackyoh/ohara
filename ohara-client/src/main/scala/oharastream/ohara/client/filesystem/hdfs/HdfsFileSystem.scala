@@ -22,6 +22,7 @@ import java.util
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.client.filesystem.{FileFilter, FileSystem}
+import oharastream.ohara.common.exception.NoSuchFileException
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 import org.apache.hadoop.conf.Configuration
@@ -81,7 +82,7 @@ private[filesystem] object HdfsFileSystem {
           wrapper(underlying)
         }
 
-        if (nonExists(dir)) throw new IllegalArgumentException(s"The path $dir doesn't exist")
+        if (nonExists(dir)) throw new NoSuchFileException(s"The path $dir doesn't exist")
         hadoopFS.listLocatedStatus(new Path(dir)).map(fileStatus => fileStatus.getPath.getName).asJava
       }
 
@@ -93,7 +94,7 @@ private[filesystem] object HdfsFileSystem {
         * @return an array of file names
         */
       override def listFileNames(dir: String, filter: FileFilter): Seq[String] = wrap { () =>
-        if (nonExists(dir)) throw new IllegalArgumentException(s"The path $dir doesn't exist")
+        if (nonExists(dir)) throw new NoSuchFileException(s"The path $dir doesn't exist")
         hadoopFS.listStatus(new Path(dir), (path: Path) => filter.accept(path.getName)).map(_.getPath.getName)
       }
 
@@ -120,7 +121,7 @@ private[filesystem] object HdfsFileSystem {
         * @return an output stream associated with the existing file
         */
       override def append(path: String): OutputStream = wrap { () =>
-        if (nonExists(path)) throw new IllegalArgumentException(s"The path $path doesn't exist")
+        if (nonExists(path)) throw new NoSuchFileException(s"The path $path doesn't exist")
         hadoopFS.append(new Path(path))
       }
 
@@ -132,7 +133,7 @@ private[filesystem] object HdfsFileSystem {
         * @return an input stream with the requested file
         */
       override def open(path: String): InputStream = wrap { () =>
-        if (nonExists(path)) throw new IllegalArgumentException(s"The path $path doesn't exist")
+        if (nonExists(path)) throw new NoSuchFileException(s"The path $path doesn't exist")
         hadoopFS.open(new Path(path))
       }
 
@@ -167,7 +168,7 @@ private[filesystem] object HdfsFileSystem {
         */
       override def moveFile(sourcePath: String, targetPath: String): Boolean = wrap { () =>
         if (exists(targetPath)) throw new IllegalArgumentException(s"The target path: $targetPath already exists")
-        if (nonExists(sourcePath)) throw new IllegalArgumentException(s"The source path: $sourcePath doesn't exist")
+        if (nonExists(sourcePath)) throw new NoSuchFileException(s"The source path: $sourcePath doesn't exist")
 
         if (sourcePath == targetPath) {
           LOG.error("The source path equals the target path")
@@ -200,7 +201,7 @@ private[filesystem] object HdfsFileSystem {
         */
       override def fileType(path: String): FileType = wrap { () =>
         val p = new Path(path)
-        if (!hadoopFS.exists(p)) throw new IllegalArgumentException(s"$path doesn't exist")
+        if (!hadoopFS.exists(p)) throw new NoSuchFileException(s"$path doesn't exist")
         if (hadoopFS.getFileStatus(p).isDirectory) FileType.FOLDER else FileType.FILE
       }
 

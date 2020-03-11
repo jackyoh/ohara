@@ -21,6 +21,7 @@ import java.time.Duration
 import oharastream.ohara.client.configurator.v0.ConnectorApi.State
 import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.client.kafka.ConnectorAdmin
+import oharastream.ohara.common.exception.NoSuchFileException
 import oharastream.ohara.common.setting.ConnectorKey
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.testing.OharaTestUtils
@@ -74,7 +75,7 @@ object ConnectorTestUtils {
     path: String
   ): Unit = {
     fileSystem.delete(path, true)
-    intercept[IllegalArgumentException] {
+    intercept[NoSuchFileException] {
       val connector = connectorClass.newInstance()
       try connector.start(props.asJava)
       finally connector.stop()

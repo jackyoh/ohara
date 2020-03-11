@@ -24,7 +24,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import oharastream.ohara.common.annotations.VisibleForTesting;
-import oharastream.ohara.common.exception.FileNoSuchException;
+import oharastream.ohara.common.exception.NoSuchFileException;
 import oharastream.ohara.common.util.Releasable;
 import oharastream.ohara.kafka.connector.RowSourceRecord;
 import oharastream.ohara.kafka.connector.RowSourceTask;
@@ -91,7 +91,7 @@ public abstract class CsvSourceTask extends RowSourceTask {
           return dataReader.read(path);
         }
       }
-    } catch (FileNoSuchException e) {
+    } catch (NoSuchFileException e) {
       log.error(e.getMessage(), e);
     } catch (Exception e) {
       throw new RuntimeException(e);

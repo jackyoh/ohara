@@ -33,7 +33,7 @@ import com.hierynomus.smbj.share.DiskShare
 import com.hierynomus.smbj.{SMBClient, SmbConfig}
 import oharastream.ohara.client.filesystem.{FileFilter, FileSystem}
 import oharastream.ohara.common.annotations.Optional
-import oharastream.ohara.common.exception.OharaFileSystemException
+import oharastream.ohara.common.exception.{NoSuchFileException, OharaFileSystemException}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 
@@ -149,7 +149,7 @@ private[filesystem] object SmbFileSystem {
         * List the file names of the file system at a given path
         *
         * @param dir the path of the folder
-        * @throws IllegalArgumentException if the path does not exist
+        * @throws NoSuchFileException if the path does not exist
         * @return the listing of the folder
         */
       override def listFileNames(dir: String): util.Iterator[String] =
@@ -163,7 +163,7 @@ private[filesystem] object SmbFileSystem {
         * @return an array of file names
         */
       override def listFileNames(dir: String, filter: FileFilter): Seq[String] = connectShare { shareRoot =>
-        if (nonExists(dir)) throw new IllegalArgumentException(s"${dir} doesn't exist")
+        if (nonExists(dir)) throw new NoSuchFileException(s"${dir} doesn't exist")
         shareRoot
           .list(dir)
           .asScala
@@ -220,11 +220,11 @@ private[filesystem] object SmbFileSystem {
         * Append data to an existing file at the given path
         *
         * @param path the path of the file
-        * @throws IllegalArgumentException if the file does not exist
+        * @throws NoSuchFileException if the file does not exist
         * @return an output stream associated with the existing file
         */
       override def append(path: String): OutputStream = connectShare { shareRoot =>
-        if (nonExists(path)) throw new IllegalArgumentException(s"$path doesn't exist")
+        if (nonExists(path)) throw new NoSuchFileException(s"$path doesn't exist")
         val accessMask: util.Set[AccessMask]         = util.EnumSet.of(AccessMask.GENERIC_WRITE)
         val createDisposition: SMB2CreateDisposition = SMB2CreateDisposition.FILE_OPEN
         val smbFile                                  = shareRoot.openFile(path, accessMask, null, SMB2ShareAccess.ALL, createDisposition, null)
@@ -258,11 +258,11 @@ private[filesystem] object SmbFileSystem {
         * Open for reading an file at the given path
         *
         * @param path the path of the file
-        * @throws IllegalArgumentException if the file does not exist
+        * @throws NoSuchFileException if the file does not exist
         * @return an input stream with the requested file
         */
       override def open(path: String): InputStream = connectShare { shareRoot =>
-        if (nonExists(path)) throw new IllegalArgumentException(s"$path doesn't exist")
+        if (nonExists(path)) throw new NoSuchFileException(s"$path doesn't exist")
         val accessMask: util.Set[AccessMask]         = util.EnumSet.of(AccessMask.GENERIC_READ)
         val createDisposition: SMB2CreateDisposition = SMB2CreateDisposition.FILE_OPEN
         val smbFile                                  = shareRoot.openFile(path, accessMask, null, SMB2ShareAccess.ALL, createDisposition, null)
@@ -373,7 +373,7 @@ private[filesystem] object SmbFileSystem {
         * @return a type of the given path
         */
       override def fileType(path: String): FileType = connectShare { shareRoot =>
-        if (!exists(path)) throw new IllegalArgumentException(s"$path doesn't exist")
+        if (!exists(path)) throw new NoSuchFileException(s"$path doesn't exist")
         val fi = shareRoot.getFileInformation(path)
         val isFolder =
           EnumWithValue.EnumUtils.isSet(fi.getBasicInformation.getFileAttributes, FILE_ATTRIBUTE_DIRECTORY)

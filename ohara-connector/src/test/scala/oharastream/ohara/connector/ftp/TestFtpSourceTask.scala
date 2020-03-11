@@ -19,6 +19,7 @@ package oharastream.ohara.connector.ftp
 import java.util.Collections
 
 import oharastream.ohara.client.filesystem.FileSystem
+import oharastream.ohara.common.exception.NoSuchFileException
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -106,7 +107,7 @@ class TestFtpSourceTask extends OharaTest {
 
     val fs = createFileSystem()
     // input folder doesn't exist should throw error
-    intercept[IllegalArgumentException] {
+    intercept[NoSuchFileException] {
       fs.listFileNames(inputFolder).asScala.size shouldBe 0
     }
   }

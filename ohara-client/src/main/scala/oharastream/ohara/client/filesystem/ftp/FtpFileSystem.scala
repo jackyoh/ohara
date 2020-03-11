@@ -24,6 +24,7 @@ import java.util.Objects
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.client.filesystem.{FileFilter, FileSystem}
 import oharastream.ohara.common.annotations.Optional
+import oharastream.ohara.common.exception.NoSuchFileException
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 
@@ -147,7 +148,7 @@ private[filesystem] object FtpFileSystem {
         * List the file names of the file system at a given path
         *
         * @param dir the path of the folder
-        * @throws IllegalArgumentException if the path does not exist
+        * @throws NoSuchFileException if the path does not exist
         * @return the listing of the folder
         */
       override def listFileNames(dir: String): util.Iterator[String] =
@@ -161,7 +162,7 @@ private[filesystem] object FtpFileSystem {
         * @return an array of file names
         */
       override def listFileNames(dir: String, filter: FileFilter): Seq[String] = wrap { () =>
-        if (nonExists(dir)) throw new IllegalArgumentException(s"The path $dir doesn't exist")
+        if (nonExists(dir)) throw new NoSuchFileException(s"The path $dir doesn't exist")
         client.listFileNames(dir).filter(filter.accept)
       }
 
@@ -183,11 +184,11 @@ private[filesystem] object FtpFileSystem {
         * Append data to an existing file at the given path
         *
         * @param path the path of the file
-        * @throws IllegalArgumentException if the file does not exist
+        * @throws NoSuchFileException if the file does not exist
         * @return an output stream associated with the existing file
         */
       override def append(path: String): OutputStream = wrap { () =>
-        if (nonExists(path)) throw new IllegalArgumentException(s"The path ${path} doesn't exist")
+        if (nonExists(path)) throw new NoSuchFileException(s"The path ${path} doesn't exist")
         client.append(path)
       }
 
@@ -195,11 +196,11 @@ private[filesystem] object FtpFileSystem {
         * Open for reading an file at the given path
         *
         * @param path the path of the file
-        * @throws IllegalArgumentException if the file does not exist
+        * @throws NoSuchFileException if the file does not exist
         * @return an input stream with the requested file
         */
       override def open(path: String): InputStream = wrap { () =>
-        if (nonExists(path)) throw new IllegalArgumentException(s"The path ${path} doesn't exist")
+        if (nonExists(path)) throw new NoSuchFileException(s"The path ${path} doesn't exist")
         client.open(path)
       }
 
@@ -236,7 +237,7 @@ private[filesystem] object FtpFileSystem {
         *
         * @param sourcePath the path of the file to move
         * @param targetPath the path of the target file
-        * @throws IllegalArgumentException if the source or target file does not exist
+        * @throws NoSuchFileException if the source or target file does not exist
         * @return true if object have moved to target path, false otherwise
         */
       override def moveFile(sourcePath: String, targetPath: String): Boolean = wrap { () =>

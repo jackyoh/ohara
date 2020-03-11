@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
+import oharastream.ohara.common.exception.NoSuchFileException;
 import oharastream.ohara.common.exception.OharaFileSystemException;
 import oharastream.ohara.kafka.connector.storage.FileSystem;
 import oharastream.ohara.kafka.connector.storage.FileType;
@@ -43,7 +44,7 @@ public class LocalFileSystem implements FileSystem {
   public Iterator<String> listFileNames(String dir) {
     try {
       if (!exists(dir)) {
-        throw new IllegalArgumentException(String.format("The path %s doesn't exist", dir));
+        throw new NoSuchFileException(String.format("The path %s doesn't exist", dir));
       }
       return Files.list(Paths.get(dir)).map(f -> f.getFileName().toString()).iterator();
     } catch (IOException e) {
@@ -81,7 +82,7 @@ public class LocalFileSystem implements FileSystem {
   public InputStream open(String path) {
     try {
       if (!exists(path)) {
-        throw new IllegalArgumentException(String.format("The path %s doesn't exist", path));
+        throw new NoSuchFileException(String.format("The path %s doesn't exist", path));
       }
       return Files.newInputStream(Paths.get(path));
     } catch (IOException e) {
@@ -114,7 +115,7 @@ public class LocalFileSystem implements FileSystem {
   public boolean moveFile(String sourcePath, String targetPath) {
     try {
       if (!exists(sourcePath)) {
-        throw new IllegalArgumentException(
+        throw new NoSuchFileException(
             String.format("The source path %s doesn't exist", sourcePath));
       }
 

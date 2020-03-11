@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.common.annotations.Optional
-import oharastream.ohara.common.exception.FileNoSuchException
+import oharastream.ohara.common.exception.NoSuchFileException
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector.storage.FileType
 import org.apache.commons.net.ftp.{FTP, FTPClient}
@@ -40,7 +40,7 @@ trait FtpClient extends Releasable {
   def listFileNames(dir: String): Seq[String]
 
   /**
-    * open an input stream from a existent file. If file doesn't exist, an IllegalArgumentException will be thrown.
+    * open an input stream from a existent file. If file doesn't exist, an NoSuchFileException will be thrown.
     * @param path file path
     * @return input stream
     */
@@ -54,7 +54,7 @@ trait FtpClient extends Releasable {
   def create(path: String): OutputStream
 
   /**
-    * create output stream from an existent file. If file doesn't exist, an IllegalArgumentException will be thrown.
+    * create output stream from an existent file. If file doesn't exist, an NoSuchFileException will be thrown.
     * @param path file path
     * @return file output stream
     */
@@ -337,7 +337,7 @@ object FtpClient {
       override def open(path: String): InputStream = {
         val client = connectIfNeeded()
         client.setFileType(FTP.BINARY_FILE_TYPE)
-        if (nonExist(path)) throw new IllegalArgumentException(s"$path doesn't exist")
+        if (nonExist(path)) throw new NoSuchFileException(s"$path doesn't exist")
         val inputStream = client.retrieveFileStream(path)
         if (inputStream == null)
           throw new IllegalStateException(s"Failed to open $path because from ${client.getReplyCode}")
@@ -420,7 +420,7 @@ object FtpClient {
       override def append(path: String): OutputStream = {
         val client = connectIfNeeded()
         client.setFileType(FTP.BINARY_FILE_TYPE)
-        if (nonExist(path)) throw new IllegalArgumentException(s"$path doesn't exist")
+        if (nonExist(path)) throw new NoSuchFileException(s"$path doesn't exist")
         val outputStream = client.appendFileStream(path)
         if (outputStream == null)
           throw new IllegalStateException(s"Failed to create $path because from ${client.getReplyCode}")
@@ -495,7 +495,7 @@ object FtpClient {
             case 250 => FileType.FOLDER
             case _   => FileType.FILE
           } finally client.cwd(current)
-        } else throw new FileNoSuchException(s"$path doesn't exist")
+        } else throw new NoSuchFileException(s"$path doesn't exist")
 
       override def status(): String = connectIfNeeded().getStatus
 
