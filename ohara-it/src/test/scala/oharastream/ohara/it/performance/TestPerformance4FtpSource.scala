@@ -38,7 +38,7 @@ class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
       try {
         loopInputDataThread(setupInputData)
         setupConnector(
-          connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+          connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
           className = classOf[FtpSource].getName,
           settings = ftpSettings
             + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))

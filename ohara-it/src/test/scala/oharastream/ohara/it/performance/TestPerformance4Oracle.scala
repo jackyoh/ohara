@@ -37,7 +37,7 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
     createTopic()
     try {
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[JDBCSourceConnector].getName(),
         settings = Map(
           oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),

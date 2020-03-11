@@ -38,7 +38,7 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
     try {
       loopInputDataThread(setupInputData)
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[SmbSource].getName(),
         settings = sambaSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))

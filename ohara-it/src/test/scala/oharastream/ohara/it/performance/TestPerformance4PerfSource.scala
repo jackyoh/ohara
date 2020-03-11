@@ -29,7 +29,7 @@ class TestPerformance4PerfSource extends BasicTestPerformance {
   def test(): Unit = {
     createTopic()
     setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+      connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
       className = classOf[PerfSource].getName,
       settings = Map.empty
     )

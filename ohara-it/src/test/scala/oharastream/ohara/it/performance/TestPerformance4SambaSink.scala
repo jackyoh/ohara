@@ -39,7 +39,7 @@ class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
       produce(timeoutOfInputData)
       loopInputDataThread(produce)
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[SmbSink].getName(),
         settings = sambaSettings
           + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(

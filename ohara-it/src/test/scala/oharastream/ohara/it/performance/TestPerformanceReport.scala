@@ -23,12 +23,14 @@ import org.junit.Test
 import org.scalatest.Matchers._
 
 class TestPerformanceReport extends OharaTest {
+  private[this] val groupName = "benchmark"
+
   @Test
   def testCleanValue(): Unit = {
     val headerName                        = "header1"
     val report: PerformanceReport.Builder = PerformanceReport.builder
     val record = report
-      .connectorKey(ConnectorKey.of("benchmark", CommonUtils.randomString(5)))
+      .connectorKey(ConnectorKey.of(groupName, CommonUtils.randomString(5)))
       .className("class")
       .record(1, headerName, 100)
       .build
@@ -49,7 +51,7 @@ class TestPerformanceReport extends OharaTest {
     val headerName                        = "header1"
     val report: PerformanceReport.Builder = PerformanceReport.builder
     report
-      .connectorKey(ConnectorKey.of("benchmark", CommonUtils.randomString(5)))
+      .connectorKey(ConnectorKey.of(groupName, CommonUtils.randomString(5)))
       .className("class")
       .record(1, headerName, 100)
       .record(1, headerName, 200)
@@ -65,7 +67,7 @@ class TestPerformanceReport extends OharaTest {
     val headerName                        = "header1"
     val report: PerformanceReport.Builder = PerformanceReport.builder
     report
-      .connectorKey(ConnectorKey.of("benchmark", CommonUtils.randomString(5)))
+      .connectorKey(ConnectorKey.of(groupName, CommonUtils.randomString(5)))
       .className("class")
       .resetValue(1, headerName)
       .record(1, headerName, 100)

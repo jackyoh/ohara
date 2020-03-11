@@ -43,7 +43,7 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
 
       //Running JDBC Source Connector
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[JDBCSourceConnector].getName(),
         settings = Map(
           oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
@@ -59,7 +59,7 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
 
       //Running HDFS Sink Connector
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[HDFSSink].getName(),
         settings = Map(
           oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceTestingUtils.hdfsURL),

@@ -39,7 +39,7 @@ class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
       produce(timeoutOfInputData)
       loopInputDataThread(produce)
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[FtpSink].getName(),
         settings = ftpSettings
           + (CsvConnectorDefinitions.OUTPUT_FOLDER_KEY -> JsString(PerformanceTestingUtils.createFolder(ftp, dataDir)),

@@ -49,11 +49,13 @@ import scala.util.control.Breaks.break
   *    so please don't change it.
   */
 abstract class BasicTestPerformance extends WithRemoteWorkers {
-  protected val log: Logger              = Logger(classOf[BasicTestPerformance])
+  protected val log: Logger       = Logger(classOf[BasicTestPerformance])
+  protected val groupName: String = "benchmark"
+
   private[this] var inputDataInfos       = mutable.Seq[DataInfo]()
   private[this] val setupStartTime: Long = CommonUtils.current()
 
-  private[this] val topicKey: TopicKey = TopicKey.of("benchmark", CommonUtils.randomString(5))
+  private[this] val topicKey: TopicKey = TopicKey.of(groupName, CommonUtils.randomString(5))
   protected val topicApi: TopicApi.Access =
     TopicApi.access
       .hostname(configuratorHostname)

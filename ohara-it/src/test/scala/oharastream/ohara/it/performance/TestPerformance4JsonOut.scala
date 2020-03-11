@@ -32,7 +32,7 @@ class TestPerformance4JsonOut extends BasicTestPerformance {
     produce(timeoutOfInputData)
     loopInputDataThread(produce)
     setupConnector(
-      connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+      connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
       className = classOf[JsonOut].getName,
       settings = Map(oharastream.ohara.connector.jio.BINDING_PORT_KEY -> JsNumber(workerClusterInfo.freePorts.head))
     )

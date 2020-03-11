@@ -44,7 +44,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
       loopInputDataThread(setupInputData)
       //Running FTP Source Connector
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[FtpSource].getName,
         settings = ftpSettings
           + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))
@@ -58,7 +58,7 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
 
       //Running HDFS Sink Connector
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[HDFSSink].getName(),
         settings = Map(
           oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceTestingUtils.hdfsURL),

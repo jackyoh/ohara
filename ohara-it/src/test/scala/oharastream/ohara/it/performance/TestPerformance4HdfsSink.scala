@@ -41,7 +41,7 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
       produce(timeoutOfInputData)
       loopInputDataThread(produce)
       setupConnector(
-        connectorKey = ConnectorKey.of("benchmark", CommonUtils.randomString(5)),
+        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[HDFSSink].getName(),
         settings = Map(
           CsvConnectorDefinitions.FLUSH_SIZE_KEY             -> JsNumber(numberOfCsvFileToFlush),
