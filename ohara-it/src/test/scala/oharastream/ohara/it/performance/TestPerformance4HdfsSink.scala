@@ -35,7 +35,6 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
 
   @Test
   def test(): Unit = {
-
     val hdfs = hdfsClient()
     try {
       createTopic()
@@ -52,7 +51,6 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
           )
         )
       )
-      
       sleepUntilEnd()
     } finally Releasable.close(hdfs)
   }
@@ -74,5 +72,4 @@ class TestPerformance4HdfsSink extends BasicTestPerformance {
   private[this] def hdfsClient(): FileSystem = {
     FileSystem.hdfsBuilder.url(PerformanceTestingUtils.hdfsURL).build
   }
-
 }
