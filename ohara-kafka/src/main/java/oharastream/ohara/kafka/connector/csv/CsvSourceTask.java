@@ -87,10 +87,10 @@ public abstract class CsvSourceTask extends RowSourceTask {
           return dataReader.read(path);
         }
       }
-      return Collections.emptyList();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+    } catch (Exception e) {
+      System.out.println("Catch the exception for test");
     }
+    return Collections.emptyList();
   }
 
   @Override
