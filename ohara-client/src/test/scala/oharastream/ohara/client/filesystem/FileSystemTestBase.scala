@@ -16,7 +16,7 @@
 
 package oharastream.ohara.client.filesystem
 
-import oharastream.ohara.common.exception.OharaFileSystemException
+import oharastream.ohara.common.exception.{NoSuchFileException, OharaFileSystemException}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import org.junit.{After, Before, Test}
@@ -73,7 +73,7 @@ abstract class FileSystemTestBase extends OharaTest {
 
   @Test
   def testListWithNonExistedPath(): Unit =
-    an[IllegalArgumentException] should be thrownBy fileSystem.listFileNames(randomDir())
+    an[NoSuchFileException] should be thrownBy fileSystem.listFileNames(randomDir())
 
   @Test
   def testCreate(): Unit = {
@@ -111,7 +111,7 @@ abstract class FileSystemTestBase extends OharaTest {
 
   @Test
   def testAppendWithNonExistedPath(): Unit =
-    an[IllegalArgumentException] should be thrownBy fileSystem.append(randomFile())
+    an[NoSuchFileException] should be thrownBy fileSystem.append(randomFile())
 
   @Test
   def testDelete(): Unit = {
@@ -193,7 +193,7 @@ abstract class FileSystemTestBase extends OharaTest {
 
   @Test
   def testFileType(): Unit =
-    intercept[IllegalArgumentException](fileSystem.fileType(CommonUtils.randomString())).getMessage should include(
+    intercept[NoSuchFileException](fileSystem.fileType(CommonUtils.randomString())).getMessage should include(
       "exist"
     )
 }
