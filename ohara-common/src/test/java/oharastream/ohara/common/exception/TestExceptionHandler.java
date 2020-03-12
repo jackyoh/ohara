@@ -64,7 +64,7 @@ public class TestExceptionHandler extends OharaTest {
   @Test(expected = TimeoutException.class)
   public void testManyHandlers() {
     ExceptionHandler.builder()
-        .with(InterruptedException.class, TimeoutException::new)
+        .with(java.lang.InterruptedException.class, TimeoutException::new)
         .with(IOException.class, ExecutionException::new)
         .build()
         .handle(
