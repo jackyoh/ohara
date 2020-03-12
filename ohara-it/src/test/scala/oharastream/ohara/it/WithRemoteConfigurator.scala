@@ -22,7 +22,7 @@ import oharastream.ohara.agent.DataCollie
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
-import oharastream.ohara.common.util.{CommonUtils, VersionUtils}
+import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
 import org.junit.{After, Before}
 import org.scalatest.Matchers._
 
@@ -83,8 +83,8 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
   @After
   def releaseConfigurator(): Unit = {
     // Releasable close add comment to debug
-    // Releasable.close(serviceNameHolder)
+    Releasable.close(serviceNameHolder)
     // the client is used by name holder so we have to close it later
-    //Releasable.close(containerClient)
+    Releasable.close(containerClient)
   }
 }
