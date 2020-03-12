@@ -19,8 +19,6 @@ package oharastream.ohara.common.exception;
 public class NoSuchFileException extends OharaException {
   private static final long serialVersionUID = 1L;
 
-  public NoSuchFileException() {}
-
   public NoSuchFileException(String message) {
     super(message);
   }
