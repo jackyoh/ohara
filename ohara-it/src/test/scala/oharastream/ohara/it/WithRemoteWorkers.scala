@@ -31,20 +31,20 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
   private[this] val bkMaxHeap        = sys.env.get("ohara.it.bk.xmx").map(_.toInt).getOrElse(1024)
   private[this] val wkInitHeap       = sys.env.get("ohara.it.wk.xms").map(_.toInt).getOrElse(1024)
   private[this] val wkMaxHeap        = sys.env.get("ohara.it.wk.xmx").map(_.toInt).getOrElse(1024)
-  private[this] val zkKey: ObjectKey = serviceNameHolder.generateClusterKey()
+  private[this] val zkKey: ObjectKey = serviceKeyHolder.generateClusterKey()
   private[this] def zkApi =
     ZookeeperApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
 
-  private[this] val bkKey: ObjectKey = serviceNameHolder.generateClusterKey()
+  private[this] val bkKey: ObjectKey = serviceKeyHolder.generateClusterKey()
   private[this] def bkApi =
     BrokerApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
   protected def brokerClusterInfo: BrokerClusterInfo = result(bkApi.get(bkKey))
 
-  private[this] val wkKey: ObjectKey = serviceNameHolder.generateClusterKey()
+  private[this] val wkKey: ObjectKey = serviceKeyHolder.generateClusterKey()
   private[this] def wkApi =
     WorkerApi.access
       .hostname(configuratorHostname)
