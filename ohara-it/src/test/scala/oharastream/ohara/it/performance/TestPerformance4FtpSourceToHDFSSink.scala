@@ -47,7 +47,8 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
         connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[FtpSource].getName,
         settings = ftpSettings
-          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))
+          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY    -> JsString(path))
+          + (CsvConnectorDefinitions.FILE_CACHE_SIZE_KEY -> JsNumber(100000))
           + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(
             PerformanceTestingUtils.createFolder(ftp, ftpCompletedPath)
           ))
