@@ -16,35 +16,42 @@
 
 package oharastream.ohara.it
 
+import oharastream.ohara.agent.DataCollie
+import oharastream.ohara.agent.container.ContainerClient
+import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
+import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
-import oharastream.ohara.client.configurator.v0.{BrokerApi, WorkerApi, ZookeeperApi}
+import oharastream.ohara.client.configurator.v0.{BrokerApi, NodeApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.common.setting.ObjectKey
-import oharastream.ohara.common.util.CommonUtils
-import org.junit.Before
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import org.junit.{After, Before}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 abstract class WithRemoteWorkers extends WithRemoteConfigurator {
-  private[this] val zkInitHeap       = sys.env.get("ohara.it.zk.xms").map(_.toInt).getOrElse(1024)
-  private[this] val zkMaxHeap        = sys.env.get("ohara.it.zk.xmx").map(_.toInt).getOrElse(1024)
-  private[this] val bkInitHeap       = sys.env.get("ohara.it.bk.xms").map(_.toInt).getOrElse(1024)
-  private[this] val bkMaxHeap        = sys.env.get("ohara.it.bk.xmx").map(_.toInt).getOrElse(1024)
-  private[this] val wkInitHeap       = sys.env.get("ohara.it.wk.xms").map(_.toInt).getOrElse(1024)
-  private[this] val wkMaxHeap        = sys.env.get("ohara.it.wk.xmx").map(_.toInt).getOrElse(1024)
-  private[this] val zkKey: ObjectKey = serviceKeyHolder.generateClusterKey()
+  private[this] val zkInitHeap                         = sys.env.get("ohara.it.zk.xms").map(_.toInt).getOrElse(1024)
+  private[this] val zkMaxHeap                          = sys.env.get("ohara.it.zk.xmx").map(_.toInt).getOrElse(1024)
+  private[this] val bkInitHeap                         = sys.env.get("ohara.it.bk.xms").map(_.toInt).getOrElse(1024)
+  private[this] val bkMaxHeap                          = sys.env.get("ohara.it.bk.xmx").map(_.toInt).getOrElse(1024)
+  private[this] val wkInitHeap                         = sys.env.get("ohara.it.wk.xms").map(_.toInt).getOrElse(1024)
+  private[this] val wkMaxHeap                          = sys.env.get("ohara.it.wk.xmx").map(_.toInt).getOrElse(1024)
+  private[this] var serviceKeyHolder: ServiceKeyHolder = _
+
+  private[this] var zkKey: ObjectKey = _
   private[this] def zkApi =
     ZookeeperApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
 
-  private[this] val bkKey: ObjectKey = serviceKeyHolder.generateClusterKey()
+  private[this] var bkKey: ObjectKey = _
   private[this] def bkApi =
     BrokerApi.access
       .hostname(configuratorHostname)
       .port(configuratorPort)
   protected def brokerClusterInfo: BrokerClusterInfo = result(bkApi.get(bkKey))
 
-  private[this] val wkKey: ObjectKey = serviceKeyHolder.generateClusterKey()
+  private[this] var wkKey: ObjectKey = _
   private[this] def wkApi =
     WorkerApi.access
       .hostname(configuratorHostname)
@@ -61,6 +68,40 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
 
   @Before
   def setupWorkers(): Unit = {
+    val serviceInfo: (Seq[Node], ContainerClient) = k8sURL
+      .map { _ =>
+        val nodes: Seq[Node]                 = EnvTestingUtils.k8sNodes()
+        val containerClient: ContainerClient = EnvTestingUtils.k8sClient()
+        (nodes, containerClient)
+      }
+      .getOrElse {
+        val nodes: Seq[Node]                 = EnvTestingUtils.dockerNodes()
+        val containerClient: ContainerClient = DockerClient(DataCollie(nodes))
+        (nodes, containerClient)
+      }
+
+    val nodes: Seq[Node]                 = serviceInfo._1
+    val containerClient: ContainerClient = serviceInfo._2
+    val nodeNames: Seq[String]           = nodes.map(_.hostname)
+    serviceKeyHolder = ServiceKeyHolder(containerClient, false)
+
+    val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
+    val hostNameList = result(nodeApi.list()).map(_.hostname)
+    nodes.foreach { node =>
+      if (!hostNameList.contains(node.hostname)) {
+        nodeApi.request
+          .hostname(node.hostname)
+          .port(node.port.get)
+          .user(node.user.get)
+          .password(node.password.get)
+          .create()
+      }
+    }
+
+    zkKey = serviceKeyHolder.generateClusterKey()
+    bkKey = serviceKeyHolder.generateClusterKey()
+    wkKey = serviceKeyHolder.generateClusterKey()
+
     // single zk
     result(
       zkApi.request
@@ -104,5 +145,10 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
         .flatMap(wkApi.start)
     )
     await(() => result(wkApi.get(wkKey)).state.isDefined)
+  }
+
+  @After
+  def releaseService(): Unit = {
+    Releasable.close(serviceKeyHolder)
   }
 }

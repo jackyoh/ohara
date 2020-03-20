@@ -20,7 +20,6 @@ import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.agent.DataCollie
 import oharastream.ohara.agent.docker.DockerClient
-import oharastream.ohara.client.configurator.v0.NodeApi
 import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
 import org.junit.{After, AssumptionViolatedException, Before}
@@ -65,28 +64,14 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
   protected val configuratorContainerName: String =
     s"${configuratorContainerKey.group()}-${configuratorContainerKey.name()}"
 
-  protected[this] var nodes: Seq[Node]                   = _
-  protected[this] var serviceKeyHolder: ServiceKeyHolder = _
-  private var k8sArgument                                = ""
+  protected[this] val k8sURL: Option[String] =
+    sys.env.get("ohara.it.k8s").map(url => s"--k8s ${url}").orElse(Option.empty)
 
-  private[this] val k8sApiURL: Option[String] = sys.env.get("ohara.it.k8s").orElse(Option.empty)
-
-  if (k8sApiURL.nonEmpty) { // Run K8S mode for the performance test
-    val containerClient = EnvTestingUtils.k8sClient()
-    nodes = EnvTestingUtils.k8sNodes()
-    serviceKeyHolder = ServiceKeyHolder(containerClient, false)
-    k8sArgument = s"--k8s ${k8sApiURL.get}"
-  } else { // Run docker mode for the performance test
-    nodes = EnvTestingUtils.dockerNodes()
-    val containerClient = DockerClient(DataCollie(nodes))
-    serviceKeyHolder = ServiceKeyHolder(containerClient, false)
-  }
-
-  protected[this] var nodeNames: Seq[String] = nodes.map(_.hostname)
-  private[this] val imageName                = s"oharastream/configurator:${VersionUtils.VERSION}"
+  private[this] val imageName = s"oharastream/configurator:${VersionUtils.VERSION}"
 
   @Before
   def setupConfigurator(): Unit = {
+    println(s"--k8s ${k8sURL}")
     // Start configurator from docker client
     result(configuratorContainerClient.imageNames(configuratorHostname)) should contain(imageName)
     result(
@@ -95,7 +80,7 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
         .imageName(imageName)
         .portMappings(Map(configuratorPort -> configuratorPort))
         .command(
-          s"--hostname $configuratorHostname --port $configuratorPort $k8sArgument"
+          s"--hostname $configuratorHostname --port $configuratorPort ${k8sURL.getOrElse("")}"
         )
         // add the routes manually since not all envs have deployed the DNS.
         .routes(Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)))
@@ -103,25 +88,13 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
         .create()
     )
 
-    // wait for configurator
+    // Wait configurator start completed
     TimeUnit.SECONDS.sleep(10)
-    val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
-    val hostNameList = result(nodeApi.list()).map(_.hostname)
-    nodes.foreach { node =>
-      if (!hostNameList.contains(node.hostname)) {
-        nodeApi.request
-          .hostname(node.hostname)
-          .port(node.port.get)
-          .user(node.user.get)
-          .password(node.password.get)
-          .create()
-      }
-    }
   }
 
   @After
   def releaseConfigurator(): Unit = {
-    Releasable.close(serviceKeyHolder)
+    // Releasable.close(serviceKeyHolder)
     Releasable.close(configuratorServiceKeyHolder)
     // the client is used by name holder so we have to close it later
     Releasable.close(configuratorContainerClient)
