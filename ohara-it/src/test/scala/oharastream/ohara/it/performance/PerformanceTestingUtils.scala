@@ -20,14 +20,15 @@ import oharastream.ohara.client.filesystem.FileSystem
 import org.junit.AssumptionViolatedException
 
 private[performance] object PerformanceTestingUtils {
-  val INPUTDATA_TIMEOUT_KEY    = "ohara.it.performance.input.data.timeout"
-  val DURATION_KEY             = "ohara.it.performance.duration"
-  val REPORT_OUTPUT_KEY        = "ohara.it.performance.report.output"
-  val LOG_METERS_FREQUENCY_KEY = "ohara.it.performance.log.meters.frequency"
-  val DATA_SIZE_KEY            = "ohara.it.performance.data.size"
-  val PARTITION_SIZE_KEY       = "ohara.it.performance.topic.partitions"
-  val TASK_SIZE_KEY            = "ohara.it.performance.connector.tasks"
-  val ROW_FLUSH_NUMBER_KEY     = "ohara.it.performance.row.flush.number"
+  val INPUTDATA_TIMEOUT_KEY: String    = "ohara.it.performance.input.data.timeout"
+  val DURATION_KEY: String             = "ohara.it.performance.duration"
+  val REPORT_OUTPUT_KEY: String        = "ohara.it.performance.report.output"
+  val LOG_METERS_FREQUENCY_KEY: String = "ohara.it.performance.log.meters.frequency"
+  val DATA_SIZE_KEY: String            = "ohara.it.performance.data.size"
+  val PARTITION_SIZE_KEY: String       = "ohara.it.performance.topic.partitions"
+  val TASK_SIZE_KEY: String            = "ohara.it.performance.connector.tasks"
+  val ROW_FLUSH_NUMBER_KEY: String     = "ohara.it.performance.row.flush.number"
+  val FILENAME_CACHE_SIZE_KEY: String  = "ohara.it.performance.filename.cache.size"
 
   // FTP Setting Key
   val FTP_HOSTNAME_KEY: String = "ohara.it.performance.ftp.hostname"

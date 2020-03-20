@@ -28,6 +28,7 @@ import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.it.WithRemoteWorkers
 import oharastream.ohara.kafka.Producer
 import com.typesafe.scalalogging.Logger
+import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.rules.Timeout
 import org.junit.{After, Rule}
 import spray.json.JsValue
@@ -77,15 +78,15 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   protected val timeoutOfInputData: Duration =
     value(timeoutOfInputDataKey).map(Duration(_)).getOrElse(timeoutOfInputDataDefault)
 
-  private[this] val numberOfRowsToFlushKey             = PerformanceTestingUtils.ROW_FLUSH_NUMBER_KEY
-  private[this] val numberOfRowsToFlushDefault: String = "2000"
+  private[this] val numberOfRowsToFlushKey          = PerformanceTestingUtils.ROW_FLUSH_NUMBER_KEY
+  private[this] val numberOfRowsToFlushDefault: Int = 2000
   protected val numberOfRowsToFlush: Int =
-    value(numberOfRowsToFlushKey).getOrElse(numberOfRowsToFlushDefault).toInt
+    value(numberOfRowsToFlushKey).map(_.toInt).getOrElse(numberOfRowsToFlushDefault).toInt
 
-  private[this] val numberOfCsvFileToFlushKey             = PerformanceTestingUtils.CSV_FILE_FLUSH_SIZE_KEY
-  private[this] val numberOfCsvFileToFlushDefault: String = "10000"
+  private[this] val numberOfCsvFileToFlushKey          = PerformanceTestingUtils.CSV_FILE_FLUSH_SIZE_KEY
+  private[this] val numberOfCsvFileToFlushDefault: Int = 10000
   protected val numberOfCsvFileToFlush: Int =
-    value(numberOfCsvFileToFlushKey).getOrElse(numberOfCsvFileToFlushDefault).toInt
+    value(numberOfCsvFileToFlushKey).map(_.toInt).getOrElse(numberOfCsvFileToFlushDefault).toInt
 
   private[this] val wholeTimeout = (durationOfPerformance.toSeconds + timeoutOfInputData.toSeconds) * 2
 
@@ -116,6 +117,11 @@ abstract class BasicTestPerformance extends WithRemoteWorkers {
   private[this] val numberOfConnectorTasksDefault = 1
   protected val numberOfConnectorTasks: Int =
     value(numberOfConnectorTasksKey).map(_.toInt).getOrElse(numberOfConnectorTasksDefault)
+
+  private[this] val fileNameCacheKey         = PerformanceTestingUtils.FILENAME_CACHE_SIZE_KEY
+  private[this] val fileNameCacheSizeDefault = CsvConnectorDefinitions.FILE_CACHE_SIZE_DEFAULT
+  protected val fileNameCacheSize: Int =
+    value(fileNameCacheKey).map(_.toInt).getOrElse(fileNameCacheSizeDefault)
 
   protected def value(key: String): Option[String] = sys.env.get(key)
   //------------------------------[helper methods]------------------------------//

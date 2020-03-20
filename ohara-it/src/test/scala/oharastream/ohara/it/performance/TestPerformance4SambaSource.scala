@@ -23,7 +23,7 @@ import oharastream.ohara.it.category.PerformanceGroup
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.Test
 import org.junit.experimental.categories.Category
-import spray.json.JsString
+import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
 class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
@@ -48,6 +48,7 @@ class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
           + (CsvConnectorDefinitions.ERROR_FOLDER_KEY -> JsString(
             PerformanceTestingUtils.createFolder(samba, errorPath)
           ))
+          + (CsvConnectorDefinitions.FILE_CACHE_SIZE_KEY -> JsNumber(fileNameCacheSize))
       )
       sleepUntilEnd()
     } finally if (needDeleteData) {
