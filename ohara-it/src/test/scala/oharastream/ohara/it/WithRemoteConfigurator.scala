@@ -64,7 +64,7 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
   /**
     * we have to combine the group and name in order to make name holder to delete related container.
     */
-  protected val configuratorContainerName: String =
+  private[this] val configuratorContainerName: String =
     s"${configuratorContainerKey.group()}-${configuratorContainerKey.name()}"
 
   protected[this] val k8sURL: Option[String] =
