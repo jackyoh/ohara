@@ -25,7 +25,6 @@ import oharastream.ohara.client.configurator.v0.{ConnectorApi, TopicApi}
 import oharastream.ohara.common.data.{Cell, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.it.WithRemoteWorkers
 import oharastream.ohara.kafka.Producer
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
@@ -49,7 +48,7 @@ import scala.util.control.Breaks.break
   * 3) the reports are located at /tmp/performance/$className/$testName/$random.csv by default. Of course, this is related to jenkins
   *    so please don't change it.
   */
-abstract class BasicTestPerformance extends WithRemoteWorkers {
+abstract class BasicTestPerformance extends WithPerformanceRemoteWorkers {
   protected val log: Logger       = Logger(classOf[BasicTestPerformance])
   protected val groupName: String = "benchmark"
 
