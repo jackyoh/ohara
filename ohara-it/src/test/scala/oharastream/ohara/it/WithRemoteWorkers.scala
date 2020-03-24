@@ -16,11 +16,7 @@
 
 package oharastream.ohara.it
 
-import oharastream.ohara.agent.DataCollie
-import oharastream.ohara.agent.container.ContainerClient
-import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
-import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
 import oharastream.ohara.client.configurator.v0.{BrokerApi, NodeApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.common.setting.ObjectKey
@@ -68,21 +64,7 @@ abstract class WithRemoteWorkers extends WithRemoteConfigurator {
 
   @Before
   def setupWorkers(): Unit = {
-    val serviceInfo: (Seq[Node], ContainerClient) = k8sURL
-      .map { _ =>
-        val nodes: Seq[Node]                 = EnvTestingUtils.k8sNodes()
-        val containerClient: ContainerClient = EnvTestingUtils.k8sClient()
-        (nodes, containerClient)
-      }
-      .getOrElse {
-        val nodes: Seq[Node]                 = EnvTestingUtils.dockerNodes()
-        val containerClient: ContainerClient = DockerClient(DataCollie(nodes))
-        (nodes, containerClient)
-      }
-
-    val nodes: Seq[Node]                 = serviceInfo._1
-    val containerClient: ContainerClient = serviceInfo._2
-    val nodeNames: Seq[String]           = nodes.map(_.hostname)
+    val nodeNames: Seq[String] = nodes.map(_.hostname)
     serviceKeyHolder = ServiceKeyHolder(containerClient, false)
 
     val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)

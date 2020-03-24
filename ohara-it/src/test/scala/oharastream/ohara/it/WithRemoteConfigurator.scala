@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.agent.DataCollie
+import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
@@ -67,61 +68,56 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
   private[this] val configuratorContainerName: String =
     s"${configuratorContainerKey.group()}-${configuratorContainerKey.name()}"
 
-  protected[this] val k8sURL: Option[String] =
+  private[this] val k8sURL: Option[String] =
     sys.env.get("ohara.it.k8s").map(url => s"--k8s ${url}").orElse(Option.empty)
 
+  private[this] val serviceInfo: (Seq[Node], ContainerClient) = k8sURL
+    .map { argument =>
+      log.info(s"Running the K8S mode, K8S API argument is ${argument}")
+      val nodes: Seq[Node]                 = EnvTestingUtils.k8sNodes()
+      val containerClient: ContainerClient = EnvTestingUtils.k8sClient()
+      (nodes, containerClient)
+    }
+    .getOrElse {
+      log.info(s"Running the Docker mode")
+      val nodes: Seq[Node]                 = EnvTestingUtils.dockerNodes()
+      val containerClient: ContainerClient = DockerClient(DataCollie(nodes))
+      (nodes, containerClient)
+    }
+
   private[this] val imageName = s"oharastream/configurator:${VersionUtils.VERSION}"
+
+  protected val nodes: Seq[Node]                 = serviceInfo._1
+  protected val containerClient: ContainerClient = serviceInfo._2
 
   @Before
   def setupConfigurator(): Unit = {
     result(configuratorContainerClient.imageNames(configuratorHostname)) should contain(imageName)
 
-    // Start configurator from docker client
-    k8sURL
-      .map { url =>
-        log.info(s"Running the K8S mode, K8S API url is ${url}")
-        val k8sMasterNodeName   = url.split("http://").last.split(":").head
-        val k8sNodes: Seq[Node] = EnvTestingUtils.k8sNodes()
-        result(
-          configuratorContainerClient.containerCreator
-            .nodeName(configuratorHostname)
-            .imageName(imageName)
-            .portMappings(Map(configuratorPort -> configuratorPort))
-            .command(
-              s"--hostname $configuratorHostname --port $configuratorPort $url"
-            )
-            // add the routes manually since not all envs have deployed the DNS.
-            .routes {
-              Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
-                Map(k8sMasterNodeName       -> CommonUtils.address(k8sMasterNodeName)) ++
-                k8sNodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap
-            }
-            .name(configuratorContainerName)
-            .create()
+    val routes: Map[String, String] =
+      k8sURL
+        .map { url =>
+          val k8sMasterNodeName = url.split("http://").last.split(":").head
+          Map(k8sMasterNodeName -> CommonUtils.address(k8sMasterNodeName))
+        }
+        .orElse(Option(Map.empty))
+        .get ++
+        Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
+        nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap
+
+    result(
+      configuratorContainerClient.containerCreator
+        .nodeName(configuratorHostname)
+        .imageName(imageName)
+        .portMappings(Map(configuratorPort -> configuratorPort))
+        .command(
+          s"--hostname $configuratorHostname --port $configuratorPort ${k8sURL.getOrElse("")}"
         )
-      }
-      .orElse {
-        log.info("Running the Docker mode")
-        val dockerNodes: Seq[Node] = EnvTestingUtils.dockerNodes()
-        Option(
-          result(
-            configuratorContainerClient.containerCreator
-              .nodeName(configuratorHostname)
-              .imageName(imageName)
-              .portMappings(Map(configuratorPort -> configuratorPort))
-              .command(
-                s"--hostname $configuratorHostname --port $configuratorPort"
-              )
-              // add the routes manually since not all envs have deployed the DNS.
-              .routes {
-                Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
-                  dockerNodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap
-              }
-              .name(configuratorContainerName)
-              .create()
-          )
-        )
-      }
+        // add the routes manually since not all envs have deployed the DNS.
+        .routes(routes)
+        .name(configuratorContainerName)
+        .create()
+    )
 
     // Wait configurator start completed
     TimeUnit.SECONDS.sleep(10)
