@@ -94,16 +94,15 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
   def setupConfigurator(): Unit = {
     result(configuratorContainerClient.imageNames(configuratorHostname)) should contain(imageName)
 
-    val routes: Map[String, String] =
+    val routes
+      : Map[String, String] = Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
+      nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap ++
       k8sURL
         .map { url =>
           val k8sMasterNodeName = url.split("http://").last.split(":").head
           Map(k8sMasterNodeName -> CommonUtils.address(k8sMasterNodeName))
         }
-        .orElse(Option(Map.empty))
-        .get ++
-        Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
-        nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap
+        .getOrElse(Map.empty)
 
     result(
       configuratorContainerClient.containerCreator
