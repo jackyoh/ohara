@@ -88,7 +88,7 @@ object EnvTestingUtils {
     * form: user:password@hostname:port.
     * NOTED: this key need to be matched with another key value in ohara-it/build.gradle
     */
-  private[this] val DOCKER_NODES_KEY = "ohara.it.docker"
+  val DOCKER_NODES_KEY = "ohara.it.docker"
 
   def dockerNodes(): Seq[Node] =
     sys.env

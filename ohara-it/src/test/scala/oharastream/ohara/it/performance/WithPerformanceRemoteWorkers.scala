@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package oharastream.ohara.it.performance
+package oharastream.ohara.it
 
 import oharastream.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
 import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
 import oharastream.ohara.client.configurator.v0.{BrokerApi, NodeApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.common.setting.ObjectKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.it.ServiceKeyHolder
 import org.junit.{After, Before}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 abstract class WithPerformanceRemoteWorkers extends WithPerformanceRemoteConfigurator {

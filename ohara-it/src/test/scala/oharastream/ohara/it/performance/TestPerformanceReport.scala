@@ -22,7 +22,7 @@ import oharastream.ohara.common.util.CommonUtils
 import org.junit.Test
 import org.scalatest.Matchers._
 
-class TestPerformanceReportOnDocker extends OharaTest {
+class TestPerformanceReport extends OharaTest {
   private[this] val groupName = "benchmark"
 
   @Test

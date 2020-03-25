@@ -26,7 +26,7 @@ import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4SambaSourceOnDocker extends BasicTestPerformance4Samba {
+class TestPerformance4SambaSource extends BasicTestPerformance4Samba {
   @Test
   def test(): Unit = {
     val samba = sambaClient()

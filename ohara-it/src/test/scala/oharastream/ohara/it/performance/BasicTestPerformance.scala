@@ -25,13 +25,9 @@ import oharastream.ohara.client.configurator.v0.{ConnectorApi, TopicApi}
 import oharastream.ohara.common.data.{Cell, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.it.WithPerformanceRemoteWorkers
 import oharastream.ohara.kafka.Producer
 import com.typesafe.scalalogging.Logger
-import oharastream.ohara.agent.DataCollie
-import oharastream.ohara.agent.container.ContainerClient
-import oharastream.ohara.agent.docker.DockerClient
-import oharastream.ohara.client.configurator.v0.NodeApi.Node
-import oharastream.ohara.it.EnvTestingUtils
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.rules.Timeout
 import org.junit.{After, Rule}
@@ -130,9 +126,6 @@ abstract class BasicTestPerformance extends WithPerformanceRemoteWorkers {
   protected def value(key: String): Option[String] = sys.env.get(key)
   //------------------------------[helper methods]------------------------------//
   private[this] var inputDataThread: Releasable = _
-
-  override protected def nodes: Seq[Node]                 = EnvTestingUtils.dockerNodes()
-  override protected def containerClient: ContainerClient = DockerClient(DataCollie(nodes))
 
   protected[this] def loopInputDataThread(input: Duration => (Any, Long, Long)): Unit = {
     inputDataThread = {
