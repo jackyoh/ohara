@@ -20,7 +20,7 @@ import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.it.EnvTestingUtils
 
-class TestPerformance4FtpSourceToHDFSSinkOnK8S extends TestPerformance4FtpSourceToHDFSSinkOnDocker {
+class TestPerformance4FtpSourceOnK8S extends TestPerformance4FtpSourceOnDocker {
   private[this] val k8sURL: Option[String] =
     sys.env.get(EnvTestingUtils.K8S_MASTER_KEY).map(url => s"--k8s ${url}").orElse(Option.empty)
 
