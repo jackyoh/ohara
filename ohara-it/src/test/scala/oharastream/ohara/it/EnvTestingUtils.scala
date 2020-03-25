@@ -75,15 +75,6 @@ object EnvTestingUtils {
       )
       .getOrElse(throw new AssumptionViolatedException(s"$K8S_NODES_KEY does not exists!!!"))
 
-  def k8sMasterRoute(): Map[String, String] =
-    sys.env
-      .get(EnvTestingUtils.K8S_MASTER_KEY)
-      .map { url =>
-        val k8sMasterNodeName = url.split("http://").last.split(":").head
-        Map(k8sMasterNodeName -> CommonUtils.address(k8sMasterNodeName))
-      }
-      .getOrElse(Map.empty)
-
   /**
     * form: user:password@hostname:port.
     * NOTED: this key need to be matched with another key value in ohara-it/build.gradle
