@@ -28,7 +28,7 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4FtpSink extends BasicTestPerformance4Ftp {
+class TestPerformance4FtpSinkOnDocker extends BasicTestPerformance4Ftp {
   private[this] val dataDir: String = "/tmp"
 
   @Test

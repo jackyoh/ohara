@@ -22,48 +22,30 @@ import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.common.setting.ConnectorKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.hdfs.sink.HDFSSink
-import oharastream.ohara.connector.jdbc.source.JDBCSourceConnector
 import oharastream.ohara.it.category.PerformanceGroup
+import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
 import org.junit.experimental.categories.Category
-import org.junit.Test
 import spray.json.{JsNumber, JsString}
+import org.junit.Test
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
-  override protected val tableName: String = s"TABLE${CommonUtils.randomString().toUpperCase()}"
+class TestPerformance4HdfsSinkOnDocker extends BasicTestPerformance {
+  private[this] val NEED_DELETE_DATA_KEY: String = PerformanceTestingUtils.DATA_CLEANUP_KEY
+  private[this] val needDeleteData: Boolean      = sys.env.getOrElse(NEED_DELETE_DATA_KEY, "true").toBoolean
 
   @Test
   def test(): Unit = {
     val hdfs = hdfsClient()
     try {
-      createTable()
-      setupInputData(timeoutOfInputData)
-      loopInputDataThread(setupInputData)
       createTopic()
-
-      //Running JDBC Source Connector
-      setupConnector(
-        connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
-        className = classOf[JDBCSourceConnector].getName(),
-        settings = Map(
-          oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
-          oharastream.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
-          oharastream.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
-          oharastream.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
-          oharastream.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
-          oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
-          oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
-          oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
-        )
-      )
-
-      //Running HDFS Sink Connector
+      produce(timeoutOfInputData)
+      loopInputDataThread(produce)
       setupConnector(
         connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[HDFSSink].getName(),
         settings = Map(
-          oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY   -> JsString(PerformanceTestingUtils.hdfsURL),
-          oharastream.ohara.connector.hdfs.sink.FLUSH_SIZE_KEY -> JsNumber(numberOfCsvFileToFlush),
+          CsvConnectorDefinitions.FLUSH_SIZE_KEY             -> JsNumber(numberOfCsvFileToFlush),
+          oharastream.ohara.connector.hdfs.sink.HDFS_URL_KEY -> JsString(PerformanceTestingUtils.hdfsURL),
           oharastream.ohara.connector.hdfs.sink.OUTPUT_FOLDER_KEY -> JsString(
             PerformanceTestingUtils.createFolder(hdfs, PerformanceTestingUtils.dataDir)
           )
@@ -78,16 +60,11 @@ class TestPerformance4JDBCSourceToHDFSSink extends BasicTestPerformance4Jdbc {
     topicInfos: Seq[TopicInfo]
   ): Unit = {
     if (needDeleteData) {
-      //Drop table for the database
-      client.dropTable(tableName)
-
       //Delete file from the HDFS
       val hdfs = hdfsClient()
-      try {
-        topicInfos.foreach { topicInfo =>
-          val path = s"${PerformanceTestingUtils.dataDir}/${topicInfo.topicNameOnKafka}"
-          PerformanceTestingUtils.deleteFolder(hdfs, path)
-        }
+      try topicInfos.foreach { topicInfo =>
+        val path = s"${PerformanceTestingUtils.dataDir}/${topicInfo.topicNameOnKafka}"
+        PerformanceTestingUtils.deleteFolder(hdfs, path)
       } finally Releasable.close(hdfs)
     }
   }

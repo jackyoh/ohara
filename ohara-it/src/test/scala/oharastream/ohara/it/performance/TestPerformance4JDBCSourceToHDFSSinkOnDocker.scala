@@ -21,39 +21,40 @@ import oharastream.ohara.client.configurator.v0.TopicApi.TopicInfo
 import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.common.setting.ConnectorKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.connector.ftp.FtpSource
 import oharastream.ohara.connector.hdfs.sink.HDFSSink
+import oharastream.ohara.connector.jdbc.source.JDBCSourceConnector
 import oharastream.ohara.it.category.PerformanceGroup
-import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions
-import org.junit.Test
 import org.junit.experimental.categories.Category
+import org.junit.Test
 import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
-  private[this] val ftpCompletedPath = "/completed"
-  private[this] val ftpErrorPath     = "/error"
-  private[this] val (path, _, _)     = setupInputData(timeoutOfInputData)
+class TestPerformance4JDBCSourceToHDFSSinkOnDocker extends BasicTestPerformance4Jdbc {
+  override protected val tableName: String = s"TABLE${CommonUtils.randomString().toUpperCase()}"
 
   @Test
   def test(): Unit = {
-    val ftp  = ftpClient()
     val hdfs = hdfsClient()
     try {
-      createTopic()
+      createTable()
+      setupInputData(timeoutOfInputData)
       loopInputDataThread(setupInputData)
-      //Running FTP Source Connector
+      createTopic()
+
+      //Running JDBC Source Connector
       setupConnector(
         connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
-        className = classOf[FtpSource].getName,
-        settings = ftpSettings
-          + (CsvConnectorDefinitions.INPUT_FOLDER_KEY -> JsString(path))
-          + (CsvConnectorDefinitions.COMPLETED_FOLDER_KEY -> JsString(
-            PerformanceTestingUtils.createFolder(ftp, ftpCompletedPath)
-          ))
-          + (CsvConnectorDefinitions.ERROR_FOLDER_KEY -> JsString(
-            PerformanceTestingUtils.createFolder(ftp, ftpErrorPath)
-          ))
+        className = classOf[JDBCSourceConnector].getName(),
+        settings = Map(
+          oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
+          oharastream.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
+          oharastream.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
+          oharastream.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
+          oharastream.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
+          oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
+          oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
+          oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
+        )
       )
 
       //Running HDFS Sink Connector
@@ -69,34 +70,25 @@ class TestPerformance4FtpSourceToHDFSSink extends BasicTestPerformance4Ftp {
         )
       )
       sleepUntilEnd()
-    } finally {
-      Releasable.close(hdfs)
-      Releasable.close(ftp)
-    }
+    } finally Releasable.close(hdfs)
   }
 
   override protected def afterStoppingConnectors(
     connectorInfos: Seq[ConnectorInfo],
     topicInfos: Seq[TopicInfo]
   ): Unit = {
-    if (cleanupTestData) {
-      //Delete file for the FTP
-      val ftp  = ftpClient()
+    if (needDeleteData) {
+      //Drop table for the database
+      client.dropTable(tableName)
+
+      //Delete file from the HDFS
       val hdfs = hdfsClient()
       try {
-        PerformanceTestingUtils.deleteFolder(ftp, path)
-        PerformanceTestingUtils.deleteFolder(ftp, ftpCompletedPath)
-        PerformanceTestingUtils.deleteFolder(ftp, ftpErrorPath)
-
-        //Delete file from the HDFS
         topicInfos.foreach { topicInfo =>
           val path = s"${PerformanceTestingUtils.dataDir}/${topicInfo.topicNameOnKafka}"
           PerformanceTestingUtils.deleteFolder(hdfs, path)
         }
-      } finally {
-        Releasable.close(hdfs)
-        Releasable.close(ftp)
-      }
+      } finally Releasable.close(hdfs)
     }
   }
 

@@ -18,20 +18,23 @@ package oharastream.ohara.it.performance
 
 import oharastream.ohara.common.setting.ConnectorKey
 import oharastream.ohara.common.util.CommonUtils
-import oharastream.ohara.connector.perf.PerfSource
+import oharastream.ohara.connector.jio.JsonOut
 import oharastream.ohara.it.category.PerformanceGroup
 import org.junit.Test
 import org.junit.experimental.categories.Category
+import spray.json.JsNumber
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4PerfSource extends BasicTestPerformance {
+class TestPerformance4JsonOutOnDocker extends BasicTestPerformance {
   @Test
   def test(): Unit = {
     createTopic()
+    produce(timeoutOfInputData)
+    loopInputDataThread(produce)
     setupConnector(
       connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
-      className = classOf[PerfSource].getName,
-      settings = Map.empty
+      className = classOf[JsonOut].getName,
+      settings = Map(oharastream.ohara.connector.jio.BINDING_PORT_KEY -> JsNumber(workerClusterInfo.freePorts.head))
     )
     sleepUntilEnd()
   }

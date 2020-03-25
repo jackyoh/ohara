@@ -28,7 +28,7 @@ import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4SambaSink extends BasicTestPerformance4Samba {
+class TestPerformance4SambaSinkOnDocker extends BasicTestPerformance4Samba {
   private[this] val outputDir: String = "output"
 
   @Test

@@ -26,7 +26,7 @@ import org.junit.experimental.categories.Category
 import spray.json.{JsNumber, JsString}
 
 @Category(Array(classOf[PerformanceGroup]))
-class TestPerformance4FtpSource extends BasicTestPerformance4Ftp {
+class TestPerformance4FtpSourceOnDocker extends BasicTestPerformance4Ftp {
   @Test
   def test(): Unit = {
     val ftp = ftpClient()
