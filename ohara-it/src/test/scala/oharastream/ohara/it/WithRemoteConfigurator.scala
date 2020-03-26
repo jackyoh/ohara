@@ -83,7 +83,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
           .hostname(node.hostname)
           .port(node.port.getOrElse(CommonUtils.availablePort()))
           .user(node.user.getOrElse(CommonUtils.randomString(5)))
-          .password(node.password.getOrElse(""))
+          .password(node.password.getOrElse(CommonUtils.randomString(5)))
           .create()
       )
     }
