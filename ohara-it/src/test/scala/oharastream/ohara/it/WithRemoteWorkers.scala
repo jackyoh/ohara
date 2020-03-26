@@ -24,7 +24,8 @@ import oharastream.ohara.common.util.CommonUtils
 import org.junit.Before
 import scala.concurrent.ExecutionContext.Implicits.global
 
-abstract class WithRemoteWorkers extends WithRemoteConfigurator {
+abstract class WithRemoteWorkers(paltform: PaltformModeInfo)
+    extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   private[this] val zkInitHeap       = sys.env.get("ohara.it.zk.xms").map(_.toInt).getOrElse(1024)
   private[this] val zkMaxHeap        = sys.env.get("ohara.it.zk.xmx").map(_.toInt).getOrElse(1024)
   private[this] val bkInitHeap       = sys.env.get("ohara.it.bk.xms").map(_.toInt).getOrElse(1024)
