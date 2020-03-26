@@ -21,7 +21,6 @@ import com.typesafe.scalalogging.Logger
 import oharastream.ohara.agent.DataCollie
 import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
-import oharastream.ohara.client.configurator.v0.NodeApi
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
 import org.junit.runner.RunWith
