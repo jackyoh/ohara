@@ -66,7 +66,9 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
         .nodeName(configuratorHostname)
         .imageName(imageName)
         .portMappings(Map(configuratorPort -> configuratorPort))
-        .command(s"--hostname $configuratorHostname --port $configuratorPort")
+        .command(
+          s"--hostname $configuratorHostname --port $configuratorPort --k8s http://ohara-jenkins-it-02:8080/api/v1"
+        )
         // add the routes manually since not all envs have deployed the DNS.
         .routes(nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap)
         .name(configuratorContainerName)
