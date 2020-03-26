@@ -19,7 +19,7 @@ package oharastream.ohara.it.client
 import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.client.configurator.v0.LogApi
-import oharastream.ohara.it.WithRemoteConfigurator
+import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import oharastream.ohara.it.category.ClientGroup
 import org.junit.Test
 import org.junit.experimental.categories.Category
@@ -28,7 +28,7 @@ import org.scalatest.Matchers._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Category(Array(classOf[ClientGroup]))
-class TestQueryConfiguratorLog extends WithRemoteConfigurator {
+class TestQueryConfiguratorLog(paltform: PaltformModeInfo) extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   @Test
   def test(): Unit = {
     val log = result(LogApi.access.hostname(configuratorHostname).port(configuratorPort).log4Configurator())

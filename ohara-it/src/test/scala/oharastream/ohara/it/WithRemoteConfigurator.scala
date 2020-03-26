@@ -17,25 +17,34 @@
 package oharastream.ohara.it
 
 import java.util.concurrent.TimeUnit
-
+import com.typesafe.scalalogging.Logger
 import oharastream.ohara.agent.DataCollie
+import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import org.junit.{After, Before}
 import org.scalatest.Matchers._
 
+import collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * a basic setup offering a configurator running on remote node.
   * this stuff is also in charge of releasing the configurator after testing.
   */
-abstract class WithRemoteConfigurator extends IntegrationTest {
-  private[this] val nodes: Seq[Node]                = EnvTestingUtils.dockerNodes()
+@RunWith(value = classOf[Parameterized])
+abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends IntegrationTest {
+  private[this] val log: Logger = Logger(classOf[WithRemoteConfigurator])
+  log.info(s"Running the ${paltform.modeName} mode")
+  private[this] val nodes: Seq[Node] = paltform.nodes
+  private[this] val containerClient  = paltform.containerClient
+
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
-  private[this] val containerClient                 = DockerClient(DataCollie(nodes))
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
   private[this] val configuratorContainerKey        = serviceNameHolder.generateClusterKey()
   protected val configuratorHostname: String        = nodes.head.hostname
@@ -87,3 +96,22 @@ abstract class WithRemoteConfigurator extends IntegrationTest {
     Releasable.close(containerClient)
   }
 }
+
+object WithRemoteConfigurator {
+  @Parameters
+  def parameters: java.util.Collection[PaltformModeInfo] = {
+    Seq(
+      {
+        val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
+        val k8sClient: ContainerClient = EnvTestingUtils.k8sClient()
+        PaltformModeInfo("K8S", k8sNode, k8sClient)
+      }, {
+        val dockerNode: Seq[Node]         = EnvTestingUtils.dockerNodes()
+        val dockerClient: ContainerClient = DockerClient(DataCollie(dockerNode))
+        PaltformModeInfo("DOCKER", dockerNode, dockerClient)
+      }
+    ).asJava
+  }
+}
+
+case class PaltformModeInfo(modeName: String, nodes: Seq[Node], containerClient: ContainerClient)
