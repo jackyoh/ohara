@@ -67,7 +67,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
         .imageName(imageName)
         .portMappings(Map(configuratorPort -> configuratorPort))
         .command(
-          s"--hostname $configuratorHostname --port $configuratorPort --k8s http://ohara-jenkins-it-02:8080/api/v1"
+          s"--hostname $configuratorHostname --port $configuratorPort --k8s http://ohara-jenkins-it-00:8080/api/v1"
         )
         // add the routes manually since not all envs have deployed the DNS.
         .routes(nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap)
@@ -75,8 +75,8 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
         .create()
     )
     // wait for configurator
-    TimeUnit.SECONDS.sleep(10)
-    nodes.foreach { node =>
+    TimeUnit.SECONDS.sleep(20)
+    /*nodes.foreach { node =>
       result(
         NodeApi.access
           .hostname(configuratorHostname)
@@ -88,7 +88,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
           .password(node.password.getOrElse(CommonUtils.randomString(5)))
           .create()
       )
-    }
+    }*/
   }
 
   @After
