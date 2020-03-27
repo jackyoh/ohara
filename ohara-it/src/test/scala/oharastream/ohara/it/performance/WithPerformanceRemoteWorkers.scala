@@ -67,9 +67,10 @@ abstract class WithPerformanceRemoteWorkers extends WithPerformanceRemoteConfigu
     val nodeNames: Seq[String] = nodes.map(_.hostname)
     serviceKeyHolder = ServiceKeyHolder(containerClient, false)
 
-    val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
-    val hostNameList = result(nodeApi.list()).map(_.hostname)
+    val nodeApi = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
+
     nodes.foreach { node =>
+      val hostNameList = result(nodeApi.list()).map(_.hostname)
       if (!hostNameList.contains(node.hostname)) {
         nodeApi.request
           .hostname(node.hostname)

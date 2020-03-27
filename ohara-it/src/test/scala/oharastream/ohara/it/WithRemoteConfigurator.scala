@@ -23,7 +23,7 @@ import oharastream.ohara.agent.DataCollie
 import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi
-import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
+import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -43,30 +43,12 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   private[this] val log: Logger = Logger(classOf[WithRemoteConfigurator])
   log.info(s"Running the ${paltform.modeName} mode")
 
-  private[this] val containerClient = paltform.containerClient
-
+  private[this] val containerClient                 = paltform.containerClient
+  private[this] val nodes: Seq[Node]                = paltform.nodes
+  protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
 
-  private[this] val configuratorNodeInfo: String = sys.env.getOrElse(
-    EnvTestingUtils.CONFIURATOR_NODENAME_KEY,
-    throw new AssumptionViolatedException(s"${EnvTestingUtils.CONFIURATOR_NODENAME_KEY} does not exists!!!")
-  )
-
-  private[this] val configuratorNode = Node(
-    hostname = configuratorNodeInfo.split("@").last.split(":").head,
-    port = Some(configuratorNodeInfo.split("@").last.split(":").last.toInt),
-    user = Some(configuratorNodeInfo.split(":").head),
-    password = Some(configuratorNodeInfo.split("@").head.split(":").last),
-    services = Seq.empty,
-    state = State.AVAILABLE,
-    error = None,
-    lastModified = CommonUtils.current(),
-    resources = Seq.empty,
-    tags = Map.empty
-  )
-  private[this] val nodes: Seq[Node]   = paltform.nodes ++ Seq(configuratorNode)
-  protected val nodeNames: Seq[String] = nodes.map(_.hostname)
-
+  private[this] val configuratorNode            = EnvTestingUtils.configuratorNode()
   private[this] val configuratorContainerClient = DockerClient(DataCollie(Seq(configuratorNode)))
   private[this] val configuratorServiceKeyHolder: ServiceKeyHolder =
     ServiceKeyHolder(configuratorContainerClient, false)
@@ -100,10 +82,10 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     )
 
     // wait for configurator
-    TimeUnit.SECONDS.sleep(20)
+    TimeUnit.SECONDS.sleep(10)
 
     val nodeApi = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
-    nodes.foreach { node =>
+    (nodes ++ Seq(configuratorNode)).foreach { node =>
       val hostNameList = result(nodeApi.list()).map(_.hostname)
       if (!hostNameList.contains(node.hostname)) {
         result(
@@ -124,8 +106,8 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     // the client is used by name holder so we have to close it later
     Releasable.close(containerClient)
 
-    /*Releasable.close(configuratorServiceKeyHolder)
-    Releasable.close(configuratorContainerClient)*/
+    Releasable.close(configuratorServiceKeyHolder)
+    Releasable.close(configuratorContainerClient)
   }
 }
 
