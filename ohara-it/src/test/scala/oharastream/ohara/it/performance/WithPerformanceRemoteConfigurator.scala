@@ -36,11 +36,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 abstract class WithPerformanceRemoteConfigurator extends IntegrationTest {
   private[this] val log: Logger = Logger(classOf[WithRemoteConfigurator])
 
-  private[this] val CONFIURATOR_NODENAME_KEY = "ohara.it.performance.configurator.node"
-
   private[this] val configuratorNodeInfo: String = sys.env.getOrElse(
-    CONFIURATOR_NODENAME_KEY,
-    throw new AssumptionViolatedException(s"$CONFIURATOR_NODENAME_KEY does not exists!!!")
+    EnvTestingUtils.CONFIURATOR_NODENAME_KEY,
+    throw new AssumptionViolatedException(s"${EnvTestingUtils.CONFIURATOR_NODENAME_KEY} does not exists!!!")
   )
   private[this] val configuratorNode = Node(
     hostname = configuratorNodeInfo.split("@").last.split(":").head,
