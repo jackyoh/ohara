@@ -42,8 +42,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends IntegrationTest {
   private[this] val log: Logger = Logger(classOf[WithRemoteConfigurator])
   log.info(s"Running the ${paltform.modeName} mode")
-  private[this] val nodes: Seq[Node] = paltform.nodes
-  private[this] val containerClient  = paltform.containerClient
+
+  private[this] val containerClient = paltform.containerClient
 
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
@@ -65,7 +65,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     resources = Seq.empty,
     tags = Map.empty
   )
-
+  private[this] val nodes: Seq[Node]            = paltform.nodes ++ Seq(configuratorNode)
   private[this] val configuratorContainerClient = DockerClient(DataCollie(Seq(configuratorNode)))
   private[this] val configuratorServiceKeyHolder: ServiceKeyHolder =
     ServiceKeyHolder(configuratorContainerClient, false)
