@@ -104,8 +104,10 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 
     val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
     val hostNameList = result(nodeApi.list()).map(_.hostname)
+    println(s"HOST NAME LIST:${hostNameList}")
 
     nodes.foreach { node =>
+      println(s"DEBUG ${node.hostname}")
       if (!hostNameList.contains(node.hostname)) {
         result(
           nodeApi.request
