@@ -32,9 +32,5 @@ class TestListNode(paltform: PaltformModeInfo) extends WithRemoteConfigurator(pa
     val services = result(NodeApi.access.hostname(configuratorHostname).port(configuratorPort).list()).head.services
     services should not be Seq.empty
     services.find(_.name == NodeApi.CONFIGURATOR_SERVICE_NAME) should not be None
-
-    /*services.find(_.name == NodeApi.ZOOKEEPER_SERVICE_NAME) should not be None
-    services.find(_.name == NodeApi.BROKER_SERVICE_NAME) should not be None
-    services.find(_.name == NodeApi.WORKER_SERVICE_NAME) should not be None*/
   }
 }

@@ -104,21 +104,25 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
     val hostNameList = result(nodeApi.list()).map(_.hostname)
 
-    nodeApi.request
-      .hostname(configuratorHostname)
-      .port(configuratorPort)
-      .user(configuratorNode.user.get)
-      .password(configuratorNode.password.get)
-      .create()
+    result(
+      nodeApi.request
+        .hostname(configuratorHostname)
+        .port(configuratorPort)
+        .user(configuratorNode.user.get)
+        .password(configuratorNode.password.get)
+        .create()
+    )
 
     nodes.foreach { node =>
       if (!hostNameList.contains(node.hostname)) {
-        nodeApi.request
-          .hostname(node.hostname)
-          .port(node.port.get)
-          .user(node.user.get)
-          .password(node.password.get)
-          .create()
+        result(
+          nodeApi.request
+            .hostname(node.hostname)
+            .port(node.port.get)
+            .user(node.user.get)
+            .password(node.password.get)
+            .create()
+        )
       }
     }
   }
@@ -129,8 +133,8 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     // the client is used by name holder so we have to close it later
     Releasable.close(containerClient)
 
-    Releasable.close(configuratorServiceKeyHolder)
-    Releasable.close(configuratorContainerClient)
+    /*Releasable.close(configuratorServiceKeyHolder)
+    Releasable.close(configuratorContainerClient)*/
   }
 }
 
