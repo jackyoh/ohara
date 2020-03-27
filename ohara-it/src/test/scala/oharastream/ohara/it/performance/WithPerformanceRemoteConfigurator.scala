@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package oharastream.ohara.it
+package oharastream.ohara.it.performance
 
 import java.util.concurrent.TimeUnit
 
@@ -24,6 +24,7 @@ import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
+import oharastream.ohara.it.{EnvTestingUtils, IntegrationTest, ServiceKeyHolder}
 import org.junit.{After, Before}
 import org.scalatest.Matchers._
 
