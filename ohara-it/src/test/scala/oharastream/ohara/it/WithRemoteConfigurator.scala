@@ -49,7 +49,6 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
-  private[this] val configuratorContainerKey        = serviceNameHolder.generateClusterKey()
 
   private[this] val configuratorNodeInfo: String = sys.env.getOrElse(
     EnvTestingUtils.CONFIURATOR_NODENAME_KEY,
@@ -69,6 +68,10 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     tags = Map.empty
   )
 
+  private[this] val configuratorContainerClient = DockerClient(DataCollie(Seq(configuratorNode)))
+  private[this] val configuratorServiceKeyHolder: ServiceKeyHolder =
+    ServiceKeyHolder(configuratorContainerClient, false)
+  private[this] val configuratorContainerKey = configuratorServiceKeyHolder.generateClusterKey()
   protected val configuratorHostname: String = configuratorNode.hostname
   protected val configuratorPort: Int        = CommonUtils.availablePort()
 
@@ -82,9 +85,9 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 
   @Before
   def setupConfigurator(): Unit = {
-    result(containerClient.imageNames(configuratorHostname)) should contain(imageName)
+    result(configuratorContainerClient.imageNames(configuratorHostname)) should contain(imageName)
     result(
-      containerClient.containerCreator
+      configuratorContainerClient.containerCreator
         .nodeName(configuratorHostname)
         .imageName(imageName)
         .portMappings(Map(configuratorPort -> configuratorPort))
@@ -119,6 +122,9 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     Releasable.close(serviceNameHolder)
     // the client is used by name holder so we have to close it later
     Releasable.close(containerClient)
+
+    Releasable.close(configuratorServiceKeyHolder)
+    Releasable.close(configuratorContainerClient)
   }
 }
 
