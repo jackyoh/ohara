@@ -93,7 +93,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
           s"--hostname $configuratorHostname --port $configuratorPort ${paltform.args}"
         )
         // add the routes manually since not all envs have deployed the DNS.
-        .routes(nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap)
+        .routes(Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)))
         .name(configuratorContainerName)
         .create()
     )
@@ -103,15 +103,6 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 
     val nodeApi      = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
     val hostNameList = result(nodeApi.list()).map(_.hostname)
-
-    result(
-      nodeApi.request
-        .hostname(configuratorHostname)
-        .port(configuratorPort)
-        .user(configuratorNode.user.get)
-        .password(configuratorNode.password.get)
-        .create()
-    )
 
     nodes.foreach { node =>
       if (!hostNameList.contains(node.hostname)) {
