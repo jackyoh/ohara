@@ -45,7 +45,6 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 
   private[this] val containerClient = paltform.containerClient
 
-  protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
 
   private[this] val configuratorNodeInfo: String = sys.env.getOrElse(
@@ -65,7 +64,9 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
     resources = Seq.empty,
     tags = Map.empty
   )
-  private[this] val nodes: Seq[Node]            = paltform.nodes ++ Seq(configuratorNode)
+  private[this] val nodes: Seq[Node]   = paltform.nodes ++ Seq(configuratorNode)
+  protected val nodeNames: Seq[String] = nodes.map(_.hostname)
+
   private[this] val configuratorContainerClient = DockerClient(DataCollie(Seq(configuratorNode)))
   private[this] val configuratorServiceKeyHolder: ServiceKeyHolder =
     ServiceKeyHolder(configuratorContainerClient, false)
