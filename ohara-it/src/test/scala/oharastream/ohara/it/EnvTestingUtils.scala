@@ -26,7 +26,6 @@ import org.junit.AssumptionViolatedException
   * from each ITs.
   */
 object EnvTestingUtils {
-  val CONFIURATOR_NODENAME_KEY                        = "ohara.it.configurator.node"
   val K8S_MASTER_KEY: String                          = "ohara.it.k8s"
   private[this] val K8S_METRICS_SERVER_URL            = "ohara.it.k8s.metrics.server"
   private[this] val K8S_NODES_KEY: String             = "ohara.it.k8s.nodename"
@@ -85,23 +84,33 @@ object EnvTestingUtils {
   def dockerNodes(): Seq[Node] =
     sys.env
       .get(DOCKER_NODES_KEY)
-      .map(_.split(",").map { nodeInfo =>
-        val user     = nodeInfo.split(":").head
-        val password = nodeInfo.split("@").head.split(":").last
-        val hostname = nodeInfo.split("@").last.split(":").head
-        val port     = nodeInfo.split("@").last.split(":").last.toInt
-        Node(
-          hostname = hostname,
-          port = Some(port),
-          user = Some(user),
-          password = Some(password),
-          services = Seq.empty,
-          state = State.AVAILABLE,
-          error = None,
-          lastModified = CommonUtils.current(),
-          resources = Seq.empty,
-          tags = Map.empty
-        )
-      }.toSeq)
+      .map(_.split(",").map(nodeInfo => parserNode(nodeInfo)).toSeq)
       .getOrElse(throw new AssumptionViolatedException(s"$DOCKER_NODES_KEY does not exists!!!"))
+
+  val CONFIURATOR_NODENAME_KEY = "ohara.it.configurator.node"
+
+  def configuratorNode(): Node =
+    sys.env
+      .get(CONFIURATOR_NODENAME_KEY)
+      .map(parserNode(_))
+      .getOrElse(throw new AssumptionViolatedException(s"$CONFIURATOR_NODENAME_KEY does not exists!!!"))
+
+  private[this] def parserNode(nodeInfo: String): Node = {
+    val user     = nodeInfo.split(":").head
+    val password = nodeInfo.split("@").head.split(":").last
+    val hostname = nodeInfo.split("@").last.split(":").head
+    val port     = nodeInfo.split("@").last.split(":").last.toInt
+    Node(
+      hostname = hostname,
+      port = Some(port),
+      user = Some(user),
+      password = Some(password),
+      services = Seq.empty,
+      state = State.AVAILABLE,
+      error = None,
+      lastModified = CommonUtils.current(),
+      resources = Seq.empty,
+      tags = Map.empty
+    )
+  }
 }
