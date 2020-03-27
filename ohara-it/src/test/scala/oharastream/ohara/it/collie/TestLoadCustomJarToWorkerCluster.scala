@@ -19,62 +19,37 @@ package oharastream.ohara.it.collie
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import oharastream.ohara.agent.DataCollie
-import oharastream.ohara.agent.docker.DockerClient
-import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.client.configurator.v0._
 import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.common.setting.ObjectKey
-import oharastream.ohara.common.util.Releasable
-import oharastream.ohara.configurator.Configurator
 import oharastream.ohara.it.category.CollieGroup
 import oharastream.ohara.it.connector.{IncludeAllTypesSinkConnector, IncludeAllTypesSourceConnector}
-import oharastream.ohara.it.{EnvTestingUtils, IntegrationTest, ServiceKeyHolder}
+import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import com.typesafe.scalalogging.Logger
 import org.junit.experimental.categories.Category
-import org.junit.{After, Before, Test}
+import org.junit.{Before, Test}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 @Category(Array(classOf[CollieGroup]))
-class TestLoadCustomJarToWorkerCluster extends IntegrationTest {
+class TestLoadCustomJarToWorkerCluster(paltform: PaltformModeInfo)
+    extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   private[this] val log = Logger(classOf[TestLoadCustomJarToWorkerCluster])
 
-  private[this] val nodes: Seq[Node] = EnvTestingUtils.dockerNodes()
+  private[this] val zkApi = ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] val invalidHostname = "unknown"
+  private[this] val bkApi = BrokerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] val invalidPort = 0
+  private[this] val wkApi = WorkerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] val hostname: String = publicHostname.getOrElse(invalidHostname)
+  private[this] val containerApi = ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] val port = publicPort.getOrElse(invalidPort)
-
-  private[this] val configurator: Configurator =
-    Configurator.builder.hostname(hostname).port(port).build()
-
-  private[this] val zkApi = ZookeeperApi.access.hostname(configurator.hostname).port(configurator.port)
-
-  private[this] val bkApi = BrokerApi.access.hostname(configurator.hostname).port(configurator.port)
-
-  private[this] val wkApi = WorkerApi.access.hostname(configurator.hostname).port(configurator.port)
-
-  private[this] val containerApi = ContainerApi.access.hostname(configurator.hostname).port(configurator.port)
-
-  private[this] val fileApi = FileInfoApi.access.hostname(configurator.hostname).port(configurator.port)
-
-  private[this] val nameHolder = ServiceKeyHolder(DockerClient(DataCollie(nodes)))
-
+  private[this] val fileApi = FileInfoApi.access.hostname(configuratorHostname).port(configuratorPort)
   @Before
-  def setup(): Unit =
-    if (nodes.isEmpty || port == invalidPort || hostname == invalidHostname)
-      skipTest(
-        "public hostname and public port must exist so all tests in TestLoadCustomJarToWorkerCluster are ignored"
-      )
-    else {
-      val nodeApi = NodeApi.access.hostname(configurator.hostname).port(configurator.port)
-      nodes.foreach(node => result(nodeApi.request.node(node).create()))
-    }
+  def setup(): Unit = {
+    val nodeApi = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
+    nodes.foreach(node => result(nodeApi.request.node(node).create()))
+  }
 
   @Test
   def test(): Unit = {
@@ -97,7 +72,7 @@ class TestLoadCustomJarToWorkerCluster extends IntegrationTest {
 
     val zkCluster = result(
       zkApi.request
-        .key(nameHolder.generateClusterKey())
+        .key(serviceNameHolder.generateClusterKey())
         .nodeNames(nodes.map(_.name).toSet)
         .create()
         .flatMap(info => zkApi.start(info.key).flatMap(_ => zkApi.get(info.key)))
@@ -110,7 +85,7 @@ class TestLoadCustomJarToWorkerCluster extends IntegrationTest {
     log.info(s"zkCluster:$zkCluster")
     val bkCluster = result(
       bkApi.request
-        .key(nameHolder.generateClusterKey())
+        .key(serviceNameHolder.generateClusterKey())
         .zookeeperClusterKey(zkCluster.key)
         .nodeNames(nodes.map(_.name).toSet)
         .create()
@@ -124,7 +99,7 @@ class TestLoadCustomJarToWorkerCluster extends IntegrationTest {
     log.info(s"bkCluster:$bkCluster")
     val wkCluster = result(
       wkApi.request
-        .key(nameHolder.generateClusterKey())
+        .key(serviceNameHolder.generateClusterKey())
         .brokerClusterKey(bkCluster.key)
         .pluginKeys(jars.map(jar => ObjectKey.of(jar.group, jar.name)).toSet)
         .nodeName(nodes.head.name)
@@ -154,16 +129,10 @@ class TestLoadCustomJarToWorkerCluster extends IntegrationTest {
     }
     await(() => {
       val connectors = result(
-        InspectApi.access.hostname(configurator.hostname).port(configurator.port).workerInfo(wkCluster.key)
+        InspectApi.access.hostname(configuratorHostname).port(configuratorPort).workerInfo(wkCluster.key)
       ).classInfos
       connectors.map(_.className).contains(classOf[IncludeAllTypesSinkConnector].getName) &&
       connectors.map(_.className).contains(classOf[IncludeAllTypesSourceConnector].getName)
     })
-  }
-
-  @After
-  final def tearDown(): Unit = {
-    Releasable.close(configurator)
-    Releasable.close(nameHolder)
   }
 }

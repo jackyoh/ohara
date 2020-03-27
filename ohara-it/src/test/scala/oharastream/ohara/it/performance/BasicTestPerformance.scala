@@ -25,7 +25,6 @@ import oharastream.ohara.client.configurator.v0.{ConnectorApi, TopicApi}
 import oharastream.ohara.common.data.{Cell, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.it.WithPerformanceRemoteWorkers
 import oharastream.ohara.kafka.Producer
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions

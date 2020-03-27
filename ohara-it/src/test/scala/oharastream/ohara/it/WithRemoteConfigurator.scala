@@ -44,7 +44,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   log.info(s"Running the ${paltform.modeName} mode")
 
   private[this] val containerClient                 = paltform.containerClient
-  private[this] val nodes: Seq[Node]                = paltform.nodes
+  protected[this] val nodes: Seq[Node]              = paltform.nodes
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
 
@@ -112,7 +112,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 }
 
 object WithRemoteConfigurator {
-  @Parameters
+  @Parameters(name = "{index} mode = {0}")
   def parameters: java.util.Collection[PaltformModeInfo] = {
     Seq(
       {
@@ -132,4 +132,8 @@ object WithRemoteConfigurator {
   }
 }
 
-case class PaltformModeInfo(modeName: String, nodes: Seq[Node], containerClient: ContainerClient, args: String)
+case class PaltformModeInfo(modeName: String, nodes: Seq[Node], containerClient: ContainerClient, args: String) {
+  override def toString(): String = {
+    modeName
+  }
+}

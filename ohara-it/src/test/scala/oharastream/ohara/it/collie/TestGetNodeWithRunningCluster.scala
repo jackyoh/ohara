@@ -18,26 +18,17 @@ package oharastream.ohara.it.collie
 
 import oharastream.ohara.agent.DataCollie
 import oharastream.ohara.agent.docker.DockerClient
-import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.client.configurator.v0.{ContainerApi, NodeApi, ZookeeperApi}
-import oharastream.ohara.common.util.Releasable
-import oharastream.ohara.configurator.Configurator
 import oharastream.ohara.it.category.CollieGroup
-import oharastream.ohara.it.{EnvTestingUtils, IntegrationTest, ServiceKeyHolder}
+import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import org.junit.experimental.categories.Category
-import org.junit.{After, Before, Test}
+import org.junit.{Before, Test}
 import org.scalatest.Matchers._
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Category(Array(classOf[CollieGroup]))
-class TestGetNodeWithRunningCluster extends IntegrationTest {
-  private[this] val nodes: Seq[Node] = EnvTestingUtils.dockerNodes()
-
-  private[this] val nameHolder: ServiceKeyHolder = ServiceKeyHolder(DockerClient(DataCollie(nodes)))
-
-  private[this] val configurator: Configurator = Configurator.builder.build()
-
+class TestGetNodeWithRunningCluster(paltform: PaltformModeInfo)
+    extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   @Before
   def setup(): Unit = {
     val client = DockerClient(DataCollie(nodes))
@@ -53,8 +44,8 @@ class TestGetNodeWithRunningCluster extends IntegrationTest {
     nodes.foreach { node =>
       result(
         NodeApi.access
-          .hostname(configurator.hostname)
-          .port(configurator.port)
+          .hostname(configuratorHostname)
+          .port(configuratorPort)
           .request
           .hostname(node.hostname)
           .port(node._port)
@@ -69,43 +60,37 @@ class TestGetNodeWithRunningCluster extends IntegrationTest {
   def test(): Unit = {
     val cluster = result(
       ZookeeperApi.access
-        .hostname(configurator.hostname)
-        .port(configurator.port)
+        .hostname(configuratorHostname)
+        .port(configuratorPort)
         .request
-        .key(nameHolder.generateClusterKey())
+        .key(serviceNameHolder.generateClusterKey())
         .nodeNames(nodes.map(_.name).toSet)
         .create()
         .flatMap(
           info =>
             ZookeeperApi.access
-              .hostname(configurator.hostname)
-              .port(configurator.port)
+              .hostname(configuratorHostname)
+              .port(configuratorPort)
               .start(info.key)
-              .flatMap(_ => ZookeeperApi.access.hostname(configurator.hostname).port(configurator.port).get(info.key))
+              .flatMap(_ => ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort).get(info.key))
         )
     )
     assertCluster(
-      () => result(ZookeeperApi.access.hostname(configurator.hostname).port(configurator.port).list()),
+      () => result(ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort).list()),
       () =>
         result(
           ContainerApi.access
-            .hostname(configurator.hostname)
-            .port(configurator.port)
+            .hostname(configuratorHostname)
+            .port(configuratorPort)
             .get(cluster.key)
             .map(_.flatMap(_.containers))
         ),
       cluster.key
     )
-    result(NodeApi.access.hostname(configurator.hostname).port(configurator.port).list()).isEmpty shouldBe false
-    result(NodeApi.access.hostname(configurator.hostname).port(configurator.port).list()).foreach { node =>
+    result(NodeApi.access.hostname(configuratorHostname).port(configuratorPort).list()).isEmpty shouldBe false
+    result(NodeApi.access.hostname(configuratorHostname).port(configuratorPort).list()).foreach { node =>
       node.services.isEmpty shouldBe false
       withClue(s"${node.services}")(node.services.map(_.clusterKeys.size).sum > 0 shouldBe true)
     }
-  }
-
-  @After
-  final def tearDown(): Unit = {
-    Releasable.close(configurator)
-    Releasable.close(nameHolder)
   }
 }
