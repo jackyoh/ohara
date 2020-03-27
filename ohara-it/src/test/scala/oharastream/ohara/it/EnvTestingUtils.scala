@@ -26,6 +26,7 @@ import org.junit.AssumptionViolatedException
   * from each ITs.
   */
 object EnvTestingUtils {
+  val CONFIURATOR_NODENAME_KEY                        = "ohara.it.configurator.node"
   val K8S_MASTER_KEY: String                          = "ohara.it.k8s"
   private[this] val K8S_METRICS_SERVER_URL            = "ohara.it.k8s.metrics.server"
   private[this] val K8S_NODES_KEY: String             = "ohara.it.k8s.nodename"
