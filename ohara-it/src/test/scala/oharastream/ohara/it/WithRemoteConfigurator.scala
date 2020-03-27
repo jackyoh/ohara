@@ -44,8 +44,6 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   log.info(s"Running the ${paltform.modeName} mode")
   private[this] val nodes: Seq[Node] = paltform.nodes
   private[this] val containerClient  = paltform.containerClient
-  private[this] val k8sURL: Option[String] =
-    sys.env.get(EnvTestingUtils.K8S_MASTER_KEY).map(url => s"--k8s ${url}").orElse(Option.empty)
 
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
@@ -92,7 +90,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
         .imageName(imageName)
         .portMappings(Map(configuratorPort -> configuratorPort))
         .command(
-          s"--hostname $configuratorHostname --port $configuratorPort ${k8sURL.getOrElse("")}"
+          s"--hostname $configuratorHostname --port $configuratorPort ${paltform.args}"
         )
         // add the routes manually since not all envs have deployed the DNS.
         .routes(nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap)
@@ -135,14 +133,18 @@ object WithRemoteConfigurator {
       {
         val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
         val k8sClient: ContainerClient = EnvTestingUtils.k8sClient()
-        PaltformModeInfo("K8S", k8sNode, k8sClient)
+        val k8sURL: String = sys.env.getOrElse(
+          EnvTestingUtils.K8S_MASTER_KEY,
+          throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
+        )
+        PaltformModeInfo("K8S", k8sNode, k8sClient, s"--k8s ${k8sURL}")
       }, {
         val dockerNode: Seq[Node]         = EnvTestingUtils.dockerNodes()
         val dockerClient: ContainerClient = DockerClient(DataCollie(dockerNode))
-        PaltformModeInfo("DOCKER", dockerNode, dockerClient)
+        PaltformModeInfo("DOCKER", dockerNode, dockerClient, "")
       }
     ).asJava
   }
 }
 
-case class PaltformModeInfo(modeName: String, nodes: Seq[Node], containerClient: ContainerClient)
+case class PaltformModeInfo(modeName: String, nodes: Seq[Node], containerClient: ContainerClient, args: String)
