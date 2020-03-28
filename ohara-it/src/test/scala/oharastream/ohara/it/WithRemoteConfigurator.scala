@@ -44,7 +44,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   log.info(s"Running the ${paltform.modeName} mode")
 
   private[this] val containerClient = paltform.containerClient.getOrElse(
-    throw new AssumptionViolatedException(s"Please setting the K8S or Docker config for the inegration test")
+    throw new AssumptionViolatedException(s"Please setting the K8S or Docker config key for the integration test")
   )
   protected[this] val nodes: Seq[Node]              = paltform.nodes
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
