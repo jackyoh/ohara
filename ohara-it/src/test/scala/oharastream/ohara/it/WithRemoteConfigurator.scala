@@ -43,7 +43,9 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   private[this] val log: Logger = Logger(classOf[WithRemoteConfigurator])
   log.info(s"Running the ${paltform.modeName} mode")
 
-  private[this] val containerClient                 = paltform.containerClient
+  private[this] val containerClient = paltform.containerClient.getOrElse(
+    throw new AssumptionViolatedException(s"Please setting the K8S or Docker config for the inegration test")
+  )
   protected[this] val nodes: Seq[Node]              = paltform.nodes
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
@@ -117,27 +119,32 @@ object WithRemoteConfigurator {
     val k8s: Option[String]    = sys.env.get(EnvTestingUtils.K8S_MASTER_KEY)
     val docker: Option[String] = sys.env.get(EnvTestingUtils.DOCKER_NODES_KEY)
     if (k8s.isEmpty && docker.isEmpty)
-      throw new AssumptionViolatedException(s"Please setting the K8S or Docker config for the inegration test")
+      Seq(PaltformModeInfo("Empty", Seq.empty, Option.empty, "")).asJava
+    else
+      ((if (k8s.nonEmpty) {
+          val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
+          val k8sClient: ContainerClient = EnvTestingUtils.k8sClient()
+          val k8sURL: String = sys.env.getOrElse(
+            EnvTestingUtils.K8S_MASTER_KEY,
+            throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
+          )
+          Seq(PaltformModeInfo("K8S", k8sNode, Option(k8sClient), s"--k8s ${k8sURL}"))
+        } else Seq.empty) ++
 
-    ((if (k8s.nonEmpty) {
-        val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
-        val k8sClient: ContainerClient = EnvTestingUtils.k8sClient()
-        val k8sURL: String = sys.env.getOrElse(
-          EnvTestingUtils.K8S_MASTER_KEY,
-          throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
-        )
-        Seq(PaltformModeInfo("K8S", k8sNode, k8sClient, s"--k8s ${k8sURL}"))
-      } else Seq.empty) ++
-
-      (if (docker.nonEmpty) {
-         val dockerNode: Seq[Node]         = EnvTestingUtils.dockerNodes()
-         val dockerClient: ContainerClient = DockerClient(DataCollie(dockerNode))
-         Seq(PaltformModeInfo("DOCKER", dockerNode, dockerClient, ""))
-       } else Seq.empty)).asJava
+        (if (docker.nonEmpty) {
+           val dockerNode: Seq[Node]         = EnvTestingUtils.dockerNodes()
+           val dockerClient: ContainerClient = DockerClient(DataCollie(dockerNode))
+           Seq(PaltformModeInfo("DOCKER", dockerNode, Option(dockerClient), ""))
+         } else Seq.empty)).asJava
   }
 }
 
-case class PaltformModeInfo(modeName: String, nodes: Seq[Node], containerClient: ContainerClient, args: String) {
+case class PaltformModeInfo(
+  modeName: String,
+  nodes: Seq[Node],
+  containerClient: Option[ContainerClient],
+  args: String
+) {
   override def toString(): String = {
     modeName
   }
