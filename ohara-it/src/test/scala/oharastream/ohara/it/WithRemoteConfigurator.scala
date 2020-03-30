@@ -123,7 +123,7 @@ object WithRemoteConfigurator {
     else
       ((if (k8s.nonEmpty) {
           val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
-          val k8sClient: ContainerClient = EnvTestingUtils.k8sClient()
+          val k8sClient: ContainerClient = EnvTestingUtils.k8sClientWithMetricsServer()
           val k8sURL: String = sys.env.getOrElse(
             EnvTestingUtils.K8S_MASTER_KEY,
             throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
