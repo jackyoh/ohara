@@ -16,14 +16,13 @@
 
 package oharastream.ohara.it.collie
 
-import oharastream.ohara.agent.DataCollie
-import oharastream.ohara.agent.docker.DockerClient
-import oharastream.ohara.client.configurator.v0.ZookeeperApi
+import oharastream.ohara.client.configurator.v0.{ContainerApi, NodeApi, ZookeeperApi}
 import oharastream.ohara.it.category.CollieGroup
 import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import org.junit.experimental.categories.Category
 import org.junit.{Before, Test}
 import org.scalatest.Matchers._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Category(Array(classOf[CollieGroup]))
@@ -31,20 +30,17 @@ class TestGetNodeWithRunningCluster(paltform: PaltformModeInfo)
     extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   @Before
   def setup(): Unit = {
-    val client = DockerClient(DataCollie(nodes))
-    try {
-      val images = result(client.imageNames())
-      nodes.foreach { node =>
-        withClue(s"failed to find ${ZookeeperApi.IMAGE_NAME_DEFAULT}")(
-          images(node.hostname) should contain(ZookeeperApi.IMAGE_NAME_DEFAULT)
-        )
-      }
-    } finally client.close()
+    val images = result(containerClient.imageNames())
+    nodes.foreach { node =>
+      withClue(s"failed to find ${ZookeeperApi.IMAGE_NAME_DEFAULT}")(
+        images(node.hostname) should contain(ZookeeperApi.IMAGE_NAME_DEFAULT)
+      )
+    }
   }
 
   @Test
   def test(): Unit = {
-    result(
+    val cluster = result(
       ZookeeperApi.access
         .hostname(configuratorHostname)
         .port(configuratorPort)
@@ -61,7 +57,7 @@ class TestGetNodeWithRunningCluster(paltform: PaltformModeInfo)
               .flatMap(_ => ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort).get(info.key))
         )
     )
-    /*assertCluster(
+    assertCluster(
       () => result(ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort).list()),
       () =>
         result(
@@ -77,6 +73,6 @@ class TestGetNodeWithRunningCluster(paltform: PaltformModeInfo)
     result(NodeApi.access.hostname(configuratorHostname).port(configuratorPort).list()).foreach { node =>
       node.services.isEmpty shouldBe false
       withClue(s"${node.services}")(node.services.map(_.clusterKeys.size).sum > 0 shouldBe true)
-    }*/
+    }
   }
 }
