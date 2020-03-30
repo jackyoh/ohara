@@ -18,37 +18,35 @@ package oharastream.ohara.it.connector.jio
 
 import oharastream.ohara.client.configurator.v0.{BrokerApi, NodeApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.client.kafka.ConnectorAdmin
-import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.configurator.Configurator
-import oharastream.ohara.it.{IntegrationTest, ServiceKeyHolder}
-import org.junit.{After, Before}
+import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
+import org.junit.Before
 import org.scalatest.Matchers._
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * the test cases are placed at BasicTestsOfJsonIn, and this abstract class is used to implements the required methods
   * by the "true"env. The env is abstract since there are two "envs" to ohara - ssh and k8s.
   */
-abstract class BasicIntegrationTestsOfJsonIo extends IntegrationTest {
-  protected def configurator: Configurator
-  protected def nameHolder: ServiceKeyHolder
+abstract class BasicIntegrationTestsOfJsonIo(paltform: PaltformModeInfo)
+    extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   protected val freePort: Int = CommonUtils.availablePort()
 
   private[this] def zkApi: ZookeeperApi.Access =
-    ZookeeperApi.access.hostname(configurator.hostname).port(configurator.port)
-  private[this] def bkApi: BrokerApi.Access = BrokerApi.access.hostname(configurator.hostname).port(configurator.port)
-  private[this] def wkApi: WorkerApi.Access = WorkerApi.access.hostname(configurator.hostname).port(configurator.port)
+    ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort)
+  private[this] def bkApi: BrokerApi.Access = BrokerApi.access.hostname(configuratorHostname).port(configuratorPort)
+  private[this] def wkApi: WorkerApi.Access = WorkerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
   protected var _connectorAdmin: ConnectorAdmin = _
 
   protected var _brokersConnProps: String = _
+
   @Before
-  def setup(): Unit = {
-    val nodes = result(NodeApi.access.hostname(configurator.hostname).port(configurator.port).list())
+  def setupJsonIo(): Unit = {
+    val nodes = result(NodeApi.access.hostname(configuratorHostname).port(configuratorPort).list())
     if (nodes.isEmpty) skipTest("are you kidding me? where is the nodes???")
     else {
-      val zkKey = nameHolder.generateClusterKey()
+      val zkKey = serviceNameHolder.generateClusterKey()
       result(
         zkApi.request
           .key(zkKey)
@@ -64,7 +62,7 @@ abstract class BasicIntegrationTestsOfJsonIo extends IntegrationTest {
         }
       }
 
-      val bkKey = nameHolder.generateClusterKey()
+      val bkKey = serviceNameHolder.generateClusterKey()
       result(
         bkApi.request
           .key(bkKey)
@@ -81,7 +79,7 @@ abstract class BasicIntegrationTestsOfJsonIo extends IntegrationTest {
         }
       }
 
-      val wkKey = nameHolder.generateClusterKey()
+      val wkKey = serviceNameHolder.generateClusterKey()
       result(
         wkApi.request
           .key(wkKey)
@@ -110,12 +108,5 @@ abstract class BasicIntegrationTestsOfJsonIo extends IntegrationTest {
         }
       }
     }
-  }
-
-  @After
-  def cleanupContainers(): Unit = {
-    // we don't need to cleanup connectors since we directly delete all containers :)
-    Releasable.close(configurator)
-    Releasable.close(nameHolder)
   }
 }

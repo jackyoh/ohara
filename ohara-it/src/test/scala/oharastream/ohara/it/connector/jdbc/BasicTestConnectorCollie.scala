@@ -22,7 +22,7 @@ import java.sql.{PreparedStatement, Statement, Timestamp}
 import oharastream.ohara.client.configurator.v0.FileInfoApi.FileInfo
 import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
 import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
-import oharastream.ohara.client.configurator.v0.{BrokerApi, ContainerApi, FileInfoApi, NodeApi, WorkerApi, ZookeeperApi}
+import oharastream.ohara.client.configurator.v0.{BrokerApi, ContainerApi, FileInfoApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.common.data.{Row, Serializer}
@@ -82,9 +82,7 @@ abstract class BasicTestConnectorCollie(paltform: PaltformModeInfo)
 
   @Before
   final def setup(): Unit = {
-    checkDataBaseInfo() //Check db info
-    val nodeApi = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
-    nodes.foreach(node => result(nodeApi.request.node(node).create()))
+    checkDataBaseInfo()           //Check db info
     uploadJDBCJarToConfigurator() //For upload JDBC jar
 
     // Create database client

@@ -15,9 +15,17 @@
  */
 
 package oharastream.ohara.it.connector.jio
+import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.connector.jio.BasicTestsOfJsonIn
+import oharastream.ohara.it.PaltformModeInfo
 import oharastream.ohara.it.category.ConnectorGroup
 import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[ConnectorGroup]))
-class TestJsonInOnDocker extends BasicIntegrationTestsOfJsonIoOnDocker with BasicTestsOfJsonIn
+class TestJsonInOnDocker(paltform: PaltformModeInfo)
+    extends BasicIntegrationTestsOfJsonIo(paltform: PaltformModeInfo)
+    with BasicTestsOfJsonIn {
+  override protected def connectorAdmin: ConnectorAdmin = _connectorAdmin
+
+  override protected def brokersConnProps: String = _brokersConnProps
+}

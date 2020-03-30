@@ -24,31 +24,21 @@ import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.client.configurator.v0.{ZookeeperApi, _}
 import oharastream.ohara.common.data.{Row, Serializer}
 import oharastream.ohara.common.setting.{ObjectKey, TopicKey}
-import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.configurator.Configurator
-import oharastream.ohara.it.{IntegrationTest, ServiceKeyHolder}
+import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import oharastream.ohara.kafka.Producer
 import com.typesafe.scalalogging.Logger
+import oharastream.ohara.it.category.StreamGroup
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException
-import org.junit.{After, Before, Test}
+import org.junit.experimental.categories.Category
+import org.junit.{Before, Test}
 import org.scalatest.Matchers._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-abstract class BasicTests4Stream extends IntegrationTest {
-  private[this] val log = Logger(classOf[BasicTests4Stream])
-
-  private[this] val invalidHostname  = "unknown"
-  private[this] val invalidPort      = 0
-  private[this] val hostname: String = publicHostname.getOrElse(invalidHostname)
-  private[this] val port             = publicPort.getOrElse(invalidPort)
-
-  protected val nodes: Seq[Node]
-  protected val nameHolder: ServiceKeyHolder
-
-  protected def createConfigurator(hostname: String, port: Int): Configurator
-
-  private[this] var configurator: Configurator = _
+@Category(Array(classOf[StreamGroup]))
+class TestStream(paltform: PaltformModeInfo) extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
+  private[this] val log = Logger(classOf[TestStream])
 
   private[this] var zkApi: ZookeeperApi.Access        = _
   private[this] var bkApi: BrokerApi.Access           = _
@@ -72,54 +62,46 @@ abstract class BasicTests4Stream extends IntegrationTest {
 
   @Before
   def setup(): Unit = {
-    if (nodes.isEmpty || port == invalidPort || hostname == invalidHostname) {
-      skipTest("public hostname and public port must exist so all tests in BasicTests4Stream are ignored")
-    } else {
-      configurator = createConfigurator(hostname, port)
-      zkApi = ZookeeperApi.access.hostname(configurator.hostname).port(configurator.port)
-      bkApi = BrokerApi.access.hostname(configurator.hostname).port(configurator.port)
-      containerApi = ContainerApi.access.hostname(configurator.hostname).port(configurator.port)
-      topicApi = TopicApi.access.hostname(configurator.hostname).port(configurator.port)
-      jarApi = FileInfoApi.access.hostname(configurator.hostname).port(configurator.port)
-      access = StreamApi.access.hostname(configurator.hostname).port(configurator.port)
-      val nodeApi = NodeApi.access.hostname(configurator.hostname).port(configurator.port)
-      // add all available nodes
-      nodes.foreach(node => result(nodeApi.request.node(node).create()))
-      nodes.size shouldBe nodes.size
-      nodes.forall(node => nodes.map(_.name).contains(node.name)) shouldBe true
+    zkApi = ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort)
+    bkApi = BrokerApi.access.hostname(configuratorHostname).port(configuratorPort)
+    containerApi = ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
+    topicApi = TopicApi.access.hostname(configuratorHostname).port(configuratorPort)
+    jarApi = FileInfoApi.access.hostname(configuratorHostname).port(configuratorPort)
+    access = StreamApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-      // create zookeeper cluster
-      log.info("create zkCluster...start")
-      val zkCluster = result(
-        zkApi.request.key(nameHolder.generateClusterKey()).nodeNames(nodes.take(1).map(_.name).toSet).create()
-      )
-      result(zkApi.start(zkCluster.key))
-      assertCluster(
-        () => result(zkApi.list()),
-        () => result(containerApi.get(zkCluster.key).map(_.flatMap(_.containers))),
-        zkCluster.key
-      )
-      log.info("create zkCluster...done")
+    nodes.forall(node => nodes.map(_.name).contains(node.name)) shouldBe true
 
-      // create broker cluster
-      log.info("create bkCluster...start")
-      val bkCluster = result(
-        bkApi.request
-          .key(nameHolder.generateClusterKey())
-          .zookeeperClusterKey(zkCluster.key)
-          .nodeNames(nodes.take(1).map(_.name).toSet)
-          .create()
-      )
-      bkKey = bkCluster.key
-      result(bkApi.start(bkCluster.key))
-      assertCluster(
-        () => result(bkApi.list()),
-        () => result(containerApi.get(bkCluster.key).map(_.flatMap(_.containers))),
-        bkCluster.key
-      )
-      log.info("create bkCluster...done")
-      brokerConnProps = bkCluster.connectionProps
-    }
+    // create zookeeper cluster
+    log.info("create zkCluster...start")
+    val zkCluster = result(
+      zkApi.request.key(serviceNameHolder.generateClusterKey()).nodeNames(nodes.take(1).map(_.name).toSet).create()
+    )
+    result(zkApi.start(zkCluster.key))
+    assertCluster(
+      () => result(zkApi.list()),
+      () => result(containerApi.get(zkCluster.key).map(_.flatMap(_.containers))),
+      zkCluster.key
+    )
+    log.info("create zkCluster...done")
+
+    // create broker cluster
+    log.info("create bkCluster...start")
+    val bkCluster = result(
+      bkApi.request
+        .key(serviceNameHolder.generateClusterKey())
+        .zookeeperClusterKey(zkCluster.key)
+        .nodeNames(nodes.take(1).map(_.name).toSet)
+        .create()
+    )
+    bkKey = bkCluster.key
+    result(bkApi.start(bkCluster.key))
+    assertCluster(
+      () => result(bkApi.list()),
+      () => result(containerApi.get(bkCluster.key).map(_.flatMap(_.containers))),
+      bkCluster.key
+    )
+    log.info("create bkCluster...done")
+    brokerConnProps = bkCluster.connectionProps
   }
 
   @Test
@@ -146,7 +128,7 @@ abstract class BasicTests4Stream extends IntegrationTest {
     // create stream properties
     val stream = result(
       access.request
-        .key(nameHolder.generateClusterKey())
+        .key(serviceNameHolder.generateClusterKey())
         .jarKey(jarInfo.key)
         .brokerClusterKey(bkKey)
         .nodeName(nodes.head.name)
@@ -257,7 +239,7 @@ abstract class BasicTests4Stream extends IntegrationTest {
       // create stream properties
       val stream = result(
         access.request
-          .key(nameHolder.generateClusterKey())
+          .key(serviceNameHolder.generateClusterKey())
           .jarKey(ObjectKey.of(jarInfo.group, jarInfo.name))
           .brokerClusterKey(bkKey)
           .nodeNames(nodes.map(_.hostname).toSet)
@@ -279,7 +261,7 @@ abstract class BasicTests4Stream extends IntegrationTest {
       // remove a container directly
       val aliveNodes: Set[Node] = nodes.slice(1, nodes.size).toSet
       val deadNodes             = nodes.toSet -- aliveNodes
-      nameHolder.release(
+      serviceNameHolder.release(
         clusterKeys = Set(stream.key),
         // remove the container from first node
         excludedNodes = aliveNodes.map(_.hostname)
@@ -293,10 +275,4 @@ abstract class BasicTests4Stream extends IntegrationTest {
         cluster.deadNodes == deadNodes.map(_.hostname)
       }
     }
-
-  @After
-  def cleanUp(): Unit = {
-    Releasable.close(nameHolder)
-    Releasable.close(configurator)
-  }
 }
