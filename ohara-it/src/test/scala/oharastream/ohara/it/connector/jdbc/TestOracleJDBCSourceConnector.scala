@@ -15,10 +15,15 @@
  */
 
 package oharastream.ohara.it.connector.jdbc
+import oharastream.ohara.it.category.ConnectorGroup
 
 import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.it.PaltformModeInfo
+import org.junit.experimental.categories.Category
 
-abstract class BasicTestOracleJDBCSourceConnector extends BasicTestConnectorCollie {
+@Category(Array(classOf[ConnectorGroup]))
+class TestOracleJDBCSourceConnector(paltform: PaltformModeInfo)
+    extends BasicTestConnectorCollie(paltform: PaltformModeInfo) {
   private[this] val DB_URL_KEY: String       = "ohara.it.oracle.db.url"
   private[this] val DB_USER_NAME_KEY: String = "ohara.it.oracle.db.username"
   private[this] val DB_PASSWORD_KEY: String  = "ohara.it.oracle.db.password"
