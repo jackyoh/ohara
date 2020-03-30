@@ -40,20 +40,6 @@ class TestGetNodeWithRunningCluster(paltform: PaltformModeInfo)
         )
       }
     } finally client.close()
-
-    nodes.foreach { node =>
-      result(
-        NodeApi.access
-          .hostname(configuratorHostname)
-          .port(configuratorPort)
-          .request
-          .hostname(node.hostname)
-          .port(node._port)
-          .user(node._user)
-          .password(node._password)
-          .create()
-      )
-    }
   }
 
   @Test
