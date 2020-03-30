@@ -20,7 +20,6 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
-import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
 import oharastream.ohara.client.configurator.v0.ZookeeperApi.ZookeeperClusterInfo
 import oharastream.ohara.client.configurator.v0.{BrokerApi, ClusterInfo, ContainerApi, LogApi, WorkerApi, ZookeeperApi}
@@ -28,14 +27,15 @@ import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.common.data.Serializer
 import oharastream.ohara.common.exception.{ExecutionException, TimeoutException}
 import oharastream.ohara.common.setting.ObjectKey
-import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.configurator.Configurator
-import oharastream.ohara.it.{IntegrationTest, ServiceKeyHolder}
+import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import oharastream.ohara.kafka.{Consumer, Producer, TopicAdmin}
 import oharastream.ohara.metrics.BeanChannel
 import com.typesafe.scalalogging.Logger
+import oharastream.ohara.it.category.CollieGroup
 import org.apache.kafka.common.errors.InvalidReplicationFactorException
-import org.junit.{After, Test}
+import org.junit.experimental.categories.Category
+import org.junit.Test
 import org.scalatest.Matchers._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -51,22 +51,20 @@ import scala.concurrent.Future
   * Noted: this test depends on the ClusterNameHolder which helps us to cleanup all containers for all tests cases.
   * Hence, you don't need to add "finally" hook to do the cleanup.
   */
-abstract class BasicTests4Collie extends IntegrationTest {
-  private[this] val log              = Logger(classOf[BasicTests4Collie])
+@Category(Array(classOf[CollieGroup]))
+class TestCollie(paltform: PaltformModeInfo) extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
+  private[this] val log              = Logger(classOf[TestCollie])
   private[this] val numberOfClusters = 2
-  protected def configurator: Configurator
-  protected def nodes: Seq[Node]
-  protected def nameHolder: ServiceKeyHolder
 
-  private[this] def zkApi = ZookeeperApi.access.hostname(configurator.hostname).port(configurator.port)
+  private[this] def zkApi = ZookeeperApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] def bkApi = BrokerApi.access.hostname(configurator.hostname).port(configurator.port)
+  private[this] def bkApi = BrokerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] def wkApi = WorkerApi.access.hostname(configurator.hostname).port(configurator.port)
+  private[this] def wkApi = WorkerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] def logApi = LogApi.access.hostname(configurator.hostname).port(configurator.port)
+  private[this] def logApi = LogApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  private[this] def containerApi = ContainerApi.access.hostname(configurator.hostname).port(configurator.port)
+  private[this] def containerApi = ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
   //--------------------------------------------------[zk operations]--------------------------------------------------//
   private[this] def zk_exist(clusterKey: ObjectKey): Future[Boolean] =
@@ -214,7 +212,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
   def testZk(): Unit = {
     log.info("start to run zookeeper cluster")
     val nodeName: String = nodes.head.name
-    val clusterKey       = nameHolder.generateClusterKey()
+    val clusterKey       = serviceNameHolder.generateClusterKey()
     result(zk_exist(clusterKey)) shouldBe false
     val jmxPort      = CommonUtils.availablePort()
     val clientPort   = CommonUtils.availablePort()
@@ -289,7 +287,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
   def testBroker(): Unit = {
     val zkCluster = result(
       zk_create(
-        clusterKey = nameHolder.generateClusterKey(),
+        clusterKey = serviceNameHolder.generateClusterKey(),
         jmxPort = CommonUtils.availablePort(),
         clientPort = CommonUtils.availablePort(),
         electionPort = CommonUtils.availablePort(),
@@ -300,7 +298,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
     result(zk_start(zkCluster.key))
     assertCluster(() => result(zk_clusters()), () => result(zk_containers(zkCluster.key)), zkCluster.key)
     log.info("[BROKER] start to run broker cluster")
-    val clusterKey = nameHolder.generateClusterKey()
+    val clusterKey = serviceNameHolder.generateClusterKey()
     result(bk_exist(clusterKey)) shouldBe false
     log.info(s"[BROKER] verify existence of broker cluster:$clusterKey...done")
     val nodeName: String = nodes.head.name
@@ -498,7 +496,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
   def testWorker(): Unit = {
     val zkCluster = result(
       zk_create(
-        clusterKey = nameHolder.generateClusterKey(),
+        clusterKey = serviceNameHolder.generateClusterKey(),
         jmxPort = CommonUtils.availablePort(),
         clientPort = CommonUtils.availablePort(),
         electionPort = CommonUtils.availablePort(),
@@ -510,7 +508,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
     assertCluster(() => result(zk_clusters()), () => result(zk_containers(zkCluster.key)), zkCluster.key)
     val bkCluster = result(
       bk_create(
-        clusterKey = nameHolder.generateClusterKey(),
+        clusterKey = serviceNameHolder.generateClusterKey(),
         clientPort = CommonUtils.availablePort(),
         jmxPort = CommonUtils.availablePort(),
         zookeeperClusterKey = zkCluster.key,
@@ -521,7 +519,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
     assertCluster(() => result(bk_clusters()), () => result(bk_containers(bkCluster.key)), bkCluster.key)
     log.info("[WORKER] start to test worker")
     val nodeName   = nodes.head.name
-    val clusterKey = nameHolder.generateClusterKey()
+    val clusterKey = serviceNameHolder.generateClusterKey()
     result(wk_exist(clusterKey)) shouldBe false
     log.info("[WORKER] verify:nonExists done")
     val clientPort = CommonUtils.availablePort()
@@ -697,7 +695,7 @@ abstract class BasicTests4Collie extends IntegrationTest {
   @Test
   def testMultiZkClustersOnSameNodes(): Unit = {
     if (nodes.size < 2) skipTest("the size of nodes must be bigger than 1")
-    val keys = (0 until numberOfClusters).map(_ => nameHolder.generateClusterKey())
+    val keys = (0 until numberOfClusters).map(_ => serviceNameHolder.generateClusterKey())
     val zkClusters = keys.map { key =>
       result(
         zk_create(
@@ -738,8 +736,8 @@ abstract class BasicTests4Collie extends IntegrationTest {
   @Test
   def testMultiBkClustersOnSameNodes(): Unit = {
     if (nodes.size < 2) skipTest("the size of nodes must be bigger than 1")
-    val zkKeys = (0 until numberOfClusters).map(_ => nameHolder.generateClusterKey())
-    val bkKeys = (0 until numberOfClusters).map(_ => nameHolder.generateClusterKey())
+    val zkKeys = (0 until numberOfClusters).map(_ => serviceNameHolder.generateClusterKey())
+    val bkKeys = (0 until numberOfClusters).map(_ => serviceNameHolder.generateClusterKey())
     // NOTED: It is illegal to run multi bk clusters on same zk cluster so we have got to instantiate multi zk clusters first.
     val zkClusters = zkKeys.map { key =>
       result(
@@ -775,9 +773,9 @@ abstract class BasicTests4Collie extends IntegrationTest {
   @Test
   def testMultiWkClustersOnSameNodes(): Unit = {
     if (nodes.size < 2) skipTest("the size of nodes must be bigger than 1")
-    val zkKey            = nameHolder.generateClusterKey()
-    val bkKey            = nameHolder.generateClusterKey()
-    val wkKeys           = (0 until numberOfClusters).map(_ => nameHolder.generateClusterKey())
+    val zkKey            = serviceNameHolder.generateClusterKey()
+    val bkKey            = serviceNameHolder.generateClusterKey()
+    val wkKeys           = (0 until numberOfClusters).map(_ => serviceNameHolder.generateClusterKey())
     val groupIds         = (0 until numberOfClusters).map(_ => CommonUtils.randomString(10))
     val configTopicNames = (0 until numberOfClusters).map(_ => CommonUtils.randomString(10))
     val offsetTopicNames = (0 until numberOfClusters).map(_ => CommonUtils.randomString(10))
@@ -845,11 +843,5 @@ abstract class BasicTests4Collie extends IntegrationTest {
       testConnectors(cluster)
       testJmx(cluster)
     }
-  }
-
-  @After
-  def cleanAllContainers(): Unit = {
-    Releasable.close(configurator)
-    Releasable.close(nameHolder)
   }
 }
