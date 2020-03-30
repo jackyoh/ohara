@@ -16,8 +16,6 @@
 
 package oharastream.ohara.it.collie
 
-import oharastream.ohara.agent.DataCollie
-import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.{ContainerApi, NodeApi, ZookeeperApi}
 import oharastream.ohara.it.category.CollieGroup
 import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
@@ -31,15 +29,12 @@ class TestGetNodeWithRunningCluster(paltform: PaltformModeInfo)
     extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   @Before
   def setup(): Unit = {
-    val client = DockerClient(DataCollie(nodes))
-    try {
-      val images = result(client.imageNames())
-      nodes.foreach { node =>
-        withClue(s"failed to find ${ZookeeperApi.IMAGE_NAME_DEFAULT}")(
-          images(node.hostname) should contain(ZookeeperApi.IMAGE_NAME_DEFAULT)
-        )
-      }
-    } finally client.close()
+    val images = result(containerClient.imageNames())
+    nodes.foreach { node =>
+      withClue(s"failed to find ${ZookeeperApi.IMAGE_NAME_DEFAULT}")(
+        images(node.hostname) should contain(ZookeeperApi.IMAGE_NAME_DEFAULT)
+      )
+    }
   }
 
   @Test
