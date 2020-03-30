@@ -27,10 +27,10 @@ import oharastream.ohara.it.connector.{IncludeAllTypesSinkConnector, IncludeAllT
 import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import com.typesafe.scalalogging.Logger
 import org.junit.experimental.categories.Category
-import org.junit.{Before, Test}
-
+import org.junit.Test
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
 @Category(Array(classOf[CollieGroup]))
 class TestLoadCustomJarToWorkerCluster(paltform: PaltformModeInfo)
     extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
@@ -45,11 +45,6 @@ class TestLoadCustomJarToWorkerCluster(paltform: PaltformModeInfo)
   private[this] val containerApi = ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
   private[this] val fileApi = FileInfoApi.access.hostname(configuratorHostname).port(configuratorPort)
-  @Before
-  def setup(): Unit = {
-    val nodeApi = NodeApi.access.hostname(configuratorHostname).port(configuratorPort)
-    nodes.foreach(node => result(nodeApi.request.node(node).create()))
-  }
 
   @Test
   def test(): Unit = {
