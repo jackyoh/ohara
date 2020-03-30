@@ -38,7 +38,6 @@ class TestNodeResource(paltform: PaltformModeInfo) extends WithRemoteConfigurato
       node.resources should not be Seq.empty
       node.resources.size should be >= 1
       node.resources.foreach { resource =>
-        println(s"Resource name is ${resource.name}")
         resource.value.toInt should be >= 1
         resource.name.isEmpty shouldBe false
         resource.unit.isEmpty shouldBe false

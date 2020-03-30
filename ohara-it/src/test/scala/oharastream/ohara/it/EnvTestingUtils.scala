@@ -27,7 +27,7 @@ import org.junit.AssumptionViolatedException
   */
 object EnvTestingUtils {
   val K8S_MASTER_KEY: String                          = "ohara.it.k8s"
-  private[this] val K8S_METRICS_SERVER_URL            = "ohara.it.k8s.metrics.server"
+  val K8S_METRICS_SERVER_URL                          = "ohara.it.k8s.metrics.server"
   private[this] val K8S_NODES_KEY: String             = "ohara.it.k8s.nodename"
   private[this] val K8S_NAMESPACE_KEY: String         = "ohara.it.k8s.namespace"
   private[this] val CONFIGURATOR_HOSTNAME_KEY: String = "ohara.it.hostname"

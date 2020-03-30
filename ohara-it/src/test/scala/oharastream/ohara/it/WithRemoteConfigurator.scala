@@ -128,7 +128,19 @@ object WithRemoteConfigurator {
             EnvTestingUtils.K8S_MASTER_KEY,
             throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
           )
-          Seq(PaltformModeInfo("K8S", k8sNode, Option(k8sClient), s"--k8s ${k8sURL}"))
+          val k8sMetricsURL: String = sys.env.getOrElse(
+            EnvTestingUtils.K8S_METRICS_SERVER_URL,
+            throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_METRICS_SERVER_URL} does not exists!!!")
+          )
+
+          Seq(
+            PaltformModeInfo(
+              "K8S",
+              k8sNode,
+              Option(k8sClient),
+              s"--k8s ${k8sURL} --k8s-metrics-server ${k8sMetricsURL}"
+            )
+          )
         } else Seq.empty) ++
 
         (if (docker.nonEmpty) {
