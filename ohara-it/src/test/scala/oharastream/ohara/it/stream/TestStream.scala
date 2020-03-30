@@ -28,15 +28,12 @@ import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.it.{PaltformModeInfo, WithRemoteConfigurator}
 import oharastream.ohara.kafka.Producer
 import com.typesafe.scalalogging.Logger
-import oharastream.ohara.it.category.StreamGroup
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException
-import org.junit.experimental.categories.Category
 import org.junit.{Before, Test}
 import org.scalatest.Matchers._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@Category(Array(classOf[StreamGroup]))
 class TestStream(paltform: PaltformModeInfo) extends WithRemoteConfigurator(paltform: PaltformModeInfo) {
   private[this] val log = Logger(classOf[TestStream])
 
@@ -68,7 +65,6 @@ class TestStream(paltform: PaltformModeInfo) extends WithRemoteConfigurator(palt
     topicApi = TopicApi.access.hostname(configuratorHostname).port(configuratorPort)
     jarApi = FileInfoApi.access.hostname(configuratorHostname).port(configuratorPort)
     access = StreamApi.access.hostname(configuratorHostname).port(configuratorPort)
-
     nodes.forall(node => nodes.map(_.name).contains(node.name)) shouldBe true
 
     // create zookeeper cluster
