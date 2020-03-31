@@ -122,7 +122,7 @@ object WithRemoteConfigurator {
       Seq(PaltformModeInfo("Empty", Seq.empty, Option.empty, "")).asJava
     else
       ((if (k8s.nonEmpty) {
-          val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
+          // val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
           val k8sClient: ContainerClient = EnvTestingUtils.k8sClientWithMetricsServer()
           val k8sURL: String = sys.env.getOrElse(
             EnvTestingUtils.K8S_MASTER_KEY,
@@ -136,7 +136,7 @@ object WithRemoteConfigurator {
           Seq(
             PaltformModeInfo(
               "K8S",
-              k8sNode,
+              Seq.empty, // K8S add node for the auto
               Option(k8sClient),
               s"--k8s ${k8sURL} --k8s-metrics-server ${k8sMetricsURL}"
             )

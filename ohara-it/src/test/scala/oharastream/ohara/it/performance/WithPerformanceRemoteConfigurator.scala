@@ -68,9 +68,9 @@ abstract class WithPerformanceRemoteConfigurator extends IntegrationTest {
     val serviceInfo: (Seq[Node], ContainerClient) =
       if (k8s.nonEmpty && docker.isEmpty) {
         log.info(s"Running the K8S mode")
-        val nodes: Seq[Node]                 = EnvTestingUtils.k8sNodes()
+        //val nodes: Seq[Node]                 = EnvTestingUtils.k8sNodes()
         val containerClient: ContainerClient = EnvTestingUtils.k8sClient()
-        (nodes, containerClient)
+        (Seq.empty, containerClient)
       } else if (k8s.isEmpty && docker.nonEmpty) {
         log.info(s"Running the Docker mode")
         val nodes: Seq[Node]                 = EnvTestingUtils.dockerNodes()
