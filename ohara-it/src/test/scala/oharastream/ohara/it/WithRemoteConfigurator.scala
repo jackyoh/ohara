@@ -78,7 +78,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
           s"--hostname $configuratorHostname --port $configuratorPort ${paltform.args}"
         )
         // add the routes manually since not all envs have deployed the DNS.
-        .routes(Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)))
+        .routes(EnvTestingUtils.routes(nodes))
         .name(configuratorContainerName)
         .create()
     )

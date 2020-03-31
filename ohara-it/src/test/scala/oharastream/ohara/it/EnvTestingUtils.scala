@@ -79,6 +79,18 @@ object EnvTestingUtils {
       .map(parserNode(_))
       .getOrElse(throw new AssumptionViolatedException(s"$CONFIURATOR_NODENAME_KEY does not exists!!!"))
 
+  def routes(nodes: Seq[Node]): Map[String, String] = {
+    Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
+      nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap ++
+      sys.env
+        .get(K8S_MASTER_KEY)
+        .map { url =>
+          val k8sMasterNodeName = url.split("http://").last.split(":").head
+          Map(k8sMasterNodeName -> CommonUtils.address(k8sMasterNodeName))
+        }
+        .getOrElse(Map.empty)
+  }
+
   private[this] def parserNode(nodeInfo: String): Node = {
     val user     = nodeInfo.split(":").head
     val password = nodeInfo.split("@").head.split(":").last

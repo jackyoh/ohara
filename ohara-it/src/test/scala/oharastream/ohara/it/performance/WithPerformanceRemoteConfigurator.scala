@@ -86,17 +86,6 @@ abstract class WithPerformanceRemoteConfigurator extends IntegrationTest {
     containerClient = serviceInfo._2
 
     result(configuratorContainerClient.imageNames(configuratorHostname)) should contain(imageName)
-
-    val routes
-      : Map[String, String] = Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++
-      nodes.map(node => node.hostname -> CommonUtils.address(node.hostname)).toMap ++
-      k8sURL
-        .map { url =>
-          val k8sMasterNodeName = url.split("http://").last.split(":").head
-          Map(k8sMasterNodeName -> CommonUtils.address(k8sMasterNodeName))
-        }
-        .getOrElse(Map.empty)
-
     result(
       configuratorContainerClient.containerCreator
         .nodeName(configuratorHostname)
@@ -106,7 +95,7 @@ abstract class WithPerformanceRemoteConfigurator extends IntegrationTest {
           s"--hostname $configuratorHostname --port $configuratorPort ${k8sURL.getOrElse("")}"
         )
         // add the routes manually since not all envs have deployed the DNS.
-        .routes(routes)
+        .routes(EnvTestingUtils.routes(nodes))
         .name(configuratorContainerName)
         .create()
     )
