@@ -16,6 +16,8 @@
 
 package oharastream.ohara.it.connector.smb
 
+import oharastream.ohara.common.rule.OharaTest
+
 case class ITSmbProps(hostname: String, port: Int, username: String, password: String, shareName: String) {
   def toMap: Map[String, String] =
     Map(
@@ -27,26 +29,30 @@ case class ITSmbProps(hostname: String, port: Int, username: String, password: S
     ).filter(_._2.nonEmpty)
 }
 
-object ITSmbProps {
-  def apply(variables: Map[String, String]): ITSmbProps = {
-    val hostname  = variables.get(IT_SMB_HOSTNAME_KEY)
-    val port      = variables.get(IT_SMB_PORT_KEY)
-    val username  = variables.get(IT_SMB_USERNAME_KEY)
-    val password  = variables.get(IT_SMB_PASSWORD_KEY)
-    val shareName = variables.get(IT_SMB_SHARE_NAME_KEY)
-
-    if (hostname.isEmpty || port.isEmpty || username.isEmpty || password.isEmpty || shareName.isEmpty) {
-      throw new IllegalArgumentException(
-        s"please setting $IT_SMB_HOSTNAME_KEY, $IT_SMB_PORT_KEY, $IT_SMB_USERNAME_KEY, $IT_SMB_PASSWORD_KEY and $IT_SMB_SHARE_NAME_KEY properties"
-      )
-    }
-
+object ITSmbProps extends OharaTest {
+  def apply(variables: Map[String, String]): ITSmbProps =
     ITSmbProps(
-      hostname = hostname.get,
-      port = Integer.parseInt(port.get),
-      username = username.get,
-      password = password.get,
-      shareName = shareName.get
+      hostname = variables.getOrElse(
+        IT_SMB_HOSTNAME_KEY,
+        skipTest(s"Please setting $IT_SMB_HOSTNAME_KEY properties")
+      ),
+      port = Integer.parseInt(
+        variables.getOrElse(
+          IT_SMB_PORT_KEY,
+          skipTest(s"Please setting $IT_SMB_PORT_KEY properties")
+        )
+      ),
+      username = variables.getOrElse(
+        IT_SMB_USERNAME_KEY,
+        skipTest(s"Please setting $IT_SMB_USERNAME_KEY properties")
+      ),
+      password = variables.getOrElse(
+        IT_SMB_PASSWORD_KEY,
+        skipTest(s"Please settting $IT_SMB_PASSWORD_KEY properties")
+      ),
+      shareName = variables.getOrElse(
+        IT_SMB_SHARE_NAME_KEY,
+        skipTest(s"Please setting $IT_SMB_SHARE_NAME_KEY properties")
+      )
     )
-  }
 }

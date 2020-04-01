@@ -24,11 +24,12 @@ import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.v0.NodeApi
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
+import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-import org.junit.{After, AssumptionViolatedException, Before}
+import org.junit.{After, Before}
 import org.scalatest.Matchers._
 
 import collection.JavaConverters._
@@ -44,8 +45,9 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   log.info(s"Running the ${paltform.modeName} mode")
 
   protected val containerClient = paltform.containerClient.getOrElse(
-    throw new AssumptionViolatedException(s"Please setting the K8S or Docker config key for the integration test")
+    skipTest(s"Please setting the K8S or Docker config key for the integration test")
   )
+
   protected[this] val nodes: Seq[Node]              = paltform.nodes
   protected val nodeNames: Seq[String]              = nodes.map(_.hostname)
   protected val serviceNameHolder: ServiceKeyHolder = ServiceKeyHolder(containerClient, false)
@@ -113,7 +115,7 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
   }
 }
 
-object WithRemoteConfigurator {
+object WithRemoteConfigurator extends OharaTest {
   @Parameters(name = "{index} mode = {0}")
   def parameters: java.util.Collection[PaltformModeInfo] = {
     val k8s: Option[String]    = sys.env.get(EnvTestingUtils.K8S_MASTER_KEY)
@@ -126,11 +128,11 @@ object WithRemoteConfigurator {
           val k8sClient: ContainerClient = EnvTestingUtils.k8sClientWithMetricsServer()
           val k8sURL: String = sys.env.getOrElse(
             EnvTestingUtils.K8S_MASTER_KEY,
-            throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
+            skipTest(s"${EnvTestingUtils.K8S_MASTER_KEY} does not exists!!!")
           )
           val k8sMetricsURL: String = sys.env.getOrElse(
             EnvTestingUtils.K8S_METRICS_SERVER_URL,
-            throw new AssumptionViolatedException(s"${EnvTestingUtils.K8S_METRICS_SERVER_URL} does not exists!!!")
+            skipTest(s"${EnvTestingUtils.K8S_METRICS_SERVER_URL} does not exists!!!")
           )
 
           Seq(

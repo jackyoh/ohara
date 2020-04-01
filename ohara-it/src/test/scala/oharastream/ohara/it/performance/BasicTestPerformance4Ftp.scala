@@ -20,7 +20,6 @@ import java.io.{BufferedWriter, OutputStreamWriter}
 import java.util.concurrent.atomic.LongAdder
 import oharastream.ohara.common.data.Row
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
 import collection.JavaConverters._
 import scala.concurrent.duration._
@@ -28,17 +27,17 @@ import oharastream.ohara.client.filesystem.FileSystem
 
 abstract class BasicTestPerformance4Ftp extends BasicTestPerformance {
   private[this] val ftpHostname = value(PerformanceTestingUtils.FTP_HOSTNAME_KEY)
-    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_HOSTNAME_KEY} is required"))
+    .getOrElse(skipTest(s"${PerformanceTestingUtils.FTP_HOSTNAME_KEY} is required"))
 
   private[this] val ftpPort = value(PerformanceTestingUtils.FTP_PORT_KEY)
-    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_PORT_KEY} is required"))
+    .getOrElse(skipTest(s"${PerformanceTestingUtils.FTP_PORT_KEY} is required"))
     .toInt
 
   private[this] val ftpUser = value(PerformanceTestingUtils.FTP_USER_KEY)
-    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_USER_KEY} is required"))
+    .getOrElse(skipTest(s"${PerformanceTestingUtils.FTP_USER_KEY} is required"))
 
   private[this] val ftpPassword = value(PerformanceTestingUtils.FTP_PASSWORD_KEY)
-    .getOrElse(throw new AssumptionViolatedException(s"${PerformanceTestingUtils.FTP_PASSWORD_KEY} is required"))
+    .getOrElse(skipTest(s"${PerformanceTestingUtils.FTP_PASSWORD_KEY} is required"))
 
   /**
     * add the route for ftp hostname to avoid the hostname error from remote services...

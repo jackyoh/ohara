@@ -17,9 +17,9 @@
 package oharastream.ohara.it.performance
 
 import oharastream.ohara.client.filesystem.FileSystem
-import org.junit.AssumptionViolatedException
+import oharastream.ohara.common.rule.OharaTest
 
-private[performance] object PerformanceTestingUtils {
+private[performance] object PerformanceTestingUtils extends OharaTest {
   val INPUTDATA_TIMEOUT_KEY: String    = "ohara.it.performance.input.data.timeout"
   val DURATION_KEY: String             = "ohara.it.performance.duration"
   val REPORT_OUTPUT_KEY: String        = "ohara.it.performance.report.output"
@@ -55,7 +55,7 @@ private[performance] object PerformanceTestingUtils {
 
   val hdfsURL: String = sys.env.getOrElse(
     PerformanceTestingUtils.HDFS_URL_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
+    skipTest(s"${PerformanceTestingUtils.HDFS_URL_KEY} does not exists!!!")
   )
 
   val CSV_FILE_FLUSH_SIZE_KEY: String = "ohara.it.performance.csv.file.flush.size"

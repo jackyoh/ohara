@@ -18,33 +18,34 @@ package oharastream.ohara.it
 
 import oharastream.ohara.agent.k8s.K8SClient
 import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
+import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.CommonUtils
-import org.junit.AssumptionViolatedException
 
 /**
   * includes helper methods to fetch important information from env variables. This class reduce the duplicate codes
   * from each ITs.
   */
-object EnvTestingUtils {
+object EnvTestingUtils extends OharaTest {
   val K8S_MASTER_KEY: String                  = "ohara.it.k8s"
-  val K8S_METRICS_SERVER_URL                  = "ohara.it.k8s.metrics.server"
+  val K8S_METRICS_SERVER_URL: String          = "ohara.it.k8s.metrics.server"
   private[this] val K8S_NODES_KEY: String     = "ohara.it.k8s.nodename"
   private[this] val K8S_NAMESPACE_KEY: String = "ohara.it.k8s.namespace"
 
   def k8sClient(): K8SClient = {
-    val k8sApiServer =
-      sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!"))
+    val k8sApiServer: String =
+      sys.env.getOrElse(K8S_MASTER_KEY, skipTest(s"$K8S_MASTER_KEY does not exists!!!"))
+
     val namespace = sys.env.getOrElse(K8S_NAMESPACE_KEY, "default")
     K8SClient.builder.apiServerURL(k8sApiServer).namespace(namespace).build()
   }
 
   def k8sClientWithMetricsServer(): K8SClient = {
-    val k8sApiServer =
-      sys.env.getOrElse(K8S_MASTER_KEY, throw new AssumptionViolatedException(s"$K8S_MASTER_KEY does not exists!!!"))
-    val namespace = sys.env.getOrElse(K8S_NAMESPACE_KEY, "default")
-    val k8sMetricsServerURL = sys.env.getOrElse(
+    val k8sApiServer: String =
+      sys.env.getOrElse(K8S_MASTER_KEY, skipTest(s"$K8S_MASTER_KEY does not exists!!!"))
+    val namespace: String = sys.env.getOrElse(K8S_NAMESPACE_KEY, "default")
+    val k8sMetricsServerURL: String = sys.env.getOrElse(
       K8S_METRICS_SERVER_URL,
-      throw new AssumptionViolatedException(s"$K8S_METRICS_SERVER_URL does not exists!!!")
+      skipTest(s"$K8S_METRICS_SERVER_URL does not exists!!!")
     )
     K8SClient.builder.apiServerURL(k8sApiServer).namespace(namespace).metricsApiServerURL(k8sMetricsServerURL).build()
   }
@@ -57,7 +58,7 @@ object EnvTestingUtils {
           .map(Node.apply)
           .toSeq
       )
-      .getOrElse(throw new AssumptionViolatedException(s"$K8S_NODES_KEY does not exists!!!"))
+      .getOrElse(skipTest(s"$K8S_NODES_KEY does not exists!!!"))
 
   /**
     * form: user:password@hostname:port.
@@ -69,7 +70,7 @@ object EnvTestingUtils {
     sys.env
       .get(DOCKER_NODES_KEY)
       .map(_.split(",").map(nodeInfo => parserNode(nodeInfo)).toSeq)
-      .getOrElse(throw new AssumptionViolatedException(s"$DOCKER_NODES_KEY does not exists!!!"))
+      .getOrElse(skipTest(s"$DOCKER_NODES_KEY does not exists!!!"))
 
   val CONFIURATOR_NODENAME_KEY = "ohara.it.configurator.node"
 
@@ -77,7 +78,7 @@ object EnvTestingUtils {
     sys.env
       .get(CONFIURATOR_NODENAME_KEY)
       .map(parserNode(_))
-      .getOrElse(throw new AssumptionViolatedException(s"$CONFIURATOR_NODENAME_KEY does not exists!!!"))
+      .getOrElse(skipTest(s"$CONFIURATOR_NODENAME_KEY does not exists!!!"))
 
   def routes(nodes: Seq[Node]): Map[String, String] = {
     Map(configuratorNode.hostname -> CommonUtils.address(configuratorNode.hostname)) ++

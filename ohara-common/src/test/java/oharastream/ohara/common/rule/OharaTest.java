@@ -85,7 +85,7 @@ public abstract class OharaTest {
    *
    * @param message why you want to skip all test cases?
    */
-  protected void skipTest(String message) {
+  protected <T extends Throwable> T skipTest(String message) {
     throw new AssumptionViolatedException(message);
   }
 }

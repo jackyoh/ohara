@@ -38,7 +38,7 @@ abstract class IntegrationTest {
     *
     * @param message why you want to skip all test cases?
     */
-  protected def skipTest(message: String): Unit = throw new AssumptionViolatedException(message)
+  protected def skipTest(message: String) = throw new AssumptionViolatedException(message)
 
   protected def result[T](f: Future[T]): T = Await.result(f, 2 minutes)
 

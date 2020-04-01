@@ -22,16 +22,11 @@ import oharastream.ohara.connector.smb._
 import oharastream.ohara.it.category.ConnectorGroup
 import oharastream.ohara.kafka.connector.csv.CsvConnectorDefinitions._
 import oharastream.ohara.kafka.connector.csv.CsvSourceConnector
-import org.junit.AssumptionViolatedException
 import org.junit.experimental.categories.Category
 
 @Category(Array(classOf[ConnectorGroup]))
 class TestSmbSource extends CsvSourceTestBase {
-  private[this] val itProps: ITSmbProps = try ITSmbProps(sys.env)
-  catch {
-    case e: IllegalArgumentException =>
-      throw new AssumptionViolatedException(s"skip TestSmbSource test, ${e.getMessage}")
-  }
+  private[this] val itProps: ITSmbProps = ITSmbProps(sys.env)
 
   override protected val fileSystem: FileSystem = FileSystem.smbBuilder
     .hostname(itProps.hostname)

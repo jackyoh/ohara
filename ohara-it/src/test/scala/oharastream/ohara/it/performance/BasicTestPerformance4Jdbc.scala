@@ -28,10 +28,7 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.Row
 import oharastream.ohara.common.setting.ObjectKey
 import oharastream.ohara.common.util.CommonUtils
-
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.junit.AssumptionViolatedException
-
 import collection.JavaConverters._
 import scala.concurrent.duration._
 
@@ -39,19 +36,19 @@ abstract class BasicTestPerformance4Jdbc extends BasicTestPerformance {
   protected[this] val url: String =
     sys.env.getOrElse(
       PerformanceTestingUtils.DB_URL_KEY,
-      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.DB_URL_KEY} does not exists!!!")
+      skipTest(s"${PerformanceTestingUtils.DB_URL_KEY} does not exists!!!")
     )
 
   protected[this] val user: String =
     sys.env.getOrElse(
       PerformanceTestingUtils.DB_USER_NAME_KEY,
-      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.DB_USER_NAME_KEY} does not exists!!!")
+      skipTest(s"${PerformanceTestingUtils.DB_USER_NAME_KEY} does not exists!!!")
     )
 
   protected[this] val password: String =
     sys.env.getOrElse(
       PerformanceTestingUtils.DB_PASSWORD_KEY,
-      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.DB_PASSWORD_KEY} does not exists!!!")
+      skipTest(s"${PerformanceTestingUtils.DB_PASSWORD_KEY} does not exists!!!")
     )
 
   private[this] val jarFolderPath: String = sys.env.getOrElse(PerformanceTestingUtils.JAR_FOLDER_KEY, "/jar")

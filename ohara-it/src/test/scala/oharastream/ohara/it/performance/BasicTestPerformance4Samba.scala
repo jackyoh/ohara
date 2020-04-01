@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.LongAdder
 import oharastream.ohara.client.filesystem.FileSystem
 import oharastream.ohara.common.data.Row
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import org.junit.AssumptionViolatedException
 import spray.json.{JsNumber, JsString, JsValue}
 
 import collection.JavaConverters._
@@ -31,29 +30,29 @@ import scala.concurrent.duration._
 abstract class BasicTestPerformance4Samba extends BasicTestPerformance {
   private[this] val sambaHostname: String = sys.env.getOrElse(
     PerformanceTestingUtils.SAMBA_HOSTNAME_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.SAMBA_HOSTNAME_KEY} does not exists!!!")
+    skipTest(s"${PerformanceTestingUtils.SAMBA_HOSTNAME_KEY} does not exists!!!")
   )
 
   private[this] val sambaUsername: String = sys.env.getOrElse(
     PerformanceTestingUtils.SAMBA_USER_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.SAMBA_USER_KEY} does not exists!!!")
+    skipTest(s"${PerformanceTestingUtils.SAMBA_USER_KEY} does not exists!!!")
   )
 
   private[this] val sambaPassword: String = sys.env.getOrElse(
     PerformanceTestingUtils.SAMBA_PASSWORD_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.SAMBA_PASSWORD_KEY} does not exists!!!")
+    skipTest(s"${PerformanceTestingUtils.SAMBA_PASSWORD_KEY} does not exists!!!")
   )
 
   private[this] val sambaPort: Int = sys.env
     .getOrElse(
       PerformanceTestingUtils.SAMBA_PORT_KEY,
-      throw new AssumptionViolatedException(s"${PerformanceTestingUtils.SAMBA_PORT_KEY} does not exists!!!")
+      skipTest(s"${PerformanceTestingUtils.SAMBA_PORT_KEY} does not exists!!!")
     )
     .toInt
 
   private[this] val sambaShare: String = sys.env.getOrElse(
     PerformanceTestingUtils.SAMBA_SHARE_KEY,
-    throw new AssumptionViolatedException(s"${PerformanceTestingUtils.SAMBA_SHARE_KEY} does not exists!!!")
+    skipTest(s"${PerformanceTestingUtils.SAMBA_SHARE_KEY} does not exists!!!")
   )
 
   private[this] val csvInputFolderKey       = PerformanceTestingUtils.CSV_INPUT_KEY
