@@ -118,12 +118,13 @@ abstract class WithRemoteConfigurator(paltform: PaltformModeInfo) extends Integr
 object WithRemoteConfigurator extends OharaTest {
   @Parameters(name = "{index} mode = {0}")
   def parameters: java.util.Collection[PaltformModeInfo] = {
-    val k8s: Option[String]    = sys.env.get(EnvTestingUtils.K8S_MASTER_KEY)
-    val docker: Option[String] = sys.env.get(EnvTestingUtils.DOCKER_NODES_KEY)
+    val k8s: Option[String]        = sys.env.get(EnvTestingUtils.K8S_MASTER_KEY)
+    val k8sMetrics: Option[String] = sys.env.get(EnvTestingUtils.K8S_METRICS_SERVER_URL)
+    val docker: Option[String]     = sys.env.get(EnvTestingUtils.DOCKER_NODES_KEY)
     if (k8s.isEmpty && docker.isEmpty)
       Seq(PaltformModeInfo("Empty", Seq.empty, Option.empty, "")).asJava
     else
-      ((if (k8s.nonEmpty) {
+      ((if (k8s.nonEmpty && k8sMetrics.nonEmpty) {
           val k8sNode: Seq[Node]         = EnvTestingUtils.k8sNodes()
           val k8sClient: ContainerClient = EnvTestingUtils.k8sClientWithMetricsServer()
           val k8sURL: String = sys.env.getOrElse(
