@@ -16,6 +16,7 @@
 
 package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
@@ -35,7 +36,8 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] var inMemoryOffsets: Offsets                             = _
   private[this] var topicOffsets: Offsets                                = _
   private[this] var lastPoll: Long                                       = -1
-  private[this] var recoveryFlag: Boolean = false
+  private[this] var recoveryFlag: AtomicBoolean                          = new AtomicBoolean(false)
+
   /**
     * Start the Task. This should handle any configuration parsing and one-time setup from the task.
     *
@@ -52,7 +54,7 @@ class JDBCSourceTask extends RowSourceTask {
     val tableName = jdbcSourceConnectorConfig.dbTableName
     inMemoryOffsets = new Offsets(rowContext, tableName)
     topicOffsets = new Offsets(rowContext, tableName)
-    recoveryFlag = true
+    recoveryFlag.set(true)
   }
 
   /**
@@ -75,12 +77,13 @@ class JDBCSourceTask extends RowSourceTask {
           dbTableDataProvider
             .executeQuery(Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
 
-        var recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
+        var recoveryQueryRecordCount = 0
 
         // Running empty loop for recovery
-        if (recoveryFlag) {
+        if (recoveryFlag.get()) {
+          recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
           resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
-          recoveryFlag = false
+          recoveryFlag.set(false)
         }
 
         lastPoll = current
@@ -96,7 +99,6 @@ class JDBCSourceTask extends RowSourceTask {
             val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
             topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1 + recoveryQueryRecordCount))
             inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1 + recoveryQueryRecordCount))
-            recoveryQueryRecordCount = 0
           } else {
             val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
             inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))

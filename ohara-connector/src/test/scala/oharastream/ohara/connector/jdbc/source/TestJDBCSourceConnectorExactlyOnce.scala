@@ -45,6 +45,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     val pool            = Executors.newSingleThreadExecutor()
     val startTime: Long = CommonUtils.current()
     pool.execute(() => {
+      if (client.tables().map(_.name).find(_ == tableName).isEmpty) createTable()
+
       val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
       val preparedStatement = client.connection.prepareStatement(sql)
 
@@ -68,18 +70,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     }
   }
 
-  private[this] def rowData(): Row = {
-    Row.of(
-      (1 to columnSize).map(index => {
-        Cell.of(s"c$index", CommonUtils.randomString())
-      }): _*
-    )
-  }
-
   @Test
   def test(): Unit = {
-    createTable()
-
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
 
@@ -95,12 +87,40 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     )
 
     TimeUnit.SECONDS.sleep(5)
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+
+    val result1 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
+    tableTotalCount.intValue() >= result1.size shouldBe true
+
     result(connectorAdmin.pause(connectorKey))
-
-    TimeUnit.SECONDS.sleep(5)
     result(connectorAdmin.resume(connectorKey))
-    result(connectorAdmin.delete(connectorKey))
+    TimeUnit.SECONDS.sleep(5)
 
+    consumer.seekToBeginning()
+    val result2 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
+    result2.size > result1.size shouldBe true
+
+    result(connectorAdmin.delete(connectorKey))
+    result(
+      connectorAdmin
+        .connectorCreator()
+        .connectorKey(connectorKey)
+        .connectorClass(classOf[JDBCSourceConnector])
+        .topicKey(topicKey)
+        .numberOfTasks(1)
+        .settings(jdbcSourceConnectorProps.toMap)
+        .create()
+    )
+    TimeUnit.SECONDS.sleep(2)
+    result(connectorAdmin.delete(connectorKey))
     result(
       connectorAdmin
         .connectorCreator()
@@ -112,20 +132,19 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         .create()
     )
 
-    val consumer =
-      Consumer
-        .builder()
-        .topicName(topicKey.topicNameOnKafka)
-        .offsetFromBegin()
-        .connectionProps(testUtil.brokersConnProps)
-        .keySerializer(Serializer.ROW)
-        .valueSerializer(Serializer.BYTES)
-        .build()
+    // Check the table and topic data size for the finally
+    TimeUnit.MILLISECONDS.sleep(durationTime)
+    consumer.seekToBeginning() //Reset consumer
+    val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+    tableTotalCount.intValue() shouldBe result3.size
+  }
 
-    // Check the table and topic data size
-    TimeUnit.MILLISECONDS.sleep(durationTime + 15)
-    val records = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
-    tableTotalCount.intValue() shouldBe records.size
+  private[this] def rowData(): Row = {
+    Row.of(
+      (1 to columnSize).map(index => {
+        Cell.of(s"c$index", CommonUtils.randomString())
+      }): _*
+    )
   }
 
   private[this] val jdbcSourceConnectorProps = JDBCSourceConnectorConfig(
