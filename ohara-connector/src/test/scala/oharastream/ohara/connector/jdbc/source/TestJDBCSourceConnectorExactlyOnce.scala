@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
-  private[this] val durationTime: Long  = 30000
+  private[this] val durationTime: Long  = 40000
   private[this] val db                  = Database.local()
   private[this] val client              = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName           = "table1"
