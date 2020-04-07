@@ -35,7 +35,7 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] var inMemoryOffsets: Offsets                             = _
   private[this] var topicOffsets: Offsets                                = _
   private[this] var lastPoll: Long                                       = -1
-
+  private[this] var recoveryFlag: Boolean = false
   /**
     * Start the Task. This should handle any configuration parsing and one-time setup from the task.
     *
@@ -52,6 +52,7 @@ class JDBCSourceTask extends RowSourceTask {
     val tableName = jdbcSourceConnectorConfig.dbTableName
     inMemoryOffsets = new Offsets(rowContext, tableName)
     topicOffsets = new Offsets(rowContext, tableName)
+    recoveryFlag = true
   }
 
   /**
@@ -77,7 +78,10 @@ class JDBCSourceTask extends RowSourceTask {
         var recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
 
         // Running empty loop for recovery
-        resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
+        if (recoveryFlag) {
+          resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
+          recoveryFlag = false
+        }
 
         lastPoll = current
         Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
