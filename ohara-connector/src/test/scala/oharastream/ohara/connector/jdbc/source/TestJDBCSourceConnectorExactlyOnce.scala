@@ -30,16 +30,21 @@ import oharastream.ohara.kafka.Consumer
 import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.testing.With3Brokers3Workers
 import oharastream.ohara.testing.service.Database
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 
 import scala.concurrent.duration._
-import collection.JavaConverters._
 import org.junit.{After, Test}
 import org.scalatest.Matchers._
+
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.JavaConverters._
 
-class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
-  private[this] val durationTime: Long  = 40000
+@RunWith(value = classOf[Parameterized])
+class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Brokers3Workers {
+  private[this] val durationTime: Long  = inputDataTime
   private[this] val db                  = Database.local()
   private[this] val client              = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName           = "table1"
@@ -226,5 +231,12 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     Releasable.close(inputDataThread)
     Releasable.close(client)
     Releasable.close(db)
+  }
+}
+
+object TestJDBCSourceConnectorExactlyOnce {
+  @Parameters(name = "{index} test input data time is {0} MILLISECONDS")
+  def parameters(): java.util.Collection[Long] = {
+    Seq(3000L, 30000L).asJava
   }
 }
