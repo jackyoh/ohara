@@ -83,11 +83,11 @@ class JDBCSourceTask extends RowSourceTask {
         if (recoveryFlag.get()) {
           recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
           resultSet.slice(0, recoveryQueryRecordCount).foreach(x => x.seq)
-          recoveryFlag.set(false)
         }
 
         lastPoll = current
         Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
+          recoveryFlag.set(false)
           val newSchema =
             if (schema.isEmpty)
               columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())

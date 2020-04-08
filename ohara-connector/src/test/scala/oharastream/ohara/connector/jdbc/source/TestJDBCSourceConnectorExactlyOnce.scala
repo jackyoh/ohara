@@ -65,20 +65,20 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
       val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
       val preparedStatement = client.connection.prepareStatement(sql)
-
-      while ((CommonUtils.current() - startTime) <= durationTime) {
-        // 432000000 is 5 days ago
-        val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
-        preparedStatement.setTimestamp(1, timestampData)
-        rowData().asScala.zipWithIndex.foreach {
-          case (result, index) => {
-            preparedStatement.setString(index + 2, result.value().toString)
+      try {
+        while ((CommonUtils.current() - startTime) <= durationTime) {
+          // 432000000 is 5 days ago
+          val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
+          preparedStatement.setTimestamp(1, timestampData)
+          rowData().asScala.zipWithIndex.foreach {
+            case (result, index) => {
+              preparedStatement.setString(index + 2, result.value().toString)
+            }
           }
+          preparedStatement.execute()
+          tableTotalCount.add(1)
         }
-        preparedStatement.execute()
-        tableTotalCount.add(1)
-      }
-      preparedStatement.close()
+      } finally Releasable.close(preparedStatement)
     })
     () => {
       pool.shutdown()
@@ -122,7 +122,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
     consumer.seekToBeginning()
     val result2 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
-    result2.size > result1.size shouldBe true
+    result2.size >= result1.size shouldBe true
 
     result(connectorAdmin.delete(connectorKey))
     result(
@@ -148,11 +148,55 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         .create()
     )
 
-    // Check the table and topic data size for the finally
+    // Check the table and topic data size
     TimeUnit.MILLISECONDS.sleep(durationTime)
     consumer.seekToBeginning() //Reset consumer
     val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
     tableTotalCount.intValue() shouldBe result3.size
+
+    // Check the topic data is equals the database table
+    val statement = client.connection.createStatement()
+    try {
+      val queryColumn = "c1"
+      val resultSet   = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+
+      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      val topicData: Seq[String] = result3
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+
+      tableData.zipWithIndex.foreach {
+        case (record, index) => {
+          record shouldBe topicData(index)
+        }
+      }
+
+      val result = statement.executeQuery(s"select * from $tableName where $queryColumn='${tableData.head}'")
+      val queryResult = Iterator
+        .continually(result)
+        .takeWhile(_.next())
+        .map(record => {
+          val timestamp = record.getString(timestampColumnName)
+          val column1   = record.getString(queryColumn)
+          (timestamp, column1)
+        })
+        .toSeq
+        .head
+      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', 'hello')"
+      )
+      consumer.seekToBeginning() //Reset consumer
+      val result4 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() shouldBe result4.size
+
+      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello'")
+      statement.executeUpdate(s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'aaaaaa')")
+      TimeUnit.SECONDS.sleep(5)
+      consumer.seekToBeginning() //Reset consumer
+      val result5 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      result5.size shouldBe tableTotalCount.intValue() + 2 // Because update and insert the now timestamp
+    } finally Releasable.close(statement)
   }
 
   private[this] def rowData(): Row = {
