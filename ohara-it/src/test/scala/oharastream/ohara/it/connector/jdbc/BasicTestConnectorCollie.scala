@@ -18,8 +18,10 @@ package oharastream.ohara.it.connector.jdbc
 
 import java.io.File
 import java.sql.{PreparedStatement, Statement, Timestamp}
+import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
+import oharastream.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
 import oharastream.ohara.client.configurator.v0.FileInfoApi.FileInfo
 import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
 import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
@@ -34,7 +36,7 @@ import oharastream.ohara.it.{ContainerPlatform, WithRemoteConfigurator}
 import oharastream.ohara.kafka.Consumer
 import oharastream.ohara.kafka.Consumer.Record
 import oharastream.ohara.kafka.connector.TaskSetting
-import org.junit.{After, Before, Test}
+import org.junit.{After, AssumptionViolatedException, Before, Test}
 import org.scalatest.Matchers._
 
 import scala.collection.JavaConverters._
@@ -45,10 +47,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     extends WithRemoteConfigurator(platform: ContainerPlatform) {
   private[this] val log                    = Logger(classOf[BasicTestConnectorCollie])
   private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
-  private[this] val jarFolderPath          = sys.env.getOrElse(JAR_FOLDER_KEY, "/jar")
-
-  private[this] val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-  private[this] val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+  private[this] val jarFolderPath =
+    sys.env.getOrElse(JAR_FOLDER_KEY, throw new AssumptionViolatedException(s"$JAR_FOLDER_KEY does not exists!!!"))
 
   protected def tableName(): String
   protected def columnPrefixName(): String
@@ -58,9 +58,9 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   private[this] var jdbcJarFileInfo: FileInfo = _
 
-  protected def dbUrl(): Option[String]
-  protected def dbUserName(): Option[String]
-  protected def dbPassword(): Option[String]
+  protected def dbUrl(): String
+  protected def dbUserName(): String
+  protected def dbPassword(): String
   protected def dbName(): String
   protected def insertDataSQL(): String
   protected def BINARY_TYPE_NAME: String
@@ -82,11 +82,10 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   @Before
   final def setup(): Unit = {
-    checkDataBaseInfo()           //Check db info
     uploadJDBCJarToConfigurator() //For upload JDBC jar
 
     // Create database client
-    client = DatabaseClient.builder.url(dbUrl().get).user(dbUserName().get).password(dbPassword().get).build
+    client = DatabaseClient.builder.url(dbUrl()).user(dbUserName()).password(dbPassword()).build
 
     // Create table
     val columns = (1 to 4).map(x => s"${columnPrefixName()}$x")
@@ -109,89 +108,22 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   }
 
   @Test
-  def testJDBCSourceConnector(): Unit = {
-    val zkCluster = result(
-      zk_create(
-        clusterKey = serviceKeyHolder.generateClusterKey(),
-        clientPort = CommonUtils.availablePort(),
-        electionPort = CommonUtils.availablePort(),
-        peerPort = CommonUtils.availablePort(),
-        nodeNames = Set(platform.nodeNames.head)
-      )
-    )
-    result(zk_start(zkCluster.key))
-    assertCluster(() => result(zk_clusters()), () => result(zk_containers(zkCluster.key)), zkCluster.key)
-    val bkCluster = result(
-      bk_create(
-        clusterKey = serviceKeyHolder.generateClusterKey(),
-        clientPort = CommonUtils.availablePort(),
-        jmxPort = CommonUtils.availablePort(),
-        zookeeperClusterKey = zkCluster.key,
-        nodeNames = Set(platform.nodeNames.head)
-      )
-    )
-    result(bk_start(bkCluster.key))
-    assertCluster(() => result(bk_clusters()), () => result(bk_containers(bkCluster.key)), bkCluster.key)
-    log.info("[WORKER] start to test worker")
-    val nodeName = platform.nodeNames.head
-    log.info("[WORKER] verify:nonExists done")
-    val clientPort = CommonUtils.availablePort()
-    val jmxPort    = CommonUtils.availablePort()
-    log.info("[WORKER] create ...")
-    val wkCluster = result(
-      wk_create(
-        clusterKey = serviceKeyHolder.generateClusterKey(),
-        clientPort = clientPort,
-        jmxPort = jmxPort,
-        brokerClusterKey = bkCluster.key,
-        nodeNames = Set(nodeName)
-      )
-    )
-    log.info("[WORKER] create done")
-    result(wk_start(wkCluster.key))
-    log.info("[WORKER] start done")
-    assertCluster(() => result(wk_clusters()), () => result(wk_containers(wkCluster.key)), wkCluster.key)
-    log.info("[WORKER] verify:create done")
-    result(wk_exist(wkCluster.key)) shouldBe true
-    log.info("[WORKER] verify:exist done")
-    // we can't assume the size since other tests may create zk cluster at the same time
-    result(wk_clusters()).isEmpty shouldBe false
-    testConnectors(wkCluster)
+  def testNormal(): Unit = {
+    val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
+    val bkCluster: BrokerClusterInfo                    = cluster._1
+    val wkCluster: WorkerClusterInfo                    = cluster._2
+    val connectorKey: ConnectorKey                      = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey: TopicKey                              = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
 
-    runningJDBCSourceConnector(wkCluster)
-    checkTopicData(bkCluster.connectionProps, topicKey.topicNameOnKafka())
+    runningJDBCSourceConnector(wkCluster, connectorKey, topicKey)
 
-    result(wk_stop(wkCluster.key))
-    await(() => {
-      // In configurator mode: clusters() will return the "stopped list" in normal case
-      // In collie mode: clusters() will return the "cluster list except stop one" in normal case
-      // we should consider these two cases by case...
-      val clusters = result(wk_clusters())
-      !clusters.map(_.key).contains(wkCluster.key) || clusters.find(_.key == wkCluster.key).get.state.isEmpty
-    })
-    // the cluster is stopped actually, delete the data
-    wk_delete(wkCluster.key)
-  }
-
-  private[this] def runningJDBCSourceConnector(workerClusterInfo: WorkerClusterInfo): Unit =
-    result(
-      ConnectorAdmin(workerClusterInfo)
-        .connectorCreator()
-        .connectorKey(connectorKey)
-        .connectorClass(classOf[JDBCSourceConnector])
-        .topicKey(topicKey)
-        .numberOfTasks(1)
-        .settings(props().toMap)
-        .create()
-    )
-
-  private[this] def checkTopicData(brokers: String, topicNameOnKafka: String): Unit = {
+    // Check the topic data
     val consumer =
       Consumer
         .builder()
-        .topicName(topicNameOnKafka)
+        .topicName(topicKey.topicNameOnKafka())
         .offsetFromBegin()
-        .connectionProps(brokers)
+        .connectionProps(bkCluster.connectionProps)
         .keySerializer(Serializer.ROW)
         .valueSerializer(Serializer.BYTES)
         .build()
@@ -211,7 +143,95 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     } finally {
       consumer.close()
     }
+
+    stopWorkerCluster(wkCluster)
   }
+
+  @Test
+  def testExtractlyOnce(): Unit = {
+    log.info("TODO: Extractly once test for the JDBC source connector")
+  }
+
+  private[this] def startCluster(): (BrokerClusterInfo, WorkerClusterInfo) = {
+    log.info("[ZOOKEEPER] start to test zookeeper")
+    TimeUnit.SECONDS.sleep(5)
+    println(s"Platform node is ${platform.nodeNames}")
+    val zkCluster = result(
+      zk_create(
+        clusterKey = serviceKeyHolder.generateClusterKey(),
+        clientPort = CommonUtils.availablePort(),
+        electionPort = CommonUtils.availablePort(),
+        peerPort = CommonUtils.availablePort(),
+        nodeNames = Set(platform.nodeNames.head)
+      )
+    )
+    result(zk_start(zkCluster.key))
+    assertCluster(() => result(zk_clusters()), () => result(zk_containers(zkCluster.key)), zkCluster.key)
+
+    log.info("[BROKER] start to test broker")
+    val bkCluster = result(
+      bk_create(
+        clusterKey = serviceKeyHolder.generateClusterKey(),
+        clientPort = CommonUtils.availablePort(),
+        jmxPort = CommonUtils.availablePort(),
+        zookeeperClusterKey = zkCluster.key,
+        nodeNames = Set(platform.nodeNames.head)
+      )
+    )
+    result(bk_start(bkCluster.key))
+    assertCluster(() => result(bk_clusters()), () => result(bk_containers(bkCluster.key)), bkCluster.key)
+
+    log.info("[WORKER] create ...")
+    val wkCluster = result(
+      wk_create(
+        clusterKey = serviceKeyHolder.generateClusterKey(),
+        clientPort = CommonUtils.availablePort(),
+        jmxPort = CommonUtils.availablePort(),
+        brokerClusterKey = bkCluster.key,
+        nodeNames = Set(platform.nodeNames.head)
+      )
+    )
+    log.info("[WORKER] create done")
+    result(wk_start(wkCluster.key))
+    log.info("[WORKER] start done")
+    assertCluster(() => result(wk_clusters()), () => result(wk_containers(wkCluster.key)), wkCluster.key)
+    log.info("[WORKER] verify:create done")
+    result(wk_exist(wkCluster.key)) shouldBe true
+    log.info("[WORKER] verify:exist done")
+    // we can't assume the size since other tests may create zk cluster at the same time
+    result(wk_clusters()).isEmpty shouldBe false
+    testConnectors(wkCluster)
+    (bkCluster, wkCluster)
+  }
+
+  private[this] def stopWorkerCluster(wkCluster: WorkerClusterInfo): Unit = {
+    result(wk_stop(wkCluster.key))
+    await(() => {
+      // In configurator mode: clusters() will return the "stopped list" in normal case
+      // In collie mode: clusters() will return the "cluster list except stop one" in normal case
+      // we should consider these two cases by case...
+      val clusters = result(wk_clusters())
+      !clusters.map(_.key).contains(wkCluster.key) || clusters.find(_.key == wkCluster.key).get.state.isEmpty
+    })
+    // the cluster is stopped actually, delete the data
+    wk_delete(wkCluster.key)
+  }
+
+  private[this] def runningJDBCSourceConnector(
+    workerClusterInfo: WorkerClusterInfo,
+    connectorKey: ConnectorKey,
+    topicKey: TopicKey
+  ): Unit =
+    result(
+      ConnectorAdmin(workerClusterInfo)
+        .connectorCreator()
+        .connectorKey(connectorKey)
+        .connectorClass(classOf[JDBCSourceConnector])
+        .topicKey(topicKey)
+        .numberOfTasks(1)
+        .settings(props().toMap)
+        .create()
+    )
 
   private[this] def uploadJDBCJarToConfigurator(): Unit = {
     val jarApi: FileInfoApi.Access = FileInfoApi.access.hostname(configuratorHostname).port(configuratorPort)
@@ -294,14 +314,6 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       .sharedJarKeys(Set(jdbcJarFileInfo.key))
       .create()
 
-  private[this] def checkDataBaseInfo(): Unit = {
-    if (dbUrl().isEmpty || dbUserName().isEmpty || dbPassword().isEmpty)
-      skipTest(s"Skip the JDBC source connector test, Please setting dbURL, dbUserName and dbPassword")
-
-    if (jarFolderPath.isEmpty)
-      skipTest(s"Please setting jdbc jar folder path.")
-  }
-
   private[this] def testConnectors(cluster: WorkerClusterInfo): Unit =
     await(
       () =>
@@ -319,9 +331,9 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     JDBCSourceConnectorConfig(
       TaskSetting.of(
         Map(
-          "source.db.url"                -> dbUrl().get,
-          "source.db.username"           -> dbUserName().get,
-          "source.db.password"           -> dbPassword().get,
+          "source.db.url"                -> dbUrl(),
+          "source.db.username"           -> dbUserName(),
+          "source.db.password"           -> dbPassword(),
           "source.table.name"            -> tableName,
           "source.timestamp.column.name" -> timestampColumn,
           "source.schema.pattern"        -> "TUSER"
