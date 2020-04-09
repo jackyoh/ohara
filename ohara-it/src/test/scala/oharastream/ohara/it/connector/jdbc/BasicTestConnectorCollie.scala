@@ -17,8 +17,9 @@
 package oharastream.ohara.it.connector.jdbc
 
 import java.io.File
-import java.sql.{PreparedStatement, Statement, Timestamp}
-import java.util.concurrent.TimeUnit
+import java.sql.{Statement, Timestamp}
+import java.util.concurrent.atomic.LongAdder
+import java.util.concurrent.{Executors, TimeUnit}
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.client.configurator.v0.BrokerApi.BrokerClusterInfo
@@ -28,15 +29,14 @@ import oharastream.ohara.client.configurator.v0.WorkerApi.WorkerClusterInfo
 import oharastream.ohara.client.configurator.v0.{BrokerApi, ContainerApi, FileInfoApi, WorkerApi, ZookeeperApi}
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
-import oharastream.ohara.common.data.{Row, Serializer}
+import oharastream.ohara.common.data.Serializer
 import oharastream.ohara.common.setting.{ConnectorKey, ObjectKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.jdbc.source.{JDBCSourceConnector, JDBCSourceConnectorConfig}
 import oharastream.ohara.it.{ContainerPlatform, WithRemoteConfigurator}
 import oharastream.ohara.kafka.Consumer
-import oharastream.ohara.kafka.Consumer.Record
 import oharastream.ohara.kafka.connector.TaskSetting
-import org.junit.{After, AssumptionViolatedException, Before, Test}
+import org.junit.{After, AssumptionViolatedException, Test}
 import org.scalatest.Matchers._
 
 import scala.collection.JavaConverters._
@@ -52,7 +52,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   protected def tableName(): String
   protected def columnPrefixName(): String
-  private[this] var timestampColumn: String = _
+  private[this] val columns = (1 to 4).map(x => s"${columnPrefixName()}$x")
+  private[this] val timestampColumn: String = columns(0)
 
   private[this] var client: DatabaseClient = _
 
@@ -62,7 +63,6 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   protected def dbUserName(): String
   protected def dbPassword(): String
   protected def dbName(): String
-  protected def insertDataSQL(): String
   protected def BINARY_TYPE_NAME: String
 
   /**
@@ -80,35 +80,55 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   private[this] def containerApi = ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-  @Before
-  final def setup(): Unit = {
+
+  private[this] var inputDataThread: Releasable = _
+  private[this] var tableTotalCount: LongAdder  = _
+
+
+  private[this] def setup(durationTime: Long): Unit = {
     uploadJDBCJarToConfigurator() //For upload JDBC jar
 
     // Create database client
     client = DatabaseClient.builder.url(dbUrl()).user(dbUserName()).password(dbPassword()).build
 
     // Create table
-    val columns = (1 to 4).map(x => s"${columnPrefixName()}$x")
-    timestampColumn = columns(0)
-
     val column1 = RdbColumn(columns(0), "TIMESTAMP", false)
-    val column2 = RdbColumn(columns(1), "varchar(45)", false)
-    val column3 = RdbColumn(columns(2), "integer", true)
+    val column2 = RdbColumn(columns(1), "varchar(45)", true)
+    val column3 = RdbColumn(columns(2), "integer", false)
     val column4 = RdbColumn(columns(3), BINARY_TYPE_NAME, false)
     client.createTable(tableName(), Seq(column1, column2, column3, column4))
+    tableTotalCount = new LongAdder()
 
-    // Insert data in the table
-    val preParedstatement: PreparedStatement = client.connection.prepareStatement(insertDataSQL)
-    (1 to 100).foreach(i => {
-      preParedstatement.setString(1, s"a${i}")
-      preParedstatement.setInt(2, i)
-      preParedstatement.setBytes(3, s"binary-value${i}".getBytes)
-      preParedstatement.executeUpdate()
-    })
+    inputDataThread = {
+      val pool            = Executors.newSingleThreadExecutor()
+      val startTime: Long = CommonUtils.current()
+      pool.execute { () =>
+        val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
+        val preparedStatement = client.connection.prepareStatement(sql)
+        try {
+          while ((CommonUtils.current() - startTime) <= durationTime) {
+            // 432000000 is 5 days ago
+            val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
+            preparedStatement.setTimestamp(1, timestampData)
+            preparedStatement.setString(2, CommonUtils.randomString())
+            preparedStatement.setInt(3, CommonUtils.randomInteger())
+            preparedStatement.setBytes(4, s"binary-value${CommonUtils.randomInteger()}".getBytes)
+            preparedStatement.execute()
+            tableTotalCount.add(1)
+          }
+        } finally Releasable.close(preparedStatement)
+      }
+      () => {
+        pool.shutdown()
+        pool.awaitTermination(durationTime, TimeUnit.SECONDS)
+      }
+    }
   }
 
   @Test
   def testNormal(): Unit = {
+    val durationTime = 3000L
+    setup(durationTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
     val bkCluster: BrokerClusterInfo                    = cluster._1
     val wkCluster: WorkerClusterInfo                    = cluster._2
@@ -127,21 +147,29 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         .keySerializer(Serializer.ROW)
         .valueSerializer(Serializer.BYTES)
         .build()
+    TimeUnit.MILLISECONDS.sleep(durationTime)
+
+    val statement = client.connection.createStatement()
     try {
-      val record: Seq[Record[Row, Array[Byte]]] = consumer.poll(java.time.Duration.ofSeconds(50), 100).asScala
-      record.size shouldBe 100
+      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() shouldBe result.size
 
-      record.head.key.get.cell(0).value.asInstanceOf[Timestamp].getTime shouldBe 1535760000000L
-      record.head.key.get.cell(1).value shouldBe "a1"
-      record.head.key.get.cell(2).value shouldBe 1
-      new String(record.head.key.get.cell(3).value.asInstanceOf[Array[Byte]]) shouldBe "binary-value1"
+      val queryColumn = columns(1)
+      val resultSet   = statement.executeQuery(s"select * from $tableName order by $queryColumn")
 
-      record.last.key.get.cell(0).value.asInstanceOf[Timestamp].getTime shouldBe 1535760000000L
-      record.last.key.get.cell(1).value shouldBe "a100"
-      record.last.key.get.cell(2).value shouldBe 100
-      new String(record.last.key.get.cell(3).value.asInstanceOf[Array[Byte]]) shouldBe "binary-value100"
+      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      val topicData: Seq[String] = result
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+
+      tableData.zipWithIndex.foreach {
+        case (record, index) => {
+          record shouldBe topicData(index)
+        }
+      }
     } finally {
-      consumer.close()
+      Releasable.close(statement)
+      Releasable.close(consumer)
     }
 
     stopWorkerCluster(wkCluster)
@@ -343,6 +371,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   @After
   def afterTest(): Unit = {
+    Releasable.close(inputDataThread)
     if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table ${tableName()}")

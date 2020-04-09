@@ -46,7 +46,5 @@ class TestPostgresqlJDBCSourceConnector(platform: ContainerPlatform)
 
   override protected val columnPrefixName: String = "column"
 
-  override protected val insertDataSQL: String = s"INSERT INTO $tableName VALUES('2018-09-01 00:00:00',?,?,?)"
-
   override protected val BINARY_TYPE_NAME: String = "BYTEA"
 }
