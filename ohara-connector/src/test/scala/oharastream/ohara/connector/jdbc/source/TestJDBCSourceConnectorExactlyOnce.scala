@@ -128,7 +128,6 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       val topicData: Seq[String] = resultRecords
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
-      println(s"test1: TABLE DATA SIZE IS ${tableData.size}, TOPIC DATA SIZE IS ${topicData.size}")
       checkData(tableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
@@ -172,12 +171,12 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       resultRecords.size shouldBe tableTotalCount.intValue()
 
       // Check the topic data is equals the database table
-      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+
       val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       val topicData: Seq[String] = resultRecords
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
-      println(s"test2: TABLE DATA SIZE IS ${tableData.size}, TOPIC DATA SIZE IS ${topicData.size}")
       checkData(tableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
@@ -186,6 +185,90 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
     }
   }
 
+  @Test
+  def testInsertDelete(): Unit = {
+    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    result(createConnector(connectorAdmin, connectorKey, topicKey))
+
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+    val statement = client.connection.createStatement()
+    try {
+      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
+
+      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      val queryData              = statement.executeQuery(s"select * from $tableName where $queryColumn='${tableData.head}'")
+      val queryResult = Iterator
+        .continually(queryData)
+        .takeWhile(_.next())
+        .map(record => {
+          val timestamp = record.getString(timestampColumnName)
+          val column1   = record.getString(queryColumn)
+          (timestamp, column1)
+        })
+        .toSeq
+        .head
+      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
+      )
+      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() shouldBe result.size
+      val topicData: Seq[String] = result
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+      val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultTableData: Seq[String] =
+        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      checkData(resultTableData, topicData)
+    } finally {
+      result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
+      Releasable.close(statement)
+      Releasable.close(consumer)
+    }
+  }
+
+  @Test
+  def testUpdate(): Unit = {
+    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    result(createConnector(connectorAdmin, connectorKey, topicKey))
+
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+    val statement = client.connection.createStatement()
+    try {
+      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello')"
+      )
+      TimeUnit.SECONDS.sleep(3)
+      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello'")
+
+      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      result.size shouldBe tableTotalCount.intValue() + 2 // Because update and insert the different timestamp
+    } finally {
+      result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
+      Releasable.close(statement)
+      Releasable.close(consumer)
+    }
+  }
   /*@Test
   def test(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")

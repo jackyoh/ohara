@@ -225,7 +225,6 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   private[this] def startCluster(): (BrokerClusterInfo, WorkerClusterInfo) = {
     log.info("[ZOOKEEPER] start to test zookeeper")
     TimeUnit.SECONDS.sleep(5)
-    println(s"Platform node is ${platform.nodeNames}")
     val zkCluster = result(
       zk_create(
         clusterKey = serviceKeyHolder.generateClusterKey(),
