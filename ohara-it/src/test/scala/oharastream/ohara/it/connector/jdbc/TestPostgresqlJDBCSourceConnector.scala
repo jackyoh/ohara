@@ -40,9 +40,9 @@ class TestPostgresqlJDBCSourceConnector(platform: ContainerPlatform)
 
   override protected def dbName(): String = "postgresql"
 
-  override protected def jdbcDriverJarFileName(): String = "postgresql-42.2.6.jar"
-
   override protected val tableName: String = s"table${CommonUtils.randomString(5)}"
+
+  override protected def jdbcDriverJarFileName(): String = "postgresql-42.2.6.jar"
 
   override protected val columnPrefixName: String = "column"
 

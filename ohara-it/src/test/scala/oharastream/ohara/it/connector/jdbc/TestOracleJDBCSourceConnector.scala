@@ -39,9 +39,9 @@ class TestOracleJDBCSourceConnector(platform: ContainerPlatform)
 
   override protected def dbName(): String = "oracle"
 
-  override protected def jdbcDriverJarFileName(): String = "ojdbc8.jar"
-
   override protected val tableName: String = s"TABLE${CommonUtils.randomString(5)}".toUpperCase
+
+  override protected def jdbcDriverJarFileName(): String = "ojdbc8.jar"
 
   override protected val columnPrefixName: String = "COLUMN"
 

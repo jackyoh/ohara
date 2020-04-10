@@ -16,13 +16,14 @@
 
 package oharastream.ohara.connector.jdbc.source
 
-import java.sql.Timestamp
+import java.sql.{Statement, Timestamp}
 import java.util.concurrent.atomic.LongAdder
 import java.util.concurrent.{Executors, TimeUnit}
 
 import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
+import oharastream.ohara.client.kafka.WorkerJson.ConnectorCreationResponse
 import oharastream.ohara.common.data.{Cell, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -44,25 +45,26 @@ import scala.collection.JavaConverters._
 
 @RunWith(value = classOf[Parameterized])
 class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Brokers3Workers {
-  private[this] val durationTime: Long  = inputDataTime
-  private[this] val db                  = Database.local()
-  private[this] val client              = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
+  private[this] val db: Database = Database.local()
+  private[this] val client: DatabaseClient =
+    DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName           = "table1"
   private[this] val timestampColumnName = "c0"
+  private[this] val queryColumn         = "c1"
   private[this] val columnSize          = 3
   private[this] val columns = Seq(RdbColumn(timestampColumnName, "TIMESTAMP(6)", false)) ++
     (1 to columnSize).map { index =>
       if (index == 1) RdbColumn(s"c${index}", "VARCHAR(45)", true)
       else RdbColumn(s"c${index}", "VARCHAR(45)", false)
     }
-  private[this] val tableTotalCount = new LongAdder()
-  private[this] val connectorAdmin  = ConnectorAdmin(testUtil.workersConnProps)
+  private[this] val tableTotalCount: LongAdder = new LongAdder()
+  private[this] val connectorAdmin             = ConnectorAdmin(testUtil.workersConnProps)
 
   private[this] def createTable(): Unit = {
     client.createTable(tableName, columns)
   }
 
-  private[this] val inputDataThread: Releasable = {
+  private[this] var inputDataThread: Releasable = {
     val pool            = Executors.newSingleThreadExecutor()
     val startTime: Long = CommonUtils.current()
     pool.execute(() => {
@@ -71,7 +73,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
       val preparedStatement = client.connection.prepareStatement(sql)
       try {
-        while ((CommonUtils.current() - startTime) <= durationTime) {
+        while ((CommonUtils.current() - startTime) <= inputDataTime) {
           // 432000000 is 5 days ago
           val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
           preparedStatement.setTimestamp(1, timestampData)
@@ -87,11 +89,104 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
     })
     () => {
       pool.shutdown()
-      pool.awaitTermination(durationTime, TimeUnit.SECONDS)
+      pool.awaitTermination(inputDataTime, TimeUnit.SECONDS)
     }
   }
 
   @Test
+  def testStartPauseResume(): Unit = {
+    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    result(createConnector(connectorAdmin, connectorKey, topicKey))
+
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+    val statement = client.connection.createStatement()
+
+    try {
+      val records = consumer.poll(java.time.Duration.ofSeconds(5), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() >= records.size shouldBe true
+
+      result(connectorAdmin.pause(connectorKey))
+      result(connectorAdmin.resume(connectorKey))
+
+      consumer.seekToBeginning()
+      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Finally to wait all data write the database table
+      val resultRecords = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      resultRecords.size shouldBe tableTotalCount.intValue()
+
+      // Check the topic data is equals the database table
+      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      val topicData: Seq[String] = resultRecords
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+      println(s"test1: TABLE DATA SIZE IS ${tableData.size}, TOPIC DATA SIZE IS ${topicData.size}")
+      checkData(tableData, topicData)
+    } finally {
+      result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
+      Releasable.close(statement)
+      Releasable.close(consumer)
+    }
+  }
+
+  @Test
+  def testStartDelete(): Unit = {
+    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    result(createConnector(connectorAdmin, connectorKey, topicKey))
+
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka)
+        .offsetFromBegin()
+        .connectionProps(testUtil.brokersConnProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+    val statement = client.connection.createStatement()
+    try {
+      val records1 = consumer.poll(java.time.Duration.ofSeconds(5), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() >= records1.size shouldBe true
+
+      result(connectorAdmin.delete(connectorKey))
+      result(createConnector(connectorAdmin, connectorKey, topicKey))
+      TimeUnit.SECONDS.sleep(5)
+      val records2 = consumer.poll(java.time.Duration.ofSeconds(5), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() >= records2.size shouldBe true
+
+      result(connectorAdmin.delete(connectorKey))
+      result(createConnector(connectorAdmin, connectorKey, topicKey))
+
+      consumer.seekToBeginning()
+      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Finally to wait all data write the database table
+      val resultRecords = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      resultRecords.size shouldBe tableTotalCount.intValue()
+
+      // Check the topic data is equals the database table
+      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      val topicData: Seq[String] = resultRecords
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+      println(s"test2: TABLE DATA SIZE IS ${tableData.size}, TOPIC DATA SIZE IS ${topicData.size}")
+      checkData(tableData, topicData)
+    } finally {
+      result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
+      Releasable.close(statement)
+      Releasable.close(consumer)
+    }
+  }
+
+  /*@Test
   def test(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
@@ -118,53 +213,53 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         .valueSerializer(Serializer.BYTES)
         .build()
 
-    val result1 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
-    tableTotalCount.intValue() >= result1.size shouldBe true
-
-    result(connectorAdmin.pause(connectorKey))
-    result(connectorAdmin.resume(connectorKey))
-    TimeUnit.SECONDS.sleep(5)
-
-    consumer.seekToBeginning()
-    val result2 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
-    result2.size >= result1.size shouldBe true
-
-    result(connectorAdmin.delete(connectorKey))
-    result(
-      connectorAdmin
-        .connectorCreator()
-        .connectorKey(connectorKey)
-        .connectorClass(classOf[JDBCSourceConnector])
-        .topicKey(topicKey)
-        .numberOfTasks(1)
-        .settings(jdbcSourceConnectorProps.toMap)
-        .create()
-    )
-    TimeUnit.SECONDS.sleep(2)
-    result(connectorAdmin.delete(connectorKey))
-    result(
-      connectorAdmin
-        .connectorCreator()
-        .connectorKey(connectorKey)
-        .connectorClass(classOf[JDBCSourceConnector])
-        .topicKey(topicKey)
-        .numberOfTasks(1)
-        .settings(jdbcSourceConnectorProps.toMap)
-        .create()
-    )
-
-    // Check the table and topic data size
-    TimeUnit.MILLISECONDS.sleep(durationTime)
-    consumer.seekToBeginning() //Reset consumer
-    val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
-    tableTotalCount.intValue() shouldBe result3.size
-
-    // Check the topic data is equals the database table
     val statement = client.connection.createStatement()
     try {
       val queryColumn = "c1"
-      val resultSet   = statement.executeQuery(s"select * from $tableName order by $queryColumn")
 
+      val result1 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() >= result1.size shouldBe true
+
+      result(connectorAdmin.pause(connectorKey))
+      result(connectorAdmin.resume(connectorKey))
+      TimeUnit.SECONDS.sleep(5)
+
+      consumer.seekToBeginning()
+      val result2 = consumer.poll(java.time.Duration.ofSeconds(10), tableTotalCount.intValue()).asScala
+      result2.size >= result1.size shouldBe true
+
+      result(connectorAdmin.delete(connectorKey))
+      result(
+        connectorAdmin
+          .connectorCreator()
+          .connectorKey(connectorKey)
+          .connectorClass(classOf[JDBCSourceConnector])
+          .topicKey(topicKey)
+          .numberOfTasks(1)
+          .settings(jdbcSourceConnectorProps.toMap)
+          .create()
+      )
+      TimeUnit.SECONDS.sleep(2)
+      result(connectorAdmin.delete(connectorKey))
+      result(
+        connectorAdmin
+          .connectorCreator()
+          .connectorKey(connectorKey)
+          .connectorClass(classOf[JDBCSourceConnector])
+          .topicKey(topicKey)
+          .numberOfTasks(1)
+          .settings(jdbcSourceConnectorProps.toMap)
+          .create()
+      )
+
+      // Check the table and topic data size
+      TimeUnit.MILLISECONDS.sleep(durationTime)
+      consumer.seekToBeginning() //Reset consumer
+      val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() shouldBe result3.size
+
+      // Check the topic data is equals the database table
+      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
       val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       val topicData: Seq[String] = result3
         .map(record => record.key.get.cell(queryColumn).value().toString)
@@ -176,9 +271,9 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         }
       }
 
-      val result = statement.executeQuery(s"select * from $tableName where $queryColumn='${tableData.head}'")
+      val queryData = statement.executeQuery(s"select * from $tableName where $queryColumn='${tableData.head}'")
       val queryResult = Iterator
-        .continually(result)
+        .continually(queryData)
         .takeWhile(_.next())
         .map(record => {
           val timestamp = record.getString(timestampColumnName)
@@ -201,7 +296,33 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       consumer.seekToBeginning() //Reset consumer
       val result5 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       result5.size shouldBe tableTotalCount.intValue() + 2 // Because update and insert the now timestamp
-    } finally Releasable.close(statement)
+    } finally {
+      Releasable.close(statement)
+      Releasable.close(consumer)
+    }
+  }*/
+
+  private[this] def createConnector(
+    connectorAdmin: ConnectorAdmin,
+    connectorKey: ConnectorKey,
+    topicKey: TopicKey
+  ): Future[ConnectorCreationResponse] = {
+    connectorAdmin
+      .connectorCreator()
+      .connectorKey(connectorKey)
+      .connectorClass(classOf[JDBCSourceConnector])
+      .topicKey(topicKey)
+      .numberOfTasks(1)
+      .settings(jdbcSourceConnectorProps.toMap)
+      .create()
+  }
+
+  private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
+    tableData.zipWithIndex.foreach {
+      case (record, index) => {
+        record shouldBe topicData(index)
+      }
+    }
   }
 
   private[this] def rowData(): Row = {
@@ -224,10 +345,14 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
     )
   )
 
-  private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
+  private[this] def result[T](future: Future[T]): T = Await.result(future, 20 seconds)
 
   @After
   def after(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
     Releasable.close(inputDataThread)
     Releasable.close(client)
     Releasable.close(db)

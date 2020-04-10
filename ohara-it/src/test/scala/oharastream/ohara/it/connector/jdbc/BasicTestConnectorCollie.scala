@@ -52,7 +52,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   protected def tableName(): String
   protected def columnPrefixName(): String
-  private[this] val columns = (1 to 4).map(x => s"${columnPrefixName()}$x")
+  private[this] val columns                 = (1 to 4).map(x => s"${columnPrefixName()}$x")
   private[this] val timestampColumn: String = columns(0)
 
   private[this] var client: DatabaseClient = _
@@ -80,10 +80,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   private[this] def containerApi = ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
 
-
   private[this] var inputDataThread: Releasable = _
   private[this] var tableTotalCount: LongAdder  = _
-
 
   private[this] def setup(durationTime: Long): Unit = {
     uploadJDBCJarToConfigurator() //For upload JDBC jar
@@ -134,10 +132,9 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     val wkCluster: WorkerClusterInfo                    = cluster._2
     val connectorKey: ConnectorKey                      = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey: TopicKey                              = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val connectorAdmin                                  = ConnectorAdmin(wkCluster)
 
-    runningJDBCSourceConnector(wkCluster, connectorKey, topicKey)
-
-    // Check the topic data
+    createConnector(connectorAdmin, connectorKey, topicKey)
     val consumer =
       Consumer
         .builder()
@@ -151,6 +148,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
     val statement = client.connection.createStatement()
     try {
+      // Check the topic data
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
 
@@ -170,14 +168,58 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     } finally {
       Releasable.close(statement)
       Releasable.close(consumer)
+      stopWorkerCluster(wkCluster)
     }
-
-    stopWorkerCluster(wkCluster)
   }
 
   @Test
-  def testExtractlyOnce(): Unit = {
-    log.info("TODO: Extractly once test for the JDBC source connector")
+  def testExtractOnce(): Unit = {
+    val durationTime = 60000L
+    setup(durationTime)
+    val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
+    val bkCluster: BrokerClusterInfo                    = cluster._1
+    val wkCluster: WorkerClusterInfo                    = cluster._2
+    val connectorKey: ConnectorKey                      = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey: TopicKey                              = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val connectorAdmin                                  = ConnectorAdmin(wkCluster)
+    createConnector(connectorAdmin, connectorKey, topicKey)
+
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka())
+        .offsetFromBegin()
+        .connectionProps(bkCluster.connectionProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+
+    val statement = client.connection.createStatement()
+    try {
+      val result1 = consumer.poll(java.time.Duration.ofSeconds(5), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() >= result1.size shouldBe true
+
+      result(connectorAdmin.pause(connectorKey))
+      result(connectorAdmin.resume(connectorKey))
+      TimeUnit.SECONDS.sleep(3)
+
+      consumer.seekToBeginning()
+      val result2 = consumer.poll(java.time.Duration.ofSeconds(5), tableTotalCount.intValue()).asScala
+      result2.size >= result1.size shouldBe true
+
+      result(connectorAdmin.delete(connectorKey))
+      createConnector(connectorAdmin, connectorKey, topicKey)
+
+      // Check the table and topic data size
+      TimeUnit.MILLISECONDS.sleep(durationTime)
+      consumer.seekToBeginning() //Reset consumer
+      val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() shouldBe result3.size
+    } finally {
+      Releasable.close(consumer)
+      Releasable.close(statement)
+      stopWorkerCluster(wkCluster)
+    }
   }
 
   private[this] def startCluster(): (BrokerClusterInfo, WorkerClusterInfo) = {
@@ -245,13 +287,13 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     wk_delete(wkCluster.key)
   }
 
-  private[this] def runningJDBCSourceConnector(
-    workerClusterInfo: WorkerClusterInfo,
+  private[this] def createConnector(
+    connectorAdmin: ConnectorAdmin,
     connectorKey: ConnectorKey,
     topicKey: TopicKey
   ): Unit =
     result(
-      ConnectorAdmin(workerClusterInfo)
+      connectorAdmin
         .connectorCreator()
         .connectorKey(connectorKey)
         .connectorClass(classOf[JDBCSourceConnector])
