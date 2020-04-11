@@ -202,25 +202,22 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         .build()
     val statement = client.connection.createStatement()
     try {
-      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
-
-      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
-      val queryData              = statement.executeQuery(s"select * from $tableName where $queryColumn='${tableData.head}'")
-      val queryResult = Iterator
-        .continually(queryData)
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val queryResult: (String, String) = Iterator
+        .continually(resultSet)
         .takeWhile(_.next())
-        .map(record => {
-          val timestamp = record.getString(timestampColumnName)
-          val column1   = record.getString(queryColumn)
-          (timestamp, column1)
-        })
+        .map { x =>
+          (x.getString(1), x.getString(2))
+        }
         .toSeq
         .head
+
       statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
       )
+
+      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
       val topicData: Seq[String] = result

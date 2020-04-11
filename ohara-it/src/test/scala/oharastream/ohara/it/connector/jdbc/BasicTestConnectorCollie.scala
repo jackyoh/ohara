@@ -54,6 +54,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   protected def columnPrefixName(): String
   private[this] val columns                 = (1 to 4).map(x => s"${columnPrefixName()}$x")
   private[this] val timestampColumn: String = columns(0)
+  private[this] val queryColumn             = columns(1)
 
   private[this] var client: DatabaseClient = _
 
@@ -152,19 +153,14 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
 
-      val queryColumn = columns(1)
-      val resultSet   = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
 
       val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       val topicData: Seq[String] = result
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
 
-      tableData.zipWithIndex.foreach {
-        case (record, index) => {
-          record shouldBe topicData(index)
-        }
-      }
+      checkData(tableData, topicData)
     } finally {
       Releasable.close(statement)
       Releasable.close(consumer)
@@ -173,7 +169,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   }
 
   @Test
-  def testExtractOnce(): Unit = {
+  def testStartPauseResumeDelete(): Unit = {
     val durationTime = 60000L
     setup(durationTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
@@ -215,10 +211,72 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       consumer.seekToBeginning() //Reset consumer
       val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result3.size
+
+      // Check the topic data is equals the database table
+      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      val topicData: Seq[String] = result3
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+      checkData(tableData, topicData)
     } finally {
       Releasable.close(consumer)
       Releasable.close(statement)
       stopWorkerCluster(wkCluster)
+    }
+  }
+
+  @Test
+  def testInsertUpdateDelete(): Unit = {
+    val durationTime = 10000L
+    setup(durationTime)
+    val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
+    val bkCluster: BrokerClusterInfo                    = cluster._1
+    val wkCluster: WorkerClusterInfo                    = cluster._2
+    val connectorKey: ConnectorKey                      = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey: TopicKey                              = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val connectorAdmin                                  = ConnectorAdmin(wkCluster)
+    createConnector(connectorAdmin, connectorKey, topicKey)
+
+    val consumer =
+      Consumer
+        .builder()
+        .topicName(topicKey.topicNameOnKafka())
+        .offsetFromBegin()
+        .connectionProps(bkCluster.connectionProps)
+        .keySerializer(Serializer.ROW)
+        .valueSerializer(Serializer.BYTES)
+        .build()
+
+    val statement = client.connection.createStatement()
+    try {
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val queryResult: (String, String) = Iterator
+        .continually(resultSet)
+        .takeWhile(_.next())
+        .map { x =>
+          (x.getString(1), x.getString(2))
+        }
+        .toSeq
+        .head
+
+      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumn, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
+      )
+      TimeUnit.MILLISECONDS.sleep(durationTime)
+      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      tableTotalCount.intValue() shouldBe result.size
+      val topicData: Seq[String] = result
+        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .sorted[String]
+      val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultTableData: Seq[String] =
+        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+      checkData(resultTableData, topicData)
+    } finally {
+      Releasable.close(statement)
+      Releasable.close(consumer)
     }
   }
 
@@ -409,6 +467,14 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         ).asJava
       )
     )
+
+  private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
+    tableData.zipWithIndex.foreach {
+      case (record, index) => {
+        record shouldBe topicData(index)
+      }
+    }
+  }
 
   @After
   def afterTest(): Unit = {
