@@ -45,6 +45,7 @@ abstract class WithRemoteConfigurator(platform: ContainerPlatform) extends Integ
   }
 }
 
+// Test QA server
 object WithRemoteConfigurator {
   @Parameters(name = "{index} mode = {0}")
   def parameters: java.util.Collection[ContainerPlatform] = {
