@@ -52,9 +52,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   protected def tableName(): String
   protected def columnPrefixName(): String
-  private[this] val columns                 = (1 to 4).map(x => s"${columnPrefixName()}$x")
-  private[this] val timestampColumn: String = columns(0)
-  private[this] val queryColumn             = columns(1)
+  private[this] var timestampColumn: String = _
+  private[this] var queryColumn: String     = _
 
   private[this] var client: DatabaseClient = _
 
@@ -91,6 +90,9 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     client = DatabaseClient.builder.url(dbUrl()).user(dbUserName()).password(dbPassword()).build
 
     // Create table
+    val columns = (1 to 4).map(x => s"${columnPrefixName()}$x")
+    timestampColumn = columns(0)
+    queryColumn = columns(1)
     val column1 = RdbColumn(columns(0), "TIMESTAMP", false)
     val column2 = RdbColumn(columns(1), "varchar(45)", true)
     val column3 = RdbColumn(columns(2), "integer", false)
@@ -247,23 +249,26 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         .keySerializer(Serializer.ROW)
         .valueSerializer(Serializer.BYTES)
         .build()
-
+    val insertPreparedStatement =
+      client.connection.prepareStatement(s"INSERT INTO $tableName($timestampColumn, $queryColumn) VALUES(?,?)")
     val statement = client.connection.createStatement()
     try {
       val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-      val queryResult: (String, String) = Iterator
+      val queryResult: (Timestamp, String) = Iterator
         .continually(resultSet)
         .takeWhile(_.next())
         .map { x =>
-          (x.getString(1), x.getString(2))
+          (x.getTimestamp(1), x.getString(2))
         }
         .toSeq
         .head
 
       statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
-      statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumn, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
-      )
+
+      insertPreparedStatement.setTimestamp(1, queryResult._1)
+      insertPreparedStatement.setString(2, queryResult._2)
+      insertPreparedStatement.executeUpdate()
+
       TimeUnit.MILLISECONDS.sleep(durationTime)
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
@@ -275,6 +280,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       checkData(resultTableData, topicData)
     } finally {
+      Releasable.close(insertPreparedStatement)
       Releasable.close(statement)
       Releasable.close(consumer)
     }
