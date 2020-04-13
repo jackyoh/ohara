@@ -251,6 +251,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         .build()
     val insertPreparedStatement =
       client.connection.prepareStatement(s"INSERT INTO $tableName($timestampColumn, $queryColumn) VALUES(?,?)")
+    val updatePreparedStatement =
+      client.connection.prepareStatement(s"UPDATE $tableName SET $timestampColumn=? WHERE $queryColumn=?")
     val statement = client.connection.createStatement()
     try {
       val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
@@ -275,12 +277,22 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       val topicData: Seq[String] = result
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
-      val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val tableResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
       val resultTableData: Seq[String] =
-        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+        Iterator.continually(tableResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       checkData(resultTableData, topicData)
+
+      // Test update data for the table
+      updatePreparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current() - 86400000))
+      updatePreparedStatement.setString(2, queryResult._2)
+      updatePreparedStatement.executeUpdate()
+      TimeUnit.SECONDS.sleep(5)
+      consumer.seekToBeginning()
+      val updateResult = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue() + 1).asScala
+      updateResult.size shouldBe tableTotalCount.intValue() + 1 // Because update the different timestamp
     } finally {
       Releasable.close(insertPreparedStatement)
+      Releasable.close(updatePreparedStatement)
       Releasable.close(statement)
       Releasable.close(consumer)
     }
