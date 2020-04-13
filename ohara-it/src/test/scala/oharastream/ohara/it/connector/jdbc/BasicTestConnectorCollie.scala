@@ -169,7 +169,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   }
 
   @Test
-  def testStartPauseResumeDelete(): Unit = {
+  def testConnectorStartPauseResumeDelete(): Unit = {
     val durationTime = 60000L
     setup(durationTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
@@ -227,7 +227,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   }
 
   @Test
-  def testInsertUpdateDelete(): Unit = {
+  def testTableInsertUpdateDelete(): Unit = {
     val durationTime = 10000L
     setup(durationTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()

@@ -209,6 +209,12 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
       x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
       x._2 shouldBe "2018-09-01 00:00:02.0,2"
     })
+
+    rows.last.sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
+      x._2 shouldBe "2018-09-02 00:00:04.0,1"
+    })
+
     rows.head.row.cell(0).value.toString shouldBe "2018-09-02 00:00:04.0"
     rows.head.row.cell(2).name shouldBe "COLUMN4"
     rows.head.row.cell(2).value shouldBe 7

@@ -94,7 +94,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   }
 
   @Test
-  def testStartPauseResume(): Unit = {
+  def testConnectorStartPauseResume(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
@@ -137,7 +137,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   }
 
   @Test
-  def testStartDelete(): Unit = {
+  def testConnectorStartDelete(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
@@ -186,7 +186,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   }
 
   @Test
-  def testInsertDelete(): Unit = {
+  def testTableInsertDelete(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
@@ -235,7 +235,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   }
 
   @Test
-  def testUpdate(): Unit = {
+  def testTableUpdate(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
