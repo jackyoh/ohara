@@ -66,7 +66,7 @@ object ContainerPlatform {
     * NOTED: this key need to be matched with another key value in ohara-it/build.gradle
     */
   val DOCKER_NODES_KEY = "ohara.it.docker"
-  private[this] def _ks8Mode: Option[ContainerPlatform] =
+  private[this] def _k8sMode: Option[ContainerPlatform] =
     sys.env
       .get(ContainerPlatform.K8S_MASTER_KEY)
       .map { masterUrl =>
@@ -99,7 +99,7 @@ object ContainerPlatform {
     * @return k8s platform information. Or skip test
     */
   def k8sMode: ContainerPlatform =
-    _dockerMode.getOrElse(
+    _k8sMode.getOrElse(
       throw new AssumptionViolatedException(s"set ${ContainerPlatform.K8S_MASTER_KEY} to run IT on k8s mode")
     )
 
@@ -200,12 +200,12 @@ object ContainerPlatform {
     * @return one of k8s or docker. If they are nonexistent, a AssumptionViolatedException is thrown
     */
   def default: ContainerPlatform =
-    _ks8Mode.orElse(_dockerMode).getOrElse(throw new AssumptionViolatedException(ERROR_MESSAGE))
+    _k8sMode.orElse(_dockerMode).getOrElse(throw new AssumptionViolatedException(ERROR_MESSAGE))
 
   /**
     * @return k8s + docker. Or empty collection
     */
-  def all: Seq[ContainerPlatform] = (_dockerMode ++ _ks8Mode ++ customMode).toSeq
+  def all: Seq[ContainerPlatform] = (_dockerMode ++ _k8sMode ++ customMode).toSeq
 
   /**
     * @return a empty platform that all methods throw AssumptionViolatedException
