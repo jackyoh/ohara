@@ -59,7 +59,7 @@ echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
 echo -e "[kubernetes]\nname=Kubernetes\nbaseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg\n       https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg\n">/etc/yum.repos.d/kubernetes.repo
 
 # Is it exist kubelet command
-k8sVersion=1.14.1
+k8sVersion=1.18.1
 if ! hash kubelet 2>/dev/null; then
   yum install -y kubelet-${k8sVersion} kubeadm-${k8sVersion} kubectl-${k8sVersion}
   systemctl enable kubelet

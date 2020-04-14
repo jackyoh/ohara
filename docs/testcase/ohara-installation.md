@@ -36,7 +36,7 @@
 
 - Docker: **18.09.6**
 
-- Kubernetes: **1.14.1**
+- Kubernetes: **1.18.1**
 
 - Ohara: **\${ohara version name}** 這裡以 0.7.0-SNAPSHOT 當做 example
 

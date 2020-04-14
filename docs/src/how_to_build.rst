@@ -31,7 +31,7 @@ Prerequisites
 -  Yarn 1.13.0 or greater
 -  Docker 19.03.8 (Docker multi-stage, which is supported by Docker 17.05 or higher, is
    required in building ohara images. see `Use multi-stage builds`_ for more details)
--  Kubernetes 1.14.1 (Official QA uses the Kubernetes version is 1.14.1)
+-  Kubernetes 1.18.1 (Official QA uses the Kubernetes version is 1.18.1)
 
 --------------
 

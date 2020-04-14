@@ -41,9 +41,13 @@ cp -i /etc/kubernetes/admin.conf $HOME_DIR/.kube/config
 chown $(id -u):$(id -g) $HOME_DIR/.kube/config
 
 # Install network plugin
-kubectl apply -f https://docs.projectcalico.org/v3.5/getting-started/kubernetes/installation/hosted/etcd.yaml
-kubectl apply -f https://docs.projectcalico.org/v3.5/getting-started/kubernetes/installation/hosted/calico.yaml
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
 kubectl taint nodes --all node-role.kubernetes.io/master-
 
 systemctl restart kubelet
-kubectl proxy --accept-hosts=^*$ --address=$hostIP --port=8080 > /dev/null 2>&1 &
+
+# Copy setting for the auto running proxy service
+cp $BIN_DIR/../k8sproxyserver.service /etc/systemd/system
+systemctl daemon-reload
+systemctl enable k8sproxyserver.service
+systemctl start k8sproxyserver.service
