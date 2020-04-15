@@ -51,3 +51,5 @@ cp $BIN_DIR/../k8sproxyserver.service /etc/systemd/system
 systemctl daemon-reload
 systemctl enable k8sproxyserver.service
 systemctl start k8sproxyserver.service
+
+echo "Please review the /tmp/k8s-install-info.txt file to get install worker token info"

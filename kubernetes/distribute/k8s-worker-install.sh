@@ -16,7 +16,7 @@
 #
 
 if [ "$#" -ne 3 ]; then
-    echo 'Your input format error. Ex: bash k8s-worker-install.sh 10.0.0.101 ${TOKEN} ${HASH_CODE}'
+    echo 'Your input format error. Ex: bash k8s-worker-install.sh ${K8S_MASTER_IP} ${TOKEN} ${HASH_CODE}'
     exit 2
 fi
 
