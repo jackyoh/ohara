@@ -936,7 +936,7 @@ How to install K8S metrics server?
 
    # git clone https://github.com/kubernetes-sigs/metrics-server.git
 
-- Below is YAML file to override the deploy/1.8+/metrics-server-deployment.yaml path file
+- Below is YAML file to override the deploy/kubernetes/metrics-server-deployment.yaml path file
 
 .. code-block:: console
 
@@ -992,7 +992,7 @@ How to install K8S metrics server?
 
 .. code-block:: console
 
-   # kubectl apply -f deploy/1.8+
+   # kubectl apply -f deploy/kubernetes
 
 - Confirm the Kubernetes metrics service is installed complete, you can input the
   URL to the browser, below is the example:
