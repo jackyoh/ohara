@@ -34,7 +34,7 @@
 
 - Operating System: **CentOS 7.6.1810**
 
-- Docker: **18.09.6**
+- Docker: **19.03.8**
 
 - Kubernetes: **1.18.1**
 
