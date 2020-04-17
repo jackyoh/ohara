@@ -108,7 +108,7 @@ object K8SClient {
         override def masterUrl: String          = k8sApiServerURL
         override def metricsUrl: Option[String] = Option(k8sMetricsApiServerURL)
         override def containers()(implicit executionContext: ExecutionContext): Future[Seq[ContainerInfo]] =
-          HttpExecutor.SINGLETON
+          httpExecutor
             .get[PodList, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$k8sNamespace/pods")
             .map(
               podList =>
@@ -148,7 +148,7 @@ object K8SClient {
             }.toMap)
 
         override def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report] =
-          HttpExecutor.SINGLETON.get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes").map { r =>
+          httpExecutor.get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes").map { r =>
             val filterNode: Seq[NodeItems]        = r.items.filter(x => x.metadata.name.equals(nodeName))
             val isK8SNode: Boolean                = filterNode.size == 1
             var statusInfo: Option[K8SStatusInfo] = None
@@ -179,7 +179,7 @@ object K8SClient {
             .flatMap(
               Future.traverse(_)(
                 containerName =>
-                  HttpExecutor.SINGLETON
+                  httpExecutor
                     .getOnlyMessage(
                       sinceSeconds
                         .map(
@@ -196,7 +196,7 @@ object K8SClient {
             .map(_.toMap)
 
         override def nodeNameIPInfo()(implicit executionContext: ExecutionContext): Future[Seq[HostAliases]] =
-          HttpExecutor.SINGLETON
+          httpExecutor
             .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
             .map(
               nodeInfo =>
@@ -213,7 +213,7 @@ object K8SClient {
           if (k8sMetricsApiServerURL == null) Future.successful(Map.empty)
           else {
             // Get K8S metrics
-            val nodeResourceUsage: Future[Map[String, K8SJson.K8SMetricsUsage]] = HttpExecutor.SINGLETON
+            val nodeResourceUsage: Future[Map[String, K8SJson.K8SMetricsUsage]] = httpExecutor
               .get[K8SMetrics, K8SErrorResponse](s"$k8sMetricsApiServerURL/metrics.k8s.io/v1beta1/nodes")
               .map(metrics => {
                 metrics.items
@@ -227,7 +227,7 @@ object K8SClient {
               })
 
             // Get K8S Node info
-            HttpExecutor.SINGLETON
+            httpExecutor
               .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
               .map(
                 nodeInfo =>
@@ -263,7 +263,7 @@ object K8SClient {
         }
 
         override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] = {
-          HttpExecutor.SINGLETON
+          httpExecutor
             .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
             .map(
               nodeInfo =>
@@ -333,7 +333,7 @@ object K8SClient {
                 }
                 .flatMap(
                   podSpec =>
-                    HttpExecutor.SINGLETON
+                    httpExecutor
                       .post[Pod, Pod, K8SErrorResponse](
                         s"$k8sApiServerURL/namespaces/$k8sNamespace/pods",
                         Pod(Metadata(None, name, Some(Map(LABEL_KEY -> LABEL_VALUE)), None), Some(podSpec), None)
@@ -351,7 +351,7 @@ object K8SClient {
             .flatMap(
               Future.traverse(_)(
                 container =>
-                  HttpExecutor.SINGLETON
+                  httpExecutor
                     .delete[K8SErrorResponse](
                       s"$k8sApiServerURL/namespaces/$k8sNamespace/pods/${container.name}${isForceRemovePod}"
                     )
@@ -367,7 +367,7 @@ object K8SClient {
         override def volumeCreator: VolumeCreator =
           (nodeName: String, volumeName: String, path: String, executionContext: ExecutionContext) => {
             implicit val pool: ExecutionContext = executionContext
-            HttpExecutor.SINGLETON
+            httpExecutor
               .post[K8SPersistentVolume, K8SPersistentVolume, K8SErrorResponse](
                 s"$k8sApiServerURL/persistentvolumes",
                 K8SPersistentVolume(
@@ -390,8 +390,8 @@ object K8SClient {
                   )
                 )
               )
-              .map { _ =>
-                HttpExecutor.SINGLETON
+              .flatMap { _ =>
+                httpExecutor
                   .post[K8SPersistentVolumeClaim, K8SPersistentVolumeClaim, K8SErrorResponse](
                     s"$k8sApiServerURL/namespaces/${k8sNamespace}/persistentvolumeclaims",
                     K8SPersistentVolumeClaim(
@@ -408,21 +408,21 @@ object K8SClient {
           }
 
         override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
-          HttpExecutor.SINGLETON
+          httpExecutor
             .delete[K8SErrorResponse](
-              s"$k8sApiServerURL/namespaces/$k8sNamespace/persistentvolumeclaims/${name}"
+              s"$k8sApiServerURL/namespaces/$k8sNamespace/persistentvolumeclaims/${name}?gracePeriodSeconds=0"
             )
-            .map { _ =>
-              HttpExecutor.SINGLETON
+            .flatMap { _ =>
+              httpExecutor
                 .delete[K8SErrorResponse](
-                  s"$k8sApiServerURL/persistentvolumes/$name"
+                  s"$k8sApiServerURL/persistentvolumes/${name}?gracePeriodSeconds=0"
                 )
             }
             .map(_ => Unit)
         }
 
         override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
-          HttpExecutor.SINGLETON
+          httpExecutor
             .get[K8SPersistentVolumeInfo, K8SErrorResponse](s"$k8sApiServerURL/persistentvolumes")
             .map(_.items)
             .map { items =>
@@ -439,6 +439,8 @@ object K8SClient {
       }
     }
   }
+
+  private[this] def httpExecutor = HttpExecutor.SINGLETON
 
   private[agent] val K8S_KIND_NAME = "K8S"
 

@@ -83,8 +83,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       }
     } finally {
       names.foreach(name => Releasable.close(() => result(containerClient.removeVolumes(name))))
-      TimeUnit.SECONDS.sleep(5)
-      result(containerClient.volumes()) shouldBe Seq.empty
+      await(() => result(containerClient.volumes()).isEmpty)
     }
   }
 
