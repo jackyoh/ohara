@@ -18,13 +18,12 @@ package oharastream.ohara.it.collie
 
 import java.util.concurrent.TimeUnit
 
-import oharastream.ohara.agent.k8s.K8SClient
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.it.{ContainerPlatform, IntegrationTest}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-import org.junit.{After, AssumptionViolatedException, Test}
+import org.junit.{After, Test}
 import org.scalatest.Matchers.{include, _}
 
 import scala.collection.JavaConverters._
@@ -63,8 +62,6 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
 
   @Test
   def testVolume(): Unit = {
-    if (containerClient.isInstanceOf[K8SClient])
-      throw new AssumptionViolatedException("TODO: https://github.com/oharastream/ohara/issues/4460")
     result(containerClient.volumes()) shouldBe Seq.empty
     val names = Seq(CommonUtils.randomString(), CommonUtils.randomString())
     try {
@@ -86,6 +83,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       }
     } finally {
       names.foreach(name => Releasable.close(() => result(containerClient.removeVolumes(name))))
+      TimeUnit.SECONDS.sleep(5)
       result(containerClient.volumes()) shouldBe Seq.empty
     }
   }

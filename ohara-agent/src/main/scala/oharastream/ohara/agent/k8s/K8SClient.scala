@@ -17,7 +17,7 @@
 package oharastream.ohara.agent.k8s
 
 import java.util.Objects
-
+import oharastream.ohara.agent.container.ContainerClient.{ContainerVolume, VolumeCreator}
 import oharastream.ohara.agent.container.{ContainerClient, ContainerName}
 import oharastream.ohara.agent.k8s.K8SClient.ContainerCreator
 import oharastream.ohara.agent.k8s.K8SJson._
@@ -36,25 +36,15 @@ case class Report(nodeName: String, isK8SNode: Boolean, statusInfo: Option[K8SSt
 
 trait K8SClient extends ContainerClient {
   override def containerCreator: ContainerCreator
+  override def volumeCreator: VolumeCreator
+  override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit]
+  override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]]
+
   def nodeNameIPInfo()(implicit executionContext: ExecutionContext): Future[Seq[HostAliases]]
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
   def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]]
   def masterUrl: String
   def metricsUrl: Option[String]
-
-  // TODO: https://github.com/oharastream/ohara/issues/4460
-  override def volumeCreator: ContainerClient.VolumeCreator =
-    throw new UnsupportedOperationException("K8SClient does not support volumeCreator function")
-
-  // TODO: https://github.com/oharastream/ohara/issues/4460
-  override def volumes()(
-    implicit executionContext: ExecutionContext
-  ): Future[Seq[ContainerClient.ContainerVolume]] =
-    throw new UnsupportedOperationException("K8SClient does not support volumes function")
-
-  // TODO: https://github.com/oharastream/ohara/issues/4460
-  override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] =
-    throw new UnsupportedOperationException("K8SClient does not support volumes function")
 }
 
 object K8SClient {
@@ -372,6 +362,79 @@ object K8SClient {
 
         override def close(): Unit = {
           // do nothing
+        }
+
+        override def volumeCreator: VolumeCreator =
+          (nodeName: String, volumeName: String, path: String, executionContext: ExecutionContext) => {
+            implicit val pool: ExecutionContext = executionContext
+            HttpExecutor.SINGLETON
+              .post[K8SPersistentVolume, K8SPersistentVolume, K8SErrorResponse](
+                s"$k8sApiServerURL/persistentvolumes",
+                K8SPersistentVolume(
+                  K8SPVMetadata(volumeName),
+                  K8SPVSpec(
+                    capacity = K8SPVCapacity("500Gi"),
+                    accessModes = Seq("ReadWriteOnce"),
+                    persistentVolumeReclaimPolicy = "Retain",
+                    storageClassName = volumeName,
+                    hostPath = K8SPVHostPath(path, "DirectoryOrCreate"),
+                    nodeAffinity = K8SPVNodeAffinity(
+                      K8SPVRequired(
+                        Seq(
+                          K8SPVNodeSelectorTerm(
+                            Seq(K8SPVMatchExpression("kubernetes.io/hostname", "In", Seq(nodeName)))
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+              .map { _ =>
+                HttpExecutor.SINGLETON
+                  .post[K8SPersistentVolumeClaim, K8SPersistentVolumeClaim, K8SErrorResponse](
+                    s"$k8sApiServerURL/namespaces/${k8sNamespace}/persistentvolumeclaims",
+                    K8SPersistentVolumeClaim(
+                      K8SPVCMetadata(volumeName),
+                      K8SPVCSpec(
+                        storageClassName = volumeName,
+                        accessModes = Seq("ReadWriteOnce"),
+                        resources = K8SPVCResources(K8SPVCRequests("500Gi"))
+                      )
+                    )
+                  )
+              }
+              .map(_ => Unit)
+          }
+
+        override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
+          HttpExecutor.SINGLETON
+            .delete[K8SErrorResponse](
+              s"$k8sApiServerURL/namespaces/$k8sNamespace/persistentvolumeclaims/${name}"
+            )
+            .map { _ =>
+              HttpExecutor.SINGLETON
+                .delete[K8SErrorResponse](
+                  s"$k8sApiServerURL/persistentvolumes/$name"
+                )
+            }
+            .map(_ => Unit)
+        }
+
+        override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
+          HttpExecutor.SINGLETON
+            .get[K8SPersistentVolumeInfo, K8SErrorResponse](s"$k8sApiServerURL/persistentvolumes")
+            .map(_.items)
+            .map { items =>
+              items.map { item =>
+                ContainerVolume(
+                  name = item.metadata.name,
+                  driver = item.spec.volumeMode,
+                  path = item.spec.hostPath.path,
+                  nodeName = item.spec.nodeAffinity.required.nodeSelectorTerms.head.matchExpressions.head.values.head
+                )
+              }
+            }
         }
       }
     }

@@ -186,6 +186,95 @@ object K8SJson {
   final case class K8SMetrics(items: Seq[K8SMetricsItem])
   implicit val K8SMETRICS_JSON_FORMAT: RootJsonFormat[K8SMetrics] = jsonFormat1(K8SMetrics)
 
+  //for create persistent volume
+  final case class K8SPVMetadata(name: String)
+  implicit val K8SPVMETADATA_JSON_FORMAT: RootJsonFormat[K8SPVMetadata] = jsonFormat1(K8SPVMetadata)
+
+  final case class K8SPVCapacity(storage: String)
+  implicit val K8SPVCAPACITY_JSON_FORMAT: RootJsonFormat[K8SPVCapacity] = jsonFormat1(K8SPVCapacity)
+
+  final case class K8SPVHostPath(path: String, hostPathType: String)
+  implicit val K8SPVHOSTPATH_JSON_FORMAT: RootJsonFormat[K8SPVHostPath] =
+    new RootJsonFormat[K8SPVHostPath] {
+      override def read(json: JsValue): K8SPVHostPath = json.asJsObject.getFields("path", "type") match {
+        case Seq(JsString(path), JsString(hostPathType)) =>
+          K8SPVHostPath(path, hostPathType)
+        case other: Any =>
+          throw DeserializationException(s"${classOf[K8SPVHostPath].getSimpleName} expected but $other")
+      }
+
+      override def write(obj: K8SPVHostPath): JsValue = JsObject(
+        "path" -> JsString(obj.path),
+        "type" -> JsString(obj.hostPathType)
+      )
+    }
+
+  final case class K8SPVMatchExpression(key: String, operator: String, values: Seq[String])
+  implicit val K8SPVMATCHEXPRESSION_K8S_JSON_FORMAT: RootJsonFormat[K8SPVMatchExpression] = jsonFormat3(
+    K8SPVMatchExpression
+  )
+
+  final case class K8SPVNodeSelectorTerm(matchExpressions: Seq[K8SPVMatchExpression])
+  implicit val K8SPVNODESELECTORTERM_JSON_FORMAT: RootJsonFormat[K8SPVNodeSelectorTerm] = jsonFormat1(
+    K8SPVNodeSelectorTerm
+  )
+
+  final case class K8SPVRequired(nodeSelectorTerms: Seq[K8SPVNodeSelectorTerm])
+  implicit val K8SPVNODESELECTORTERMS_JSON_FORMAT: RootJsonFormat[K8SPVRequired] = jsonFormat1(K8SPVRequired)
+
+  final case class K8SPVNodeAffinity(required: K8SPVRequired)
+  implicit val K8SPVREQUIRED_JSON_FORMAT: RootJsonFormat[K8SPVNodeAffinity] = jsonFormat1(K8SPVNodeAffinity)
+
+  final case class K8SPVSpec(
+    capacity: K8SPVCapacity,
+    accessModes: Seq[String],
+    persistentVolumeReclaimPolicy: String,
+    storageClassName: String,
+    hostPath: K8SPVHostPath,
+    nodeAffinity: K8SPVNodeAffinity
+  )
+  implicit val K8SPVSPEC_JSON_FORMAT: RootJsonFormat[K8SPVSpec] = jsonFormat6(K8SPVSpec)
+
+  final case class K8SPersistentVolume(metadata: K8SPVMetadata, spec: K8SPVSpec)
+  implicit val K8SPERSISTENTVOLUME_JSON_FORMAT: RootJsonFormat[K8SPersistentVolume] = jsonFormat2(K8SPersistentVolume)
+
+  // for create persistent volume claim
+  final case class K8SPVCRequests(storage: String)
+  implicit val K8SPVCREQUEST_JSON_FORMAT: RootJsonFormat[K8SPVCRequests] = jsonFormat1(K8SPVCRequests)
+
+  final case class K8SPVCResources(requests: K8SPVCRequests)
+  implicit val K8SPVCRESOURCES_JSON_FORMAT: RootJsonFormat[K8SPVCResources] = jsonFormat1(K8SPVCResources)
+
+  final case class K8SPVCSpec(storageClassName: String, accessModes: Seq[String], resources: K8SPVCResources)
+  implicit val K8SPVCSPEC_JSON_FORMAT: RootJsonFormat[K8SPVCSpec] = jsonFormat3(K8SPVCSpec)
+
+  final case class K8SPVCMetadata(name: String)
+  implicit val K8SPVCMETADATA_JSON_FORMAT: RootJsonFormat[K8SPVCMetadata] = jsonFormat1(K8SPVCMetadata)
+
+  final case class K8SPersistentVolumeClaim(metadata: K8SPVCMetadata, spec: K8SPVCSpec)
+  implicit val K8SPERSISTENTVOLUMECLAIM_JSON_FORMAT: RootJsonFormat[K8SPersistentVolumeClaim] = jsonFormat2(
+    K8SPersistentVolumeClaim
+  )
+
+  // for persistent volume info
+  final case class K8SPVSpecInfo(
+    capacity: K8SPVCapacity,
+    hostPath: K8SPVHostPath,
+    volumeMode: String,
+    nodeAffinity: K8SPVNodeAffinity
+  )
+  implicit val K8SPVSPECINFO_JSON_FORMAT: RootJsonFormat[K8SPVSpecInfo] = jsonFormat4(K8SPVSpecInfo)
+
+  final case class K8SPersistentVolumeItem(metadata: K8SPVMetadata, spec: K8SPVSpecInfo)
+  implicit val K8SPERSISTENTVOLUMEITEM_JSON_FORMAT: RootJsonFormat[K8SPersistentVolumeItem] = jsonFormat2(
+    K8SPersistentVolumeItem
+  )
+
+  final case class K8SPersistentVolumeInfo(items: Seq[K8SPersistentVolumeItem])
+  implicit val K8SPERSISTENTVOLUMEINFO_JSON_FORMAT: RootJsonFormat[K8SPersistentVolumeInfo] = jsonFormat1(
+    K8SPersistentVolumeInfo
+  )
+
   //for error
   final case class K8SErrorResponse(message: String) extends HttpExecutor.Error
   implicit val K8SERROR_RESPONSE_FORMAT: RootJsonFormat[K8SErrorResponse] = jsonFormat1(K8SErrorResponse)
