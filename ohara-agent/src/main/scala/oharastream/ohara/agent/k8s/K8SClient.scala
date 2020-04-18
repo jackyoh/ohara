@@ -36,10 +36,6 @@ case class Report(nodeName: String, isK8SNode: Boolean, statusInfo: Option[K8SSt
 
 trait K8SClient extends ContainerClient {
   override def containerCreator: ContainerCreator
-  override def volumeCreator: VolumeCreator
-  override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit]
-  override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]]
-
   def nodeNameIPInfo()(implicit executionContext: ExecutionContext): Future[Seq[HostAliases]]
   def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report]
   def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]]
