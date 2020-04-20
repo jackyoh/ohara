@@ -192,6 +192,11 @@ object DockerClient {
                   case (key, value) => s"""-e \"$key=$value\""""
                 }
                 .mkString(" "),
+              mountVolumes
+                .map {
+                  case (key, value) => s"""-v \"$key=$value\""""
+                }
+                .mkString(" "),
               // add label so we can distinguish the containers from others
               s"--label $LABEL_KEY=$LABEL_VALUE",
               Objects.requireNonNull(imageName),

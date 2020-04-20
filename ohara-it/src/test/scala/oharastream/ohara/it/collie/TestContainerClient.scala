@@ -33,12 +33,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   private[this] val containerClient = platform.setupContainerClient()
 
-  private[this] def createBusyBox(name: String, arguments: Seq[String]): Unit =
+  private[this] def createBusyBox(name: String, volumes: Map[String, String], arguments: Seq[String]): Unit =
     result(
       containerClient.containerCreator
         .nodeName(platform.nodeNames.head)
         .name(name)
         .imageName("busybox")
+        .mountVolumes(volumes)
         .arguments(arguments)
         .create()
     )
@@ -49,7 +50,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   @Test
   def testLog(): Unit = {
     val name = CommonUtils.randomString(10)
-    createBusyBox(name, Seq("sh", "-c", "while true; do $(echo date); sleep 1; done"))
+    createBusyBox(name, Map.empty, Seq("sh", "-c", "while true; do $(echo date); sleep 1; done"))
     try {
       // wait the container
       await(() => log(name, None).contains("UTC"))
@@ -62,8 +63,8 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
 
   @Test
   def testVolume(): Unit = {
-    result(containerClient.volumes()) shouldBe Seq.empty
     val names = Seq(CommonUtils.randomString(), CommonUtils.randomString())
+    result(containerClient.volumes()) shouldBe Seq.empty
     try {
       names.foreach(
         name =>
@@ -83,10 +84,47 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       }
     } finally {
       names.foreach(name => Releasable.close(() => result(containerClient.removeVolumes(name))))
-      await(() => result(containerClient.volumes()).isEmpty)
+      names.foreach { volumeName =>
+        await(() => result(containerClient.volumes()).filter(_.name == volumeName).isEmpty)
+      }
     }
   }
 
+  @Test
+  def testWriteFileToVolume(): Unit = {
+    val volumeName = CommonUtils.randomString()
+    try {
+      val nodePath: String = s"/tmp/${CommonUtils.randomString(10)}"
+      result(
+        containerClient.volumeCreator
+          .name(volumeName)
+          .nodeName(platform.nodeNames.head)
+          .path(nodePath)
+          .create()
+      )
+      result(containerClient.volumes(volumeName)).head.name shouldBe volumeName
+      result(containerClient.volumes(volumeName)).head.path shouldBe nodePath.toString()
+      val containerName = CommonUtils.randomString(10)
+      try {
+        val containerPath        = "/tmp"
+        val containerFileName    = s"${CommonUtils.randomString(10)}.txt"
+        val containerPahtAndName = s"${containerPath}/${containerFileName}"
+        createBusyBox(
+          containerName,
+          Map(volumeName -> containerPath),
+          Seq(
+            "sh",
+            "-c",
+            s"while true; do echo Hello World >> ${containerPahtAndName} ; cat ${containerPahtAndName} ; sleep 1; done"
+          )
+        )
+        await(() => log(containerName, None).contains("Hello World"))
+      } finally Releasable.close(() => result(containerClient.forceRemove(containerName)))
+    } finally {
+      Releasable.close(() => result(containerClient.removeVolumes(volumeName)))
+      await(() => result(containerClient.volumes()).filter(_.name == volumeName).isEmpty)
+    }
+  }
   @After
   def tearDown(): Unit = Releasable.close(containerClient)
 }
