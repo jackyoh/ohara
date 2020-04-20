@@ -105,7 +105,7 @@ object K8SClient {
         override def metricsUrl: Option[String] = Option(k8sMetricsApiServerURL)
         override def containers()(implicit executionContext: ExecutionContext): Future[Seq[ContainerInfo]] =
           httpExecutor
-            .get[PodList, K8SErrorResponse](s"$k8sApiServerURL/namespaces/$k8sNamespace/pods")
+            .get[PodList, ErrorResponse](s"$k8sApiServerURL/namespaces/$k8sNamespace/pods")
             .map(
               podList =>
                 podList.items
@@ -144,7 +144,7 @@ object K8SClient {
             }.toMap)
 
         override def checkNode(nodeName: String)(implicit executionContext: ExecutionContext): Future[Report] =
-          httpExecutor.get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes").map { r =>
+          httpExecutor.get[NodeInfo, ErrorResponse](s"$k8sApiServerURL/nodes").map { r =>
             val filterNode: Seq[NodeItems]        = r.items.filter(x => x.metadata.name.equals(nodeName))
             val isK8SNode: Boolean                = filterNode.size == 1
             var statusInfo: Option[K8SStatusInfo] = None
@@ -193,7 +193,7 @@ object K8SClient {
 
         override def nodeNameIPInfo()(implicit executionContext: ExecutionContext): Future[Seq[HostAliases]] =
           httpExecutor
-            .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
+            .get[NodeInfo, ErrorResponse](s"$k8sApiServerURL/nodes")
             .map(
               nodeInfo =>
                 nodeInfo.items.map(item => {
@@ -209,14 +209,14 @@ object K8SClient {
           if (k8sMetricsApiServerURL == null) Future.successful(Map.empty)
           else {
             // Get K8S metrics
-            val nodeResourceUsage: Future[Map[String, K8SJson.K8SMetricsUsage]] = httpExecutor
-              .get[K8SMetrics, K8SErrorResponse](s"$k8sMetricsApiServerURL/metrics.k8s.io/v1beta1/nodes")
+            val nodeResourceUsage: Future[Map[String, K8SJson.MetricsUsage]] = httpExecutor
+              .get[Metrics, ErrorResponse](s"$k8sMetricsApiServerURL/metrics.k8s.io/v1beta1/nodes")
               .map(metrics => {
                 metrics.items
                   .flatMap(nodeMetricsInfo => {
                     Seq(
                       nodeMetricsInfo.metadata.name ->
-                        K8SMetricsUsage(nodeMetricsInfo.usage.cpu, nodeMetricsInfo.usage.memory)
+                        MetricsUsage(nodeMetricsInfo.usage.cpu, nodeMetricsInfo.usage.memory)
                     )
                   })
                   .toMap
@@ -224,7 +224,7 @@ object K8SClient {
 
             // Get K8S Node info
             httpExecutor
-              .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
+              .get[NodeInfo, ErrorResponse](s"$k8sApiServerURL/nodes")
               .map(
                 nodeInfo =>
                   nodeInfo.items
@@ -260,7 +260,7 @@ object K8SClient {
 
         override def nodes()(implicit executionContext: ExecutionContext): Future[Seq[K8SNodeReport]] = {
           httpExecutor
-            .get[K8SNodeInfo, K8SErrorResponse](s"$k8sApiServerURL/nodes")
+            .get[NodeInfo, ErrorResponse](s"$k8sApiServerURL/nodes")
             .map(
               nodeInfo =>
                 nodeInfo.items.map(
@@ -323,14 +323,13 @@ object K8SClient {
                       )
                     ),
                     restartPolicy = Some(restartPolicy),
-                    nodeName = None,
-                    volumes = None
+                    nodeName = None
                   )
                 }
                 .flatMap(
                   podSpec =>
                     httpExecutor
-                      .post[Pod, Pod, K8SErrorResponse](
+                      .post[Pod, Pod, ErrorResponse](
                         s"$k8sApiServerURL/namespaces/$k8sNamespace/pods",
                         Pod(Metadata(None, name, Some(Map(LABEL_KEY -> LABEL_VALUE)), None), Some(podSpec), None)
                       )
@@ -348,7 +347,7 @@ object K8SClient {
               Future.traverse(_)(
                 container =>
                   httpExecutor
-                    .delete[K8SErrorResponse](
+                    .delete[ErrorResponse](
                       s"$k8sApiServerURL/namespaces/$k8sNamespace/pods/${container.name}${isForceRemovePod}"
                     )
               )
@@ -364,21 +363,21 @@ object K8SClient {
           (nodeName: String, volumeName: String, path: String, executionContext: ExecutionContext) => {
             implicit val pool: ExecutionContext = executionContext
             httpExecutor
-              .post[K8SPersistentVolume, K8SPersistentVolume, K8SErrorResponse](
+              .post[PersistentVolume, PersistentVolume, ErrorResponse](
                 s"$k8sApiServerURL/persistentvolumes",
-                K8SPersistentVolume(
-                  K8SPVMetadata(volumeName),
-                  K8SPVSpec(
-                    capacity = K8SPVCapacity("500Gi"),
+                PersistentVolume(
+                  PVMetadata(volumeName),
+                  PVSpec(
+                    capacity = PVCapacity("500Gi"),
                     accessModes = Seq("ReadWriteOnce"),
                     persistentVolumeReclaimPolicy = "Retain",
                     storageClassName = volumeName,
-                    hostPath = K8SPVHostPath(path, "DirectoryOrCreate"),
-                    nodeAffinity = K8SPVNodeAffinity(
-                      K8SPVRequired(
+                    hostPath = PVHostPath(path, "DirectoryOrCreate"),
+                    nodeAffinity = PVNodeAffinity(
+                      PVRequired(
                         Seq(
-                          K8SPVNodeSelectorTerm(
-                            Seq(K8SPVMatchExpression("kubernetes.io/hostname", "In", Seq(nodeName)))
+                          PVNodeSelectorTerm(
+                            Seq(PVMatchExpression("kubernetes.io/hostname", "In", Seq(nodeName)))
                           )
                         )
                       )
@@ -388,14 +387,14 @@ object K8SClient {
               )
               .flatMap { _ =>
                 httpExecutor
-                  .post[K8SPersistentVolumeClaim, K8SPersistentVolumeClaim, K8SErrorResponse](
+                  .post[PersistentVolumeClaim, PersistentVolumeClaim, ErrorResponse](
                     s"$k8sApiServerURL/namespaces/${k8sNamespace}/persistentvolumeclaims",
-                    K8SPersistentVolumeClaim(
-                      K8SPVCMetadata(volumeName),
-                      K8SPVCSpec(
+                    PersistentVolumeClaim(
+                      PVCMetadata(volumeName),
+                      PVCSpec(
                         storageClassName = volumeName,
                         accessModes = Seq("ReadWriteOnce"),
-                        resources = K8SPVCResources(K8SPVCRequests("500Gi"))
+                        resources = PVCResources(PVCRequests("500Gi"))
                       )
                     )
                   )
@@ -405,12 +404,12 @@ object K8SClient {
 
         override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
           httpExecutor
-            .delete[K8SErrorResponse](
+            .delete[ErrorResponse](
               s"$k8sApiServerURL/namespaces/$k8sNamespace/persistentvolumeclaims/${name}?gracePeriodSeconds=0"
             )
             .flatMap { _ =>
               httpExecutor
-                .delete[K8SErrorResponse](
+                .delete[ErrorResponse](
                   s"$k8sApiServerURL/persistentvolumes/${name}?gracePeriodSeconds=0"
                 )
             }
@@ -419,7 +418,7 @@ object K8SClient {
 
         override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
           httpExecutor
-            .get[K8SPersistentVolumeInfo, K8SErrorResponse](s"$k8sApiServerURL/persistentvolumes")
+            .get[PersistentVolumeInfo, ErrorResponse](s"$k8sApiServerURL/persistentvolumes")
             .map(_.items)
             .map { items =>
               items.map { item =>
