@@ -272,10 +272,11 @@ object K8SClient {
 
         override def containerCreator: ContainerCreator =
           new ContainerCreator() {
-            private[this] var imagePullPolicy: ImagePullPolicy = ImagePullPolicy.IFNOTPRESENT
-            private[this] var restartPolicy: RestartPolicy     = RestartPolicy.Never
-            private[this] val domainName: String               = "default"
-            private[this] val labelName: String                = "ohara"
+            private[this] var mountVolumes: Map[String, String] = Map.empty
+            private[this] var imagePullPolicy: ImagePullPolicy  = ImagePullPolicy.IFNOTPRESENT
+            private[this] var restartPolicy: RestartPolicy      = RestartPolicy.Never
+            private[this] val domainName: String                = "default"
+            private[this] val labelName: String                 = "ohara"
 
             @Optional
             override def pullImagePolicy(imagePullPolicy: ImagePullPolicy): ContainerCreator = {
@@ -286,6 +287,12 @@ object K8SClient {
             @Optional("default is Never")
             override def restartPolicy(restartPolicy: RestartPolicy): ContainerCreator = {
               this.restartPolicy = Objects.requireNonNull(restartPolicy, "restartPolicy should not be null")
+              this
+            }
+
+            @Optional("default is empty")
+            override def mountVolumes(mountVolumes: Map[String, String]): ContainerCreator = {
+              this.mountVolumes = mountVolumes
               this
             }
 
@@ -316,6 +323,10 @@ object K8SClient {
                       Container(
                         name = labelName,
                         image = imageName,
+                        volumeMounts =
+                          if (mountVolumes.isEmpty) None
+                          else
+                            Some(mountVolumes.map(v => VolumeMount(v._1, v._2)).toSeq),
                         env = if (envs.isEmpty) None else Some(envs.map(x => EnvVar(x._1, Some(x._2))).toSeq),
                         ports = if (ports.isEmpty) None else Some(ports.map(x => ContainerPort(x._1, x._2)).toSeq),
                         imagePullPolicy = Some(imagePullPolicy),
@@ -324,7 +335,11 @@ object K8SClient {
                       )
                     ),
                     restartPolicy = Some(restartPolicy),
-                    nodeName = None
+                    nodeName = None,
+                    volumes =
+                      if (mountVolumes.isEmpty) None
+                      else
+                        Some(mountVolumes.map(v => Volume(v._1, Some(MountPersistentVolumeClaim(v._1)))).toSeq)
                   )
                 }
                 .flatMap(
@@ -475,5 +490,6 @@ object K8SClient {
   trait ContainerCreator extends ContainerClient.ContainerCreator {
     def pullImagePolicy(imagePullPolicy: ImagePullPolicy): ContainerCreator
     def restartPolicy(restartPolicy: RestartPolicy): ContainerCreator
+    def mountVolumes(volumes: Map[String, String]): ContainerCreator
   }
 }

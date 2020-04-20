@@ -40,13 +40,14 @@ object K8SJson {
   final case class Container(
     name: String,
     image: String,
+    volumeMounts: Option[Seq[VolumeMount]],
     ports: Option[Seq[ContainerPort]],
     env: Option[Seq[EnvVar]],
     imagePullPolicy: Option[ImagePullPolicy],
     command: Option[Seq[String]],
     args: Option[Seq[String]]
   )
-  implicit val CONTAINER_JSON_FORMAT: RootJsonFormat[Container] = jsonFormat7(Container)
+  implicit val CONTAINER_JSON_FORMAT: RootJsonFormat[Container] = jsonFormat8(Container)
 
   implicit val RESTART_POLICY_JSON_FORMAT: RootJsonFormat[RestartPolicy] = new RootJsonFormat[RestartPolicy] {
     override def read(json: JsValue): RestartPolicy = RestartPolicy.forName(json.convertTo[String])
@@ -73,6 +74,14 @@ object K8SJson {
       )
     }
 
+  final case class MountPersistentVolumeClaim(claimName: String)
+  implicit val MOUNTPERSISTENTVOLUMECLAIM_JSON_FORMAT: RootJsonFormat[MountPersistentVolumeClaim] = jsonFormat1(
+    MountPersistentVolumeClaim
+  )
+
+  final case class Volume(name: String, persistentVolumeClaim: Option[MountPersistentVolumeClaim])
+  implicit val VOLUME_JSON_FORMAT: RootJsonFormat[Volume] = jsonFormat2(Volume)
+
   final case class PodSpec(
     nodeSelector: Option[NodeSelector],
     hostname: String,
@@ -80,9 +89,10 @@ object K8SJson {
     subdomain: Option[String],
     nodeName: Option[String],
     containers: Seq[Container],
-    restartPolicy: Option[RestartPolicy]
+    restartPolicy: Option[RestartPolicy],
+    volumes: Option[Seq[Volume]]
   )
-  implicit val SPEC_JSON_FORMAT: RootJsonFormat[PodSpec] = jsonFormat7(PodSpec)
+  implicit val SPEC_JSON_FORMAT: RootJsonFormat[PodSpec] = jsonFormat8(PodSpec)
 
   final case class Metadata(
     uid: Option[String],
