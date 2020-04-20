@@ -31,6 +31,7 @@ class TestContainerCreator extends OharaTest {
       nodeName: String,
       hostname: String,
       imageName: String,
+      mountVolumes: Map[String, String],
       name: String,
       command: Option[String],
       arguments: Seq[String],
@@ -50,6 +51,7 @@ class TestContainerCreator extends OharaTest {
         Objects.requireNonNull(envs)
         Objects.requireNonNull(routes)
         Objects.requireNonNull(arguments)
+        Objects.requireNonNull(mountVolumes)
       }
 
   @Test

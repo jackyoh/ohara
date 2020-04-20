@@ -225,6 +225,7 @@ object ContainerClient {
     private[this] var hostname: String                            = CommonUtils.randomString()
     private[this] implicit var executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
     private[this] var imageName: String                           = _
+    private[this] var mountVolumes: Map[String, String]           = Map.empty
     private[this] var name: String                                = CommonUtils.randomString()
     private[this] var command: Option[String]                     = None
     private[this] var arguments: Seq[String]                      = Seq.empty
@@ -257,6 +258,18 @@ object ContainerClient {
       */
     def imageName(imageName: String): ContainerCreator.this.type = {
       this.imageName = CommonUtils.requireNonEmpty(imageName)
+      this
+    }
+
+    /**
+      * set volume name and mapping container path
+      *
+      * @param mountVolumes volume name, container path
+      * @return this builder
+      */
+    @Optional("default is empty")
+    def mountVolumes(mountVolumes: Map[String, String]): ContainerCreator.this.type = {
+      this.mountVolumes = mountVolumes
       this
     }
 
@@ -337,6 +350,7 @@ object ContainerClient {
       nodeName = CommonUtils.requireNonEmpty(nodeName),
       hostname = CommonUtils.requireNonEmpty(hostname),
       imageName = CommonUtils.requireNonEmpty(imageName),
+      mountVolumes = Objects.requireNonNull(mountVolumes),
       name = CommonUtils.requireNonEmpty(name),
       command = Objects.requireNonNull(command),
       arguments = Objects.requireNonNull(arguments),
@@ -350,6 +364,7 @@ object ContainerClient {
       nodeName: String,
       hostname: String,
       imageName: String,
+      mountVolumes: Map[String, String],
       name: String,
       command: Option[String],
       arguments: Seq[String],

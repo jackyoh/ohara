@@ -161,6 +161,7 @@ object DockerClient {
         nodeName: String,
         hostname: String,
         imageName: String,
+        mountVolumes: Map[String, String],
         name: String,
         command: Option[String],
         arguments: Seq[String],
