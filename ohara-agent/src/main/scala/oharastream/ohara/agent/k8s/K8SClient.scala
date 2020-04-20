@@ -272,11 +272,10 @@ object K8SClient {
 
         override def containerCreator: ContainerCreator =
           new ContainerCreator() {
-            private[this] var mountVolumes: Map[String, String] = Map.empty
-            private[this] var imagePullPolicy: ImagePullPolicy  = ImagePullPolicy.IFNOTPRESENT
-            private[this] var restartPolicy: RestartPolicy      = RestartPolicy.Never
-            private[this] val domainName: String                = "default"
-            private[this] val labelName: String                 = "ohara"
+            private[this] var imagePullPolicy: ImagePullPolicy = ImagePullPolicy.IFNOTPRESENT
+            private[this] var restartPolicy: RestartPolicy     = RestartPolicy.Never
+            private[this] val domainName: String               = "default"
+            private[this] val labelName: String                = "ohara"
 
             @Optional
             override def pullImagePolicy(imagePullPolicy: ImagePullPolicy): ContainerCreator = {
@@ -290,16 +289,11 @@ object K8SClient {
               this
             }
 
-            @Optional("default is empty")
-            override def mountVolumes(mountVolumes: Map[String, String]): ContainerCreator = {
-              this.mountVolumes = mountVolumes
-              this
-            }
-
             override protected def doCreate(
               nodeName: String,
               hostname: String,
               imageName: String,
+              mountVolumes: Map[String, String],
               name: String,
               command: Option[String],
               arguments: Seq[String],
