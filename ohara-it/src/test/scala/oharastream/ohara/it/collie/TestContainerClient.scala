@@ -39,12 +39,13 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   private[this] val imageName       = "centos:7"
   private[this] val webHost         = "www.google.com.tw"
 
-  private[this] def createBusyBox(arguments: Seq[String]): Unit =
+  private[this] def createBusyBox(arguments: Seq[String], volumes: Map[String, String]): Unit =
     result(
       containerClient.containerCreator
         .nodeName(platform.nodeNames.head)
         .name(name)
         .imageName("busybox")
+        .mountVolumes(volumes)
         .arguments(arguments)
         .create()
     )
@@ -54,8 +55,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     def log(name: String, sinceSeconds: Option[Long]): String =
       result(containerClient.log(name, sinceSeconds)).head._2
 
-    createBusyBox(Seq("sh", "-c", "while true; do $(echo date); sleep 1; done"))
-
+    createBusyBox(Seq("sh", "-c", "while true; do $(echo date); sleep 1; done"), Map.empty)
     try {
       // wait the container
       await(() => log(name, None).contains("UTC"))
