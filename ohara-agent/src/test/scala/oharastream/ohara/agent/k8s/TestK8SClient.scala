@@ -614,9 +614,9 @@ class TestK8SClient extends OharaTest {
                 """.stripMargin
 
     // test json serialization
-    val k8sNodeInfo: K8SNodeInfo = K8SNODEINFO_JSON_FORMAT.read(nodesResponse.parseJson)
-    k8sNodeInfo.items.head.metadata.name shouldBe "ohara-it-02"
-    k8sNodeInfo.items.head.status.images.size shouldBe 1
+    val nodeInfo: NodeInfo = NODEINFO_JSON_FORMAT.read(nodesResponse.parseJson)
+    nodeInfo.items.head.metadata.name shouldBe "ohara-it-02"
+    nodeInfo.items.head.status.images.size shouldBe 1
 
     // test communication
     toServer {
