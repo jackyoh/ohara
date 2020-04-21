@@ -27,7 +27,7 @@ class TestVolumeContainer(platform: ContainerPlatform) extends IntegrationTest {
     val zkDataDir          = s"${ZookeeperApi.ZOOKEEPER_HOME_FOLDER}/data"
     val myIdPath: String   = s"$zkDataDir/myid"
     val zkVolumeName       = "volume1"
-    val zkNodePath: String = s"/tmp/ccc"
+    val zkNodePath: String = s"/tmp/eee"
     println(s"zkNodePath is ${zkNodePath}")
     result(
       containerClient.volumeCreator
@@ -62,7 +62,7 @@ class TestVolumeContainer(platform: ContainerPlatform) extends IntegrationTest {
     val bkConfigPath: String = s"${BrokerApi.BROKER_HOME_FOLDER}/config/broker.config"
     val logDir: String       = s"${BrokerApi.BROKER_HOME_FOLDER}/logs"
     val bkClientPort         = CommonUtils.availablePort()
-    val bkNodePath: String   = s"/tmp/ccc"
+    val bkNodePath: String   = s"/tmp/fff"
     val bkVolumeName         = "volume2"
     println(s"bkNodePath is ${bkNodePath}")
     result(

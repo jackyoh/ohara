@@ -82,7 +82,7 @@ object K8SJson {
   final case class Volume(name: String, persistentVolumeClaim: Option[MountPersistentVolumeClaim])
   implicit val VOLUME_JSON_FORMAT: RootJsonFormat[Volume] = jsonFormat2(Volume)
 
-  final case class SecurityContext(runAsUser: String, runAsGroup: String, fsGroup: String)
+  final case class SecurityContext(runAsUser: Int, runAsGroup: Int, fsGroup: Int)
   implicit val SECURITYCONTEXT_JSON_FORMAT: RootJsonFormat[SecurityContext] = jsonFormat3(SecurityContext)
 
   final case class PodSpec(
