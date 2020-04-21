@@ -16,6 +16,7 @@
 
 package oharastream.ohara.agent.k8s
 
+import spray.json._
 import java.util.Objects
 import oharastream.ohara.agent.container.ContainerClient.{ContainerVolume, VolumeCreator}
 import oharastream.ohara.agent.container.{ContainerClient, ContainerName}
@@ -337,12 +338,16 @@ object K8SClient {
                   )
                 }
                 .flatMap(
-                  podSpec =>
+                  podSpec => {
+                    println(
+                      s"JSON: ${Pod(Metadata(None, name, Some(Map(LABEL_KEY -> LABEL_VALUE)), None), Some(podSpec), None).toJson}"
+                    )
                     httpExecutor
                       .post[Pod, Pod, ErrorResponse](
                         s"$k8sApiServerURL/namespaces/$k8sNamespace/pods",
                         Pod(Metadata(None, name, Some(Map(LABEL_KEY -> LABEL_VALUE)), None), Some(podSpec), None)
                       )
+                  }
                 )
                 .map(_ => Unit)
             }
