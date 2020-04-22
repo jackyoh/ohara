@@ -309,7 +309,6 @@ object K8SClient {
               nodeNameIPInfo
                 .map { ipInfo =>
                   PodSpec(
-                    SecurityContext(1000, 1000, 1000),
                     nodeSelector = Some(NodeSelector(nodeName)),
                     hostname = hostname, //hostname is container name
                     subdomain = Some(domainName),

@@ -22,18 +22,20 @@ class TestVolumeContainer(platform: ContainerPlatform) extends IntegrationTest {
 
   @Test
   def test(): Unit = {
-    val zkConfigPath       = s"${ZookeeperApi.ZOOKEEPER_HOME_FOLDER}/conf/zoo.cfg"
-    val zkClientPort       = CommonUtils.availablePort()
-    val zkDataDir          = s"${ZookeeperApi.ZOOKEEPER_HOME_FOLDER}/data"
-    val myIdPath: String   = s"$zkDataDir/myid"
-    val zkVolumeName       = "volume1"
-    val zkNodePath: String = s"/tmp/eee"
-    println(s"zkNodePath is ${zkNodePath}")
+    val containerDir     = s"/home/ohara/volume"
+    val nodePath: String = s"/home/user1/volume-test"
+
+    val zkConfigPath     = s"${ZookeeperApi.ZOOKEEPER_HOME_FOLDER}/conf/zoo.cfg"
+    val zkClientPort     = CommonUtils.availablePort()
+    val zkDataDir        = s"${containerDir}/zkdata-${CommonUtils.randomString(5)}"
+    val myIdPath: String = s"$zkDataDir/myid"
+    val zkVolumeName     = "volume1"
+
     result(
       containerClient.volumeCreator
         .name(zkVolumeName)
         .nodeName(platform.nodeNames.head)
-        .path(zkNodePath)
+        .path(nodePath)
         .create()
     )
 
@@ -41,7 +43,7 @@ class TestVolumeContainer(platform: ContainerPlatform) extends IntegrationTest {
       .mainConfigFile(zkConfigPath)
       .file(zkConfigPath)
       .append(CLIENT_PORT_DEFINITION.key(), zkClientPort)
-      .append(DATA_DIR_DEFINITION.key(), zkDataDir)
+      .append(DATA_DIR_DEFINITION.key(), containerDir)
       .done
       .file(myIdPath)
       .append(0)
@@ -54,22 +56,20 @@ class TestVolumeContainer(platform: ContainerPlatform) extends IntegrationTest {
         .name("zookeeper")
         .portMappings(Map(zkClientPort -> zkClientPort))
         .imageName(ZookeeperApi.IMAGE_NAME_DEFAULT)
-        .mountVolumes(Map(zkVolumeName -> zkDataDir))
+        .mountVolumes(Map(zkVolumeName -> containerDir))
         .arguments(zkArguments)
         .create()
     )
 
     val bkConfigPath: String = s"${BrokerApi.BROKER_HOME_FOLDER}/config/broker.config"
-    val logDir: String       = s"${BrokerApi.BROKER_HOME_FOLDER}/logs"
+    val logDir: String       = s"${containerDir}/bk-logs-${CommonUtils.randomString(5)}"
     val bkClientPort         = CommonUtils.availablePort()
-    val bkNodePath: String   = s"/tmp/fff"
     val bkVolumeName         = "volume2"
-    println(s"bkNodePath is ${bkNodePath}")
     result(
       containerClient.volumeCreator
         .name(bkVolumeName)
         .nodeName(platform.nodeNames.head)
-        .path(bkNodePath)
+        .path(nodePath)
         .create()
     )
 
@@ -89,7 +89,7 @@ class TestVolumeContainer(platform: ContainerPlatform) extends IntegrationTest {
         .name("broker")
         .portMappings(Map(bkClientPort -> bkClientPort))
         .imageName(BrokerApi.IMAGE_NAME_DEFAULT)
-        .mountVolumes(Map(bkVolumeName -> logDir))
+        .mountVolumes(Map(bkVolumeName -> containerDir))
         .arguments(bkArguments)
         .create()
     )
