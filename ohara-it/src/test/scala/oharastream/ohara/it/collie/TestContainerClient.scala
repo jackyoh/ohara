@@ -62,8 +62,8 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
 
   @Test
   def testVolume(): Unit = {
-    result(containerClient.volumes()) shouldBe Seq.empty
     val names = Seq(CommonUtils.randomString(), CommonUtils.randomString())
+    checkVolumeExists(names)
     try {
       names.foreach(
         name =>
@@ -83,7 +83,13 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       }
     } finally {
       names.foreach(name => Releasable.close(() => result(containerClient.removeVolumes(name))))
-      await(() => result(containerClient.volumes()).isEmpty)
+      checkVolumeExists(names)
+    }
+  }
+
+  private[this] def checkVolumeExists(names: Seq[String]): Unit = {
+    names.foreach { volumeName =>
+      await(() => result(containerClient.volumes()).filter(_.name == volumeName).isEmpty)
     }
   }
 
