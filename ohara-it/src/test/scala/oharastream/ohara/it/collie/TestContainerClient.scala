@@ -89,7 +89,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
 
   private[this] def checkVolumeExists(names: Seq[String]): Unit = {
     names.foreach { volumeName =>
-      await(() => result(containerClient.volumes()).filter(_.name == volumeName).isEmpty)
+      await(() => !result(containerClient.volumes()).exists(_.name == volumeName))
     }
   }
 
