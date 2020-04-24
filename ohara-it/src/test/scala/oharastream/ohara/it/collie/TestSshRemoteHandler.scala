@@ -16,12 +16,13 @@
 
 package oharastream.ohara.it.collie
 
-import oharastream.ohara.agent.{DataCollie, SshRemoteNodeHandler}
+import oharastream.ohara.agent.{DataCollie, RemoteNodeHandler}
 import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.it.ContainerPlatform
 import org.junit.{AssumptionViolatedException, Test}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -38,8 +39,9 @@ class TestSshRemoteHandler extends OharaTest {
   def testValidateError(): Unit = {
     val dataCollie        = DataCollie(Seq(node))
     val nodeName          = node.hostname
-    val remoteNodeHandler = new SshRemoteNodeHandler(dataCollie)
-    val response          = result(remoteNodeHandler.validateFolder(nodeName, "/home/ohara100"))
+    val remoteNodeHandler = RemoteNodeHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
+
+    val response = result(remoteNodeHandler.validateFolder("/home/ohara100"))
     response.message.contains("Folder validate failed") shouldBe true
   }
 
@@ -47,15 +49,16 @@ class TestSshRemoteHandler extends OharaTest {
   def testValidateSuccess(): Unit = {
     val dataCollie        = DataCollie(Seq(node))
     val nodeName          = node.hostname
-    val remoteNodeHandler = new SshRemoteNodeHandler(dataCollie)
-    val fileName          = CommonUtils.randomString(5)
-    val path              = s"/tmp/${fileName}"
+    val remoteNodeHandler = RemoteNodeHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
+
+    val fileName = CommonUtils.randomString(5)
+    val path     = s"/tmp/${fileName}"
     try {
-      result(remoteNodeHandler.mkDir(nodeName, path))
-      val response = result(remoteNodeHandler.validateFolder(nodeName, path))
+      result(remoteNodeHandler.mkDir(path))
+      val response = result(remoteNodeHandler.validateFolder(path))
       response.message shouldBe "Folder validate success"
     } finally {
-      result(remoteNodeHandler.deleteDir(nodeName, path))
+      result(remoteNodeHandler.deleteDir(path))
     }
   }
 
@@ -65,14 +68,14 @@ class TestSshRemoteHandler extends OharaTest {
     val nodeName          = node.hostname
     val fileName          = CommonUtils.randomString(5)
     val path              = s"/tmp/${fileName}"
-    val remoteNodeHandler = new SshRemoteNodeHandler(dataCollie)
+    val remoteNodeHandler = RemoteNodeHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
     try {
-      val response = result(remoteNodeHandler.mkDir(nodeName, path))
+      val response = result(remoteNodeHandler.mkDir(path))
       response.message shouldBe "create folder success"
-      val listDir = result(remoteNodeHandler.listDir(nodeName, "/tmp"))
+      val listDir = result(remoteNodeHandler.listDir("/tmp"))
       listDir.message.contains(fileName) shouldBe true
     } finally {
-      val response = result(remoteNodeHandler.deleteDir(nodeName, path))
+      val response = result(remoteNodeHandler.deleteDir(path))
       response.message shouldBe "delete folder success"
     }
   }
