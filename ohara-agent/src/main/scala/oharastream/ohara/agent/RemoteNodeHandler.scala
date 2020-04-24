@@ -51,7 +51,7 @@ class SshRemoteNodeHandler(dataCollie: DataCollie) extends RemoteNodeHandler {
       }
       .map { result =>
         if (result.contains("Folder not exists") || !result.contains("1000"))
-          RemoteNodeResponse("Folder validate failed")
+          RemoteNodeResponse("Folder validate failed, Please check folder exists and folder own UID is 1000")
         else RemoteNodeResponse("Folder validate success")
       }
 

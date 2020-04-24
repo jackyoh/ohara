@@ -40,7 +40,7 @@ class TestSshRemoteHandler extends OharaTest {
     val nodeName          = node.hostname
     val remoteNodeHandler = new SshRemoteNodeHandler(dataCollie)
     val response          = result(remoteNodeHandler.validateFolder(nodeName, "/home/ohara100"))
-    response.message shouldBe "Folder validate failed"
+    response.message.contains("Folder validate failed") shouldBe true
   }
 
   @Test
