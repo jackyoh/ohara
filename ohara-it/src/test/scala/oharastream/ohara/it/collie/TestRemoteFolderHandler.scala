@@ -16,30 +16,31 @@
 
 package oharastream.ohara.it.collie
 
-import oharastream.ohara.agent.{DataCollie, RemoteNodeHandler}
+import oharastream.ohara.agent.{DataCollie, FolderInfo, RemoteFolderHandler}
 import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.CommonUtils
-import oharastream.ohara.it.ContainerPlatform
-import org.junit.{AssumptionViolatedException, Test}
-
+//import oharastream.ohara.it.ContainerPlatform
+//import org.junit.{AssumptionViolatedException, Test}
+import org.junit.Test
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import org.scalatest.Matchers._
 
-class TestSshRemoteHandler extends OharaTest {
-  private[this] val nodeInfo: String = sys.env.getOrElse(
+class TestRemoteFolderHandler extends OharaTest {
+  /*private[this] val nodeInfo: String = sys.env.getOrElse(
     ContainerPlatform.DOCKER_NODES_KEY,
     throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
-  )
-  private[this] val node: Node = parserNode(nodeInfo)
+  )*/
+  private[this] val nodeInfo: String = "user1:123456@192.168.1.211:22"
+  private[this] val node: Node       = parserNode(nodeInfo)
 
   @Test
   def testValidateError(): Unit = {
     val dataCollie        = DataCollie(Seq(node))
     val nodeName          = node.hostname
-    val remoteNodeHandler = RemoteNodeHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
 
     val response = result(remoteNodeHandler.validateFolder("/home/ohara100"))
     response.message.contains("Folder validate failed") shouldBe true
@@ -49,7 +50,7 @@ class TestSshRemoteHandler extends OharaTest {
   def testValidateSuccess(): Unit = {
     val dataCollie        = DataCollie(Seq(node))
     val nodeName          = node.hostname
-    val remoteNodeHandler = RemoteNodeHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
 
     val fileName = CommonUtils.randomString(5)
     val path     = s"/tmp/${fileName}"
@@ -68,16 +69,25 @@ class TestSshRemoteHandler extends OharaTest {
     val nodeName          = node.hostname
     val fileName          = CommonUtils.randomString(5)
     val path              = s"/tmp/${fileName}"
-    val remoteNodeHandler = RemoteNodeHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
     try {
       val response = result(remoteNodeHandler.mkDir(path))
       response.message shouldBe "create folder success"
-      val listDir = result(remoteNodeHandler.listDir("/tmp"))
-      listDir.message.contains(fileName) shouldBe true
+      val folders = result(remoteNodeHandler.listDir("/tmp"))
+      folders.exists(_.fileName == fileName) shouldBe true
     } finally {
       val response = result(remoteNodeHandler.deleteDir(path))
       response.message shouldBe "delete folder success"
     }
+  }
+
+  @Test
+  def testListDir(): Unit = {
+    val dataCollie                = DataCollie(Seq(node))
+    val nodeName                  = node.hostname
+    val remoteNodeHandler         = RemoteFolderHandler.builder().dataCollie(dataCollie).hostname(nodeName).build()
+    val response: Seq[FolderInfo] = result(remoteNodeHandler.listDir("/home/user1"))
+    response.size > 0 shouldBe true
   }
 
   private[this] def parserNode(nodeInfo: String): Node = {

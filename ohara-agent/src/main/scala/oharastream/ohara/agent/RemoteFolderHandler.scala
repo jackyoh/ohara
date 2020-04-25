@@ -21,22 +21,22 @@ import oharastream.ohara.common.util.CommonUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait RemoteNodeHandler {
+trait RemoteFolderHandler {
   def validateFolder(path: String)(
     implicit executionContext: ExecutionContext
   ): Future[RemoteNodeResponse]
 
   def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
 
-  def listDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
+  def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Seq[FolderInfo]]
 
   def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
 }
 
-object RemoteNodeHandler {
+object RemoteFolderHandler {
   def builder(): Builder = new Builder()
 
-  class Builder private[agent] extends oharastream.ohara.common.pattern.Builder[RemoteNodeHandler] {
+  class Builder private[agent] extends oharastream.ohara.common.pattern.Builder[RemoteFolderHandler] {
     private var dataCollie: DataCollie = _
     private var nodeName: String       = _
 
@@ -50,7 +50,7 @@ object RemoteNodeHandler {
       this
     }
 
-    override def build: RemoteNodeHandler = new RemoteNodeHandler() {
+    override def build: RemoteFolderHandler = new RemoteFolderHandler() {
       override def validateFolder(
         path: String
       )(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
@@ -83,15 +83,23 @@ object RemoteNodeHandler {
             RemoteNodeResponse(result.getOrElse("create folder success"))
           }
 
-      override def listDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
+      override def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Seq[FolderInfo]] = {
         agent(nodeName)
           .map { agent =>
-            agent.execute(s"ls -l ${path}")
+            agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'")
           }
           .map { result =>
-            RemoteNodeResponse(result.getOrElse(""))
+            result.getOrElse("").split("\n").filter(_.split(",").size == 4).map { record =>
+              val values = record.split(",")
+              FolderInfo(
+                own = values(0),
+                group = values(1),
+                size = values(2),
+                fileName = values(3)
+              )
+            }
           }
-
+      }
       override def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
         agent(nodeName)
           .map { agent =>
@@ -113,3 +121,5 @@ object RemoteNodeHandler {
 }
 
 case class RemoteNodeResponse(message: String)
+
+case class FolderInfo(own: String, group: String, size: String, fileName: String)
