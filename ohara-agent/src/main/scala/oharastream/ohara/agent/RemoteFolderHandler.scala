@@ -22,14 +22,38 @@ import oharastream.ohara.common.util.CommonUtils
 import scala.concurrent.{ExecutionContext, Future}
 
 trait RemoteFolderHandler {
+  /**
+    * Validate remote folder exists and own
+    * @param path remote folder path
+    * @param executionContext thread pool
+    * @return result message
+    */
   def validateFolder(path: String)(
     implicit executionContext: ExecutionContext
   ): Future[RemoteNodeResponse]
 
+  /**
+    * Create folder for the remote node
+    * @param path new folder path
+    * @param executionContext thread pool
+    * @return result message
+    */
   def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
 
+  /**
+    * List folder info for the remote node
+    * @param path remote folder path
+    * @param executionContext thread pool
+    * @return folder info for the list
+    */
   def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Seq[FolderInfo]]
 
+  /**
+    * Delete folder for the remote node
+    * @param path delete folder path
+    * @param executionContext thread pool
+    * @return result message
+    */
   def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
 }
 
@@ -38,10 +62,10 @@ object RemoteFolderHandler {
 
   class Builder private[agent] extends oharastream.ohara.common.pattern.Builder[RemoteFolderHandler] {
     private var dataCollie: DataCollie = _
-    private var nodeName: String       = _
+    private var hostname: String       = _
 
-    def hostname(nodeName: String): Builder = {
-      this.nodeName = CommonUtils.requireNonEmpty(nodeName)
+    def hostname(hostname: String): Builder = {
+      this.hostname = CommonUtils.requireNonEmpty(hostname)
       this
     }
 
@@ -54,7 +78,7 @@ object RemoteFolderHandler {
       override def validateFolder(
         path: String
       )(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
-        agent(nodeName)
+        agent(hostname)
           .map { agent =>
             val folderName = path.split("/").last
             Seq(
@@ -75,7 +99,7 @@ object RemoteFolderHandler {
           }
 
       override def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
-        agent(nodeName)
+        agent(hostname)
           .map { agent =>
             agent.execute(s"mkdir ${path}")
           }
@@ -84,7 +108,7 @@ object RemoteFolderHandler {
           }
 
       override def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Seq[FolderInfo]] = {
-        agent(nodeName)
+        agent(hostname)
           .map { agent =>
             agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'")
           }
@@ -101,7 +125,7 @@ object RemoteFolderHandler {
           }
       }
       override def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
-        agent(nodeName)
+        agent(hostname)
           .map { agent =>
             agent.execute(s"rm -rf ${path}")
           }
@@ -110,9 +134,9 @@ object RemoteFolderHandler {
           }
     }
 
-    private[this] def agent(nodeName: String)(implicit executionContext: ExecutionContext): Future[Agent] = {
+    private[this] def agent(hostname: String)(implicit executionContext: ExecutionContext): Future[Agent] = {
       dataCollie
-        .value[Node](nodeName)
+        .value[Node](hostname)
         .map { node =>
           Agent.builder.hostname(node.hostname).user(node._user).password(node._password).port(node._port).build
         }
