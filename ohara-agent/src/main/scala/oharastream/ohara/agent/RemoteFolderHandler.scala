@@ -17,8 +17,6 @@
 package oharastream.ohara.agent
 
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
-import oharastream.ohara.common.util.CommonUtils
-
 import scala.concurrent.{ExecutionContext, Future}
 
 trait RemoteFolderHandler {
@@ -30,7 +28,7 @@ trait RemoteFolderHandler {
     */
   def validateFolder(path: String)(
     implicit executionContext: ExecutionContext
-  ): Future[RemoteNodeResponse]
+  ): Future[Map[String, RemoteFolderResponse]]
 
   /**
     * Create folder for the remote node
@@ -38,7 +36,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return result message
     */
-  def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
+  def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]]
 
   /**
     * List folder info for the remote node
@@ -46,7 +44,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return folder info for the list
     */
-  def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Seq[FolderInfo]]
+  def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Seq[FolderInfo]]]
 
   /**
     * Delete folder for the remote node
@@ -54,7 +52,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return result message
     */
-  def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse]
+  def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]]
 }
 
 object RemoteFolderHandler {
@@ -62,10 +60,10 @@ object RemoteFolderHandler {
 
   class Builder private[agent] extends oharastream.ohara.common.pattern.Builder[RemoteFolderHandler] {
     private var dataCollie: DataCollie = _
-    private var hostname: String       = _
+    private var hostnames: Seq[String] = _
 
-    def hostname(hostname: String): Builder = {
-      this.hostname = CommonUtils.requireNonEmpty(hostname)
+    def hostNames(hostnames: Seq[String]): Builder = {
+      this.hostnames = hostnames
       this
     }
 
@@ -77,73 +75,96 @@ object RemoteFolderHandler {
     override def build: RemoteFolderHandler = new RemoteFolderHandler() {
       override def validateFolder(
         path: String
-      )(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
-        agent(hostname)
-          .map { agent =>
-            val folderName = path.split("/").last
-            Seq(
-              agent.execute(s"""
-                               |if [ -d "$path" ]; then
-                               |  echo "Folder not exists"
-                               |else
-                               |  echo "Folder exists"
-                               |fi
-           """.stripMargin).get,
-              agent.execute("ls -n " + path + "/../|grep " + folderName + "|awk '{print $3}'").get.trim()
-            )
-          }
-          .map { result =>
-            if (result.contains("Folder not exists") || !result.contains("1000"))
-              RemoteNodeResponse("Folder validate failed, Please check folder exists and folder own UID is 1000")
-            else RemoteNodeResponse("Folder validate success")
-          }
-
-      override def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
-        agent(hostname)
-          .map { agent =>
-            agent.execute(s"mkdir ${path}")
-          }
-          .map { result =>
-            RemoteNodeResponse(result.getOrElse("create folder success"))
-          }
-
-      override def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Seq[FolderInfo]] = {
-        agent(hostname)
-          .map { agent =>
-            agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'")
-          }
-          .map { result =>
-            result.getOrElse("").split("\n").filter(_.split(",").size == 4).map { record =>
-              val values = record.split(",")
-              FolderInfo(
-                own = values(0),
-                group = values(1),
-                size = values(2),
-                fileName = values(3)
+      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
+        agent(hostnames).map { nodes =>
+          nodes
+            .map { agent =>
+              val folderName = path.split("/").last
+              val result: Seq[String] = Seq(
+                agent.execute(s"""
+                   |if [ -d "$path" ]; then
+                   |  echo "Folder not exists"
+                   |else
+                   |  echo "Folder exists"
+                   |fi
+           """.stripMargin).getOrElse(""),
+                agent.execute("ls -n " + path + "/../|grep " + folderName + "|awk '{print $3}'").getOrElse("").trim()
               )
+              (agent.hostname, result)
             }
-          }
-      }
-      override def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[RemoteNodeResponse] =
-        agent(hostname)
-          .map { agent =>
-            agent.execute(s"rm -rf ${path}")
-          }
-          .map { result =>
-            RemoteNodeResponse(result.getOrElse("delete folder success"))
+            .map { result =>
+              val nodeResponse =
+                (if (result._2.contains("Folder not exists") || !result._2.contains("1000"))
+                   RemoteFolderResponse("Folder validate failed, Please check folder exists and folder own UID is 1000")
+                 else RemoteFolderResponse("Folder validate success"))
+              (result._1, nodeResponse)
+            }
+            .toMap
+        }
+
+      override def mkDir(
+        path: String
+      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
+        agent(hostnames).map { nodes =>
+          nodes.map { agent =>
+            val result = agent.execute(s"mkdir ${path}").getOrElse("create folder success")
+            (agent.hostname, RemoteFolderResponse(result))
+          }.toMap
+        }
+
+      override def listDir(
+        path: String
+      )(implicit executionContext: ExecutionContext): Future[Map[String, Seq[FolderInfo]]] =
+        agent(hostnames).map { nodes =>
+          nodes
+            .map { agent =>
+              (agent.hostname, agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'"))
+            }
+            .map { result =>
+              val folderInfo: Seq[FolderInfo] = result._2.getOrElse("").split("\n").filter(_.split(",").size == 4).map {
+                record =>
+                  val values = record.split(",")
+                  FolderInfo(
+                    own = values(0),
+                    group = values(1),
+                    size = values(2),
+                    fileName = values(3)
+                  )
+              }
+              (result._1, folderInfo)
+            }
+            .toMap
+        }
+
+      override def deleteDir(
+        path: String
+      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
+        agent(hostnames)
+          .map { nodes =>
+            nodes.map { agent =>
+              val result = agent.execute(s"rm -rf ${path}").getOrElse("delete folder success")
+              (agent.hostname, RemoteFolderResponse(result))
+            }.toMap
           }
     }
 
-    private[this] def agent(hostname: String)(implicit executionContext: ExecutionContext): Future[Agent] = {
-      dataCollie
-        .value[Node](hostname)
-        .map { node =>
-          Agent.builder.hostname(node.hostname).user(node._user).password(node._password).port(node._port).build
+    private[this] def agent(hostnames: Seq[String])(implicit executionContext: ExecutionContext): Future[Seq[Agent]] = {
+      Future
+        .sequence(hostnames.map(hostname => dataCollie.value[Node](hostname)))
+        .map { nodes =>
+          nodes.map { node =>
+            Agent.builder
+              .hostname(node.hostname)
+              .user(node._user)
+              .password(node._password)
+              .port(node._port)
+              .build
+          }
         }
     }
   }
 }
 
-case class RemoteNodeResponse(message: String)
+case class RemoteFolderResponse(message: String)
 
 case class FolderInfo(own: String, group: String, size: String, fileName: String)
