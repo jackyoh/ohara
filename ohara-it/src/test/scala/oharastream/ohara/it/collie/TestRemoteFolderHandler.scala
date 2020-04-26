@@ -33,31 +33,37 @@ class TestRemoteFolderHandler extends OharaTest {
     ContainerPlatform.DOCKER_NODES_KEY,
     throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
   )*/
-  private[this] val nodeInfo: String = "user1:123456@192.168.1.211:22"
-  private[this] val node: Node       = parserNode(nodeInfo)
+  private[this] val nodeInfos: String = "user1:123456@192.168.1.211:22"
+  private[this] val nodes: Seq[Node]  = nodeInfos.split(",").map(nodeInfo => parserNode(nodeInfo))
 
   @Test
   def testValidateError(): Unit = {
-    val dataCollie        = DataCollie(Seq(node))
-    val hostname          = node.hostname
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(Seq(hostname)).build()
+    val dataCollie        = DataCollie(nodes)
+    val hostnames         = nodes.map(_.hostname)
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
 
     val response: Map[String, RemoteFolderResponse] = result(remoteNodeHandler.validateFolder("/home/ohara100"))
-    response.get(hostname).get.message.contains("Folder validate failed") shouldBe true
+    response.foreach { node =>
+      hostnames.exists(_ == node._1) shouldBe true
+      node._2.message.contains("Folder validate failed") shouldBe true
+    }
   }
 
   @Test
   def testValidateSuccess(): Unit = {
-    val dataCollie        = DataCollie(Seq(node))
-    val hostname          = node.hostname
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(Seq(hostname)).build()
+    val dataCollie        = DataCollie(nodes)
+    val hostnames         = nodes.map(_.hostname)
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
 
     val fileName = CommonUtils.randomString(5)
     val path     = s"/tmp/${fileName}"
     try {
       result(remoteNodeHandler.mkDir(path))
       val response = result(remoteNodeHandler.validateFolder(path))
-      response.get(hostname).get.message shouldBe "Folder validate success"
+      response.foreach { node =>
+        hostnames.exists(_ == node._1) shouldBe true
+        node._2.message.contains("Folder validate success") shouldBe true
+      }
     } finally {
       result(remoteNodeHandler.deleteDir(path))
     }
@@ -65,29 +71,39 @@ class TestRemoteFolderHandler extends OharaTest {
 
   @Test
   def testMkDirAndDelete(): Unit = {
-    val dataCollie        = DataCollie(Seq(node))
-    val hostname          = node.hostname
+    val dataCollie        = DataCollie(nodes)
+    val hostnames         = nodes.map(_.hostname)
     val fileName          = CommonUtils.randomString(5)
     val path              = s"/tmp/${fileName}"
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(Seq(hostname)).build()
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
     try {
       val response = result(remoteNodeHandler.mkDir(path))
-      response.get(hostname).get.message shouldBe "create folder success"
-      val folders = result(remoteNodeHandler.listDir("/tmp"))
-      folders.get(hostname).get.exists(_.fileName == fileName) shouldBe true
+      response.foreach { node =>
+        hostnames.exists(_ == node._1) shouldBe true
+        node._2.message.contains("create folder success") shouldBe true
+      }
+
+      val nodeListDir = result(remoteNodeHandler.listDir("/tmp"))
+      nodeListDir.foreach { result =>
+        result._2.exists(_.fileName == fileName) shouldBe true
+      }
     } finally {
       val response = result(remoteNodeHandler.deleteDir(path))
-      response.get(hostname).get.message shouldBe "delete folder success"
+      response.foreach { node =>
+        node._2.message shouldBe "delete folder success"
+      }
     }
   }
 
   @Test
   def testListDir(): Unit = {
-    val dataCollie                = DataCollie(Seq(node))
-    val hostname                  = node.hostname
-    val remoteNodeHandler         = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(Seq(hostname)).build()
-    val response: Seq[FolderInfo] = result(remoteNodeHandler.listDir("/home/user1")).get(hostname).get
-    response.size > 0 shouldBe true
+    val dataCollie                             = DataCollie(nodes)
+    val hostnames                              = nodes.map(_.hostname)
+    val remoteNodeHandler                      = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
+    val response: Map[String, Seq[FolderInfo]] = result(remoteNodeHandler.listDir("/home/user1"))
+    response.foreach { node =>
+      node._2.size > 0 shouldBe true
+    }
   }
 
   private[this] def parserNode(nodeInfo: String): Node = {
