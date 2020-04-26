@@ -16,6 +16,7 @@
 
 package oharastream.ohara.agent
 
+import oharastream.ohara.client.Enum
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -82,21 +83,24 @@ object RemoteFolderHandler {
               val folderName = path.split("/").last
               val result: Seq[String] = Seq(
                 agent.execute(s"""
-                   |if [ -d "$path" ]; then
-                   |  echo "Folder not exists"
+                   |if [ ! -d "$path" ]; then
+                   |  echo "NotExists"
                    |else
-                   |  echo "Folder exists"
+                   |  echo "Exists"
                    |fi
-           """.stripMargin).getOrElse(""),
+           """.stripMargin).getOrElse("").trim(),
                 agent.execute("ls -n " + path + "/../|grep " + folderName + "|awk '{print $3}'").getOrElse("").trim()
               )
               (agent.hostname, result)
             }
             .map { result =>
               val nodeResponse =
-                (if (result._2.contains("Folder not exists") || !result._2.contains("1000"))
-                   RemoteFolderResponse("Folder validate failed, Please check folder exists and folder own UID is 1000")
-                 else RemoteFolderResponse("Folder validate success"))
+                (if (result._2.contains("NotExists") || !result._2.contains("1000"))
+                   RemoteFolderResponse(
+                     RemoteFolderState.FAILED,
+                     "Folder validate failed, Please check folder exists and folder own UID is 1000"
+                   )
+                 else RemoteFolderResponse(RemoteFolderState.SUCCESS, "Folder validate success"))
               (result._1, nodeResponse)
             }
             .toMap
@@ -107,8 +111,11 @@ object RemoteFolderHandler {
       )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
         agent(hostnames).map { nodes =>
           nodes.map { agent =>
-            val result = agent.execute(s"mkdir ${path}").getOrElse("create folder success")
-            (agent.hostname, RemoteFolderResponse(result))
+            val result = agent
+              .execute(s"mkdir ${path}")
+              .map(message => RemoteFolderResponse(RemoteFolderState.FAILED, message))
+              .getOrElse(RemoteFolderResponse(RemoteFolderState.SUCCESS, "create folder success"))
+            (agent.hostname, result)
           }.toMap
         }
 
@@ -142,8 +149,20 @@ object RemoteFolderHandler {
         agent(hostnames)
           .map { nodes =>
             nodes.map { agent =>
-              val result = agent.execute(s"rm -rf ${path}").getOrElse("delete folder success")
-              (agent.hostname, RemoteFolderResponse(result))
+              val folderNotExists = agent.execute(s"""
+                |if [ ! -d "$path" ]; then
+                |  echo "NotExists"
+                |fi
+              """.stripMargin).getOrElse("").trim()
+              val remoteResponse =
+                if (folderNotExists == "NotExists")
+                  RemoteFolderResponse(RemoteFolderState.FAILED, "Folder is not exists")
+                else
+                  agent
+                    .execute(s"rm -rf ${path}")
+                    .map(message => RemoteFolderResponse(RemoteFolderState.FAILED, message))
+                    .getOrElse(RemoteFolderResponse(RemoteFolderState.SUCCESS, "delete folder success"))
+              (agent.hostname, remoteResponse)
             }.toMap
           }
     }
@@ -165,6 +184,13 @@ object RemoteFolderHandler {
   }
 }
 
-case class RemoteFolderResponse(message: String)
+case class RemoteFolderResponse(state: RemoteFolderState, message: String)
 
 case class FolderInfo(own: String, group: String, size: String, fileName: String)
+
+sealed abstract class RemoteFolderState(val name: String)
+object RemoteFolderState extends Enum[RemoteFolderState] {
+  case object SUCCESS extends RemoteFolderState("SUCCESS")
+
+  case object FAILED extends RemoteFolderState("FAILED")
+}

@@ -16,25 +16,23 @@
 
 package oharastream.ohara.it.collie
 
-import oharastream.ohara.agent.{DataCollie, FolderInfo, RemoteFolderHandler, RemoteFolderResponse}
+import oharastream.ohara.agent.{DataCollie, FolderInfo, RemoteFolderHandler, RemoteFolderResponse, RemoteFolderState}
 import oharastream.ohara.client.configurator.v0.NodeApi.{Node, State}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.CommonUtils
-//import oharastream.ohara.it.ContainerPlatform
-//import org.junit.{AssumptionViolatedException, Test}
-import org.junit.Test
+import oharastream.ohara.it.ContainerPlatform
+import org.junit.{AssumptionViolatedException, Test}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import org.scalatest.Matchers._
 
 class TestRemoteFolderHandler extends OharaTest {
-  /*private[this] val nodeInfo: String = sys.env.getOrElse(
+  private[this] val nodeInfos: String = sys.env.getOrElse(
     ContainerPlatform.DOCKER_NODES_KEY,
     throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
-  )*/
-  private[this] val nodeInfos: String = "user1:123456@192.168.1.211:22"
-  private[this] val nodes: Seq[Node]  = nodeInfos.split(",").map(nodeInfo => parserNode(nodeInfo))
+  )
+  private[this] val nodes: Seq[Node] = nodeInfos.split(",").map(nodeInfo => parserNode(nodeInfo))
 
   @Test
   def testValidateError(): Unit = {
@@ -46,6 +44,7 @@ class TestRemoteFolderHandler extends OharaTest {
     response.foreach { node =>
       hostnames.exists(_ == node._1) shouldBe true
       node._2.message.contains("Folder validate failed") shouldBe true
+      node._2.state shouldBe RemoteFolderState.FAILED
     }
   }
 
@@ -63,6 +62,7 @@ class TestRemoteFolderHandler extends OharaTest {
       response.foreach { node =>
         hostnames.exists(_ == node._1) shouldBe true
         node._2.message.contains("Folder validate success") shouldBe true
+        node._2.state shouldBe RemoteFolderState.SUCCESS
       }
     } finally {
       result(remoteNodeHandler.deleteDir(path))
@@ -81,6 +81,7 @@ class TestRemoteFolderHandler extends OharaTest {
       response.foreach { node =>
         hostnames.exists(_ == node._1) shouldBe true
         node._2.message.contains("create folder success") shouldBe true
+        node._2.state shouldBe RemoteFolderState.SUCCESS
       }
 
       val nodeListDir = result(remoteNodeHandler.listDir("/tmp"))
@@ -91,6 +92,7 @@ class TestRemoteFolderHandler extends OharaTest {
       val response = result(remoteNodeHandler.deleteDir(path))
       response.foreach { node =>
         node._2.message shouldBe "delete folder success"
+        node._2.state shouldBe RemoteFolderState.SUCCESS
       }
     }
   }
@@ -100,7 +102,7 @@ class TestRemoteFolderHandler extends OharaTest {
     val dataCollie                             = DataCollie(nodes)
     val hostnames                              = nodes.map(_.hostname)
     val remoteNodeHandler                      = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
-    val response: Map[String, Seq[FolderInfo]] = result(remoteNodeHandler.listDir("/home/user1"))
+    val response: Map[String, Seq[FolderInfo]] = result(remoteNodeHandler.listDir("/tmp"))
     response.foreach { node =>
       node._2.size > 0 shouldBe true
     }
