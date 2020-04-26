@@ -128,15 +128,14 @@ object RemoteFolderHandler {
               (agent.hostname, agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'"))
             }
             .map { result =>
-              val folderInfo: Seq[FolderInfo] = result._2.getOrElse("").split("\n").filter(_.split(",").size == 4).map {
-                record =>
-                  val values = record.split(",")
-                  FolderInfo(
-                    own = values(0),
-                    group = values(1),
-                    size = values(2),
-                    fileName = values(3)
-                  )
+              val folderInfo = result._2.getOrElse("").split("\n").filter(_.split(",").size == 4).toSeq.map { record =>
+                val values = record.split(",")
+                FolderInfo(
+                  own = values(0),
+                  group = values(1),
+                  size = values(2),
+                  fileName = values(3)
+                )
               }
               (result._1, folderInfo)
             }

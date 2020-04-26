@@ -25,14 +25,14 @@ import org.junit.{AssumptionViolatedException, Test}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import org.scalatest.Matchers._
+import org.scalatest.matchers.should.Matchers._
 
 class TestRemoteFolderHandler extends OharaTest {
   private[this] val nodeInfos: String = sys.env.getOrElse(
     ContainerPlatform.DOCKER_NODES_KEY,
     throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
   )
-  private[this] val nodes: Seq[Node] = nodeInfos.split(",").map(nodeInfo => parserNode(nodeInfo))
+  private[this] val nodes: Seq[Node] = nodeInfos.split(",").toSeq.map(nodeInfo => parserNode(nodeInfo))
 
   @Test
   def testValidateError(): Unit = {
