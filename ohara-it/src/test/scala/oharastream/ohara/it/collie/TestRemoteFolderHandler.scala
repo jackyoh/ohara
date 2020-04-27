@@ -39,7 +39,7 @@ class TestRemoteFolderHandler extends OharaTest {
     ContainerPlatform.DOCKER_NODES_KEY,
     throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
   )*/
-  private[this] val nodeInfos = "user1:123456@ohara-k8s-master:22,user1:123456@ohara-k8s-slave00:22"
+  private[this] val nodeInfos        = "user1:123456@ohara-k8s-master:22,user1:123456@ohara-k8s-slave00:22"
   private[this] val nodes: Seq[Node] = nodeInfos.split(",").toSeq.map(nodeInfo => parserNode(nodeInfo))
 
   @Test
@@ -47,9 +47,7 @@ class TestRemoteFolderHandler extends OharaTest {
     val dataCollie        = DataCollie(nodes)
     val hostnames         = nodes.map(_.hostname)
     val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
-    result(remoteNodeHandler.exists("/home/ohara100")).foreach { node =>
-      node._2 shouldBe false
-    }
+    result(remoteNodeHandler.exists("/home/ohara100")) shouldBe false
   }
 
   @Test
@@ -62,10 +60,7 @@ class TestRemoteFolderHandler extends OharaTest {
     val path     = s"/tmp/${fileName}"
     try {
       result(remoteNodeHandler.mkFolder(path))
-      result(remoteNodeHandler.exists(path)).foreach { node =>
-        hostnames.exists(_ == node._1) shouldBe true
-        node._2 shouldBe true
-      }
+      result(remoteNodeHandler.exists(path)) shouldBe true
     } finally {
       result(remoteNodeHandler.deleteFolder(path))
     }

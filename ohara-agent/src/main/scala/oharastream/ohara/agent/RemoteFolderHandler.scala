@@ -29,7 +29,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return True is exist, false is not exist
     */
-  def exists(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Boolean]]
+  def exists(path: String)(implicit executionContext: ExecutionContext): Future[Boolean]
 
   /**
     * Get the folder UID value for the remote node
@@ -87,25 +87,23 @@ object RemoteFolderHandler {
     }
 
     override def build: RemoteFolderHandler = new RemoteFolderHandler() {
-      override def exists(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Boolean]] =
-        agent(hostnames).map { nodes =>
-          nodes
-            .map { agent =>
-              val result = agent.execute(s"""
-              |if [ -d "$path" ]; then
-              |  echo "Exists"
-              |else
-              |  echo "NotExists"
-              |fi
+      override def exists(path: String)(implicit executionContext: ExecutionContext): Future[Boolean] =
+        agent(hostnames)
+          .map { nodes =>
+            nodes
+              .map { agent =>
+                agent.execute(s"""
+                   |if [ -d "$path" ]; then
+                   |  echo "Exists"
+                   |else
+                   |  echo "NotExists"
+                   |fi
             """.stripMargin).getOrElse("").trim()
-              (agent.hostname, result)
-            }
-            .map { result =>
-              val isExists: Boolean = (result._2 == "Exists")
-              (result._1, isExists)
-            }
-            .toMap
-        }
+              }
+          }
+          .map { result =>
+            !result.exists(_ == "NotExists")
+          }
 
       override def folderUID(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Int]] =
         agent(hostnames).map { nodes =>
