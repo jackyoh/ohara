@@ -18,6 +18,8 @@ package oharastream.ohara.agent
 
 import oharastream.ohara.client.Enum
 import oharastream.ohara.client.configurator.v0.NodeApi.Node
+import oharastream.ohara.common.util.CommonUtils
+
 import scala.concurrent.{ExecutionContext, Future}
 
 trait RemoteFolderHandler {
@@ -72,12 +74,13 @@ object RemoteFolderHandler {
     private var hostnames: Seq[String] = _
 
     def hostNames(hostnames: Seq[String]): Builder = {
-      this.hostnames = hostnames
+      this.hostnames = hostnames.map(hostname => CommonUtils.requireNonEmpty(hostname))
       this
     }
 
     def dataCollie(dataCollie: DataCollie): Builder = {
-      this.dataCollie = dataCollie
+      if (this.dataCollie == null) throw new IllegalArgumentException("Please setting the dataCollie function")
+      else this.dataCollie = dataCollie
       this
     }
 
