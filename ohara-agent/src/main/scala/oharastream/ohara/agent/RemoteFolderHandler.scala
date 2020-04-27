@@ -127,8 +127,8 @@ object RemoteFolderHandler {
           nodes.map { agent =>
             val result = agent
               .execute(s"mkdir ${path}")
-              .map(message => RemoteFolderCommandResult(RemoteFolderState.FAILED, message))
-              .getOrElse(RemoteFolderCommandResult(RemoteFolderState.SUCCESS, "create folder success"))
+              .map(message => throw new IllegalArgumentException(s"Create folder error: $message"))
+              .getOrElse(RemoteFolderCommandResult("Create folder success"))
             (agent.hostname, result)
           }.toMap
         }
@@ -185,12 +185,12 @@ object RemoteFolderHandler {
               """.stripMargin).getOrElse("").trim()
               val remoteResponse =
                 if (folderNotExists == "NotExists")
-                  RemoteFolderCommandResult(RemoteFolderState.FAILED, "Folder is not exists")
+                  throw new IllegalArgumentException("Folder is not exists")
                 else
                   agent
                     .execute(s"rm -rf ${path}")
-                    .map(message => RemoteFolderCommandResult(RemoteFolderState.FAILED, message))
-                    .getOrElse(RemoteFolderCommandResult(RemoteFolderState.SUCCESS, "Delete folder success"))
+                    .map(message => throw new IllegalArgumentException(s"Delete folder error: ${message}"))
+                    .getOrElse(RemoteFolderCommandResult("Delete folder success"))
               (agent.hostname, remoteResponse)
             }.toMap
           }
@@ -223,7 +223,7 @@ object RemoteFolderHandler {
   }
 }
 
-case class RemoteFolderCommandResult(state: RemoteFolderState, message: String)
+case class RemoteFolderCommandResult(message: String)
 
 case class FolderInfo(
   permission: FolderPermission,
@@ -241,11 +241,4 @@ object FolderPermission extends Enum[FolderPermission] {
   case object READWRITE extends FolderPermission("ReadWrite")
 
   case object UNKNOWN extends FolderPermission("Unknown")
-}
-
-sealed abstract class RemoteFolderState(val name: String)
-object RemoteFolderState extends Enum[RemoteFolderState] {
-  case object SUCCESS extends RemoteFolderState("SUCCESS")
-
-  case object FAILED extends RemoteFolderState("FAILED")
 }
