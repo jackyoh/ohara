@@ -22,14 +22,14 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait RemoteFolderHandler {
   /**
-    * Validate remote folder exists and own
+    * Validate remote folder exists and owner
     * @param path remote folder path
     * @param executionContext thread pool
     * @return result message
     */
   def validateFolder(path: String)(
     implicit executionContext: ExecutionContext
-  ): Future[Map[String, RemoteFolderResponse]]
+  ): Future[Map[String, RemoteFolderCommandResult]]
 
   /**
     * Create folder for the remote node
@@ -37,7 +37,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return result message
     */
-  def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]]
+  def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]]
 
   /**
     * List folder info for the remote node
@@ -53,7 +53,9 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return result message
     */
-  def deleteDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]]
+  def deleteDir(path: String)(
+    implicit executionContext: ExecutionContext
+  ): Future[Map[String, RemoteFolderCommandResult]]
 }
 
 object RemoteFolderHandler {
@@ -76,7 +78,7 @@ object RemoteFolderHandler {
     override def build: RemoteFolderHandler = new RemoteFolderHandler() {
       override def validateFolder(
         path: String
-      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
+      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]] =
         agent(hostnames).map { nodes =>
           nodes
             .map { agent =>
@@ -96,11 +98,11 @@ object RemoteFolderHandler {
             .map { result =>
               val nodeResponse =
                 (if (result._2.contains("NotExists") || !result._2.contains("1000"))
-                   RemoteFolderResponse(
+                   RemoteFolderCommandResult(
                      RemoteFolderState.FAILED,
-                     "Folder validate failed, Please check folder exists and folder own UID is 1000"
+                     "Folder validate failed, Please check folder exists and folder owner UID is 1000"
                    )
-                 else RemoteFolderResponse(RemoteFolderState.SUCCESS, "Folder validate success"))
+                 else RemoteFolderCommandResult(RemoteFolderState.SUCCESS, "Folder validate success"))
               (result._1, nodeResponse)
             }
             .toMap
@@ -108,13 +110,13 @@ object RemoteFolderHandler {
 
       override def mkDir(
         path: String
-      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
+      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]] =
         agent(hostnames).map { nodes =>
           nodes.map { agent =>
             val result = agent
               .execute(s"mkdir ${path}")
-              .map(message => RemoteFolderResponse(RemoteFolderState.FAILED, message))
-              .getOrElse(RemoteFolderResponse(RemoteFolderState.SUCCESS, "create folder success"))
+              .map(message => RemoteFolderCommandResult(RemoteFolderState.FAILED, message))
+              .getOrElse(RemoteFolderCommandResult(RemoteFolderState.SUCCESS, "create folder success"))
             (agent.hostname, result)
           }.toMap
         }
@@ -131,7 +133,7 @@ object RemoteFolderHandler {
               val folderInfo = result._2.getOrElse("").split("\n").filter(_.split(",").size == 4).toSeq.map { record =>
                 val values = record.split(",")
                 FolderInfo(
-                  own = values(0),
+                  owner = values(0),
                   group = values(1),
                   size = values(2),
                   fileName = values(3)
@@ -144,7 +146,7 @@ object RemoteFolderHandler {
 
       override def deleteDir(
         path: String
-      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderResponse]] =
+      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]] =
         agent(hostnames)
           .map { nodes =>
             nodes.map { agent =>
@@ -155,12 +157,12 @@ object RemoteFolderHandler {
               """.stripMargin).getOrElse("").trim()
               val remoteResponse =
                 if (folderNotExists == "NotExists")
-                  RemoteFolderResponse(RemoteFolderState.FAILED, "Folder is not exists")
+                  RemoteFolderCommandResult(RemoteFolderState.FAILED, "Folder is not exists")
                 else
                   agent
                     .execute(s"rm -rf ${path}")
-                    .map(message => RemoteFolderResponse(RemoteFolderState.FAILED, message))
-                    .getOrElse(RemoteFolderResponse(RemoteFolderState.SUCCESS, "Delete folder success"))
+                    .map(message => RemoteFolderCommandResult(RemoteFolderState.FAILED, message))
+                    .getOrElse(RemoteFolderCommandResult(RemoteFolderState.SUCCESS, "Delete folder success"))
               (agent.hostname, remoteResponse)
             }.toMap
           }
@@ -183,9 +185,9 @@ object RemoteFolderHandler {
   }
 }
 
-case class RemoteFolderResponse(state: RemoteFolderState, message: String)
+case class RemoteFolderCommandResult(state: RemoteFolderState, message: String)
 
-case class FolderInfo(own: String, group: String, size: String, fileName: String)
+case class FolderInfo(owner: String, group: String, size: String, fileName: String)
 
 sealed abstract class RemoteFolderState(val name: String)
 object RemoteFolderState extends Enum[RemoteFolderState] {
