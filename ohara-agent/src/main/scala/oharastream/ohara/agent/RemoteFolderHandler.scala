@@ -22,14 +22,20 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait RemoteFolderHandler {
   /**
-    * Validate remote folder exists and owner
-    * @param path remote folder path
+    * Test whether the exist folder
+    * @param path folder path
     * @param executionContext thread pool
-    * @return result message
+    * @return True is exist, false is not exist
     */
-  def validateFolder(path: String)(
-    implicit executionContext: ExecutionContext
-  ): Future[Map[String, RemoteFolderCommandResult]]
+  def exists(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Boolean]]
+
+  /**
+    * Get the folder UID value for the remote node
+    * @param path folder path
+    * @param executionContext thread pool
+    * @return UID value
+    */
+  def folderUID(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Int]]
 
   /**
     * Create folder for the remote node
@@ -76,34 +82,37 @@ object RemoteFolderHandler {
     }
 
     override def build: RemoteFolderHandler = new RemoteFolderHandler() {
-      override def validateFolder(
-        path: String
-      )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]] =
+      override def exists(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Boolean]] =
+        agent(hostnames).map { nodes =>
+          nodes
+            .map { agent =>
+              val result = agent.execute(s"""
+              |if [ -d "$path" ]; then
+              |  echo "Exists"
+              |else
+              |  echo "NotExists"
+              |fi
+            """.stripMargin).getOrElse("").trim()
+              (agent.hostname, result)
+            }
+            .map { result =>
+              val isExists: Boolean = (result._2 == "Exists")
+              (result._1, isExists)
+            }
+            .toMap
+        }
+
+      override def folderUID(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Int]] =
         agent(hostnames).map { nodes =>
           nodes
             .map { agent =>
               val folderName = path.split("/").last
-              val result: Seq[String] = Seq(
-                agent.execute(s"""
-                   |if [ ! -d "$path" ]; then
-                   |  echo "NotExists"
-                   |else
-                   |  echo "Exists"
-                   |fi
-           """.stripMargin).getOrElse("").trim(),
+              val result =
                 agent.execute("ls -n " + path + "/../|grep " + folderName + "|awk '{print $3}'").getOrElse("").trim()
-              )
               (agent.hostname, result)
             }
             .map { result =>
-              val nodeResponse =
-                (if (result._2.contains("NotExists") || !result._2.contains("1000"))
-                   RemoteFolderCommandResult(
-                     RemoteFolderState.FAILED,
-                     "Folder validate failed, Please check folder exists and folder owner UID is 1000"
-                   )
-                 else RemoteFolderCommandResult(RemoteFolderState.SUCCESS, "Folder validate success"))
-              (result._1, nodeResponse)
+              (result._1, result._2.toInt)
             }
             .toMap
         }
