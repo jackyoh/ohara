@@ -32,6 +32,7 @@ class TestRemoteFolderHandler extends OharaTest {
     ContainerPlatform.DOCKER_NODES_KEY,
     throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
   )
+
   private[this] val nodes: Seq[Node] = nodeInfos.split(",").toSeq.map(nodeInfo => parserNode(nodeInfo))
 
   @Test
@@ -91,9 +92,24 @@ class TestRemoteFolderHandler extends OharaTest {
     } finally {
       val response = result(remoteNodeHandler.deleteDir(path))
       response.foreach { node =>
-        node._2.message shouldBe "delete folder success"
+        node._2.message shouldBe "Delete folder success"
         node._2.state shouldBe RemoteFolderState.SUCCESS
       }
+    }
+  }
+
+  @Test
+  def testRemoveFolderError(): Unit = {
+    val dataCollie        = DataCollie(nodes)
+    val hostnames         = nodes.map(_.hostname)
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
+    val response: Map[String, RemoteFolderResponse] = result(
+      remoteNodeHandler.deleteDir(s"/tmp/${CommonUtils.randomString(5)}")
+    )
+    response.foreach { nodes =>
+      hostnames.exists(_ == nodes._1) shouldBe true
+      nodes._2.state shouldBe RemoteFolderState.FAILED
+      nodes._2.message shouldBe "Folder is not exists"
     }
   }
 

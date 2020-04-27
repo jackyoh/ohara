@@ -160,7 +160,7 @@ object RemoteFolderHandler {
                   agent
                     .execute(s"rm -rf ${path}")
                     .map(message => RemoteFolderResponse(RemoteFolderState.FAILED, message))
-                    .getOrElse(RemoteFolderResponse(RemoteFolderState.SUCCESS, "delete folder success"))
+                    .getOrElse(RemoteFolderResponse(RemoteFolderState.SUCCESS, "Delete folder success"))
               (agent.hostname, remoteResponse)
             }.toMap
           }
