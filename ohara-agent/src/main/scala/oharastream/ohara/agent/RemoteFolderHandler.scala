@@ -45,7 +45,9 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return result message
     */
-  def mkDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]]
+  def mkFolder(path: String)(
+    implicit executionContext: ExecutionContext
+  ): Future[Map[String, RemoteFolderCommandResult]]
 
   /**
     * List folder info for the remote node
@@ -53,7 +55,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return folder info for the list
     */
-  def listDir(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Seq[FolderInfo]]]
+  def listFolder(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Seq[FolderInfo]]]
 
   /**
     * Delete folder for the remote node
@@ -61,7 +63,7 @@ trait RemoteFolderHandler {
     * @param executionContext thread pool
     * @return result message
     */
-  def deleteDir(path: String)(
+  def deleteFolder(path: String)(
     implicit executionContext: ExecutionContext
   ): Future[Map[String, RemoteFolderCommandResult]]
 }
@@ -79,7 +81,7 @@ object RemoteFolderHandler {
     }
 
     def dataCollie(dataCollie: DataCollie): Builder = {
-      if (this.dataCollie == null) throw new IllegalArgumentException("Please setting the dataCollie function")
+      if (dataCollie == null) throw new IllegalArgumentException("Please setting the dataCollie function")
       else this.dataCollie = dataCollie
       this
     }
@@ -120,7 +122,7 @@ object RemoteFolderHandler {
             .toMap
         }
 
-      override def mkDir(
+      override def mkFolder(
         path: String
       )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]] =
         agent(hostnames).map { nodes =>
@@ -133,18 +135,33 @@ object RemoteFolderHandler {
           }.toMap
         }
 
-      override def listDir(
+      override def listFolder(
         path: String
       )(implicit executionContext: ExecutionContext): Future[Map[String, Seq[FolderInfo]]] =
         agent(hostnames).map { nodes =>
           nodes
             .map { agent =>
-              (agent.hostname, agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'"))
+              (
+                agent.hostname,
+                agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'"),
+                agent.execute("cat /etc/passwd|awk 'BEGIN { FS=\":\"} {print $1\":\"$3}'")
+              )
             }
             .map { result =>
+              val uidList: Map[String, Int] = result._3
+                .getOrElse("")
+                .split("\n")
+                .map { record =>
+                  val fields = record.split(":")
+                  (fields.head, fields.last.toInt)
+                }
+                .toMap
               val folderInfo = result._2.getOrElse("").split("\n").filter(_.split(",").size == 4).toSeq.map { record =>
                 val values = record.split(",")
                 FolderInfo(
+                  uid = uidList
+                    .get(values(0))
+                    .getOrElse(throw new IllegalArgumentException("Please confirm your UID value")),
                   owner = values(0),
                   group = values(1),
                   size = values(2),
@@ -156,7 +173,7 @@ object RemoteFolderHandler {
             .toMap
         }
 
-      override def deleteDir(
+      override def deleteFolder(
         path: String
       )(implicit executionContext: ExecutionContext): Future[Map[String, RemoteFolderCommandResult]] =
         agent(hostnames)
@@ -199,7 +216,13 @@ object RemoteFolderHandler {
 
 case class RemoteFolderCommandResult(state: RemoteFolderState, message: String)
 
-case class FolderInfo(owner: String, group: String, size: String, fileName: String)
+case class FolderInfo(
+  uid: Int,
+  owner: String,
+  group: String,
+  size: String,
+  fileName: String
+)
 
 sealed abstract class RemoteFolderState(val name: String)
 object RemoteFolderState extends Enum[RemoteFolderState] {
