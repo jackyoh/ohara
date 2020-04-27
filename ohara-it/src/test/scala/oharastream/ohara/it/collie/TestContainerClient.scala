@@ -35,10 +35,11 @@ import scala.jdk.CollectionConverters._
 
 @RunWith(value = classOf[Parameterized])
 class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
-  private[this] val containerClient = platform.setupContainerClient()
-  private[this] val name            = CommonUtils.randomString(5)
-  private[this] val imageName       = "centos:7"
-  private[this] val webHost         = "www.google.com.tw"
+  private[this] val containerClient   = platform.setupContainerClient()
+  private[this] val name              = CommonUtils.randomString(5)
+  private[this] val imageName         = "centos:7"
+  private[this] val webHost           = "www.google.com.tw"
+  private[this] val containerHomePath = "/home/ohara/default"
 
   private[this] def createBusyBox(arguments: Seq[String], volumes: Map[String, String]): Unit =
     result(
@@ -286,8 +287,8 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   }
 
   private[this] def createZkContainer(zkClientPort: Int, volumeName: String): String = {
-    val zkContainerConfigPath = "/home/ohara/default/conf/zoo.cfg"
-    val zkContainerDataDir    = "/home/ohara/default/data"
+    val zkContainerConfigPath = s"${containerHomePath}/conf/zoo.cfg"
+    val zkContainerDataDir    = s"${containerHomePath}/data"
     val zkMyIdPath: String    = s"$zkContainerDataDir/myid"
     val zkArguments = ArgumentsBuilder()
       .mainConfigFile(zkContainerConfigPath)
@@ -314,10 +315,9 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     containerName
   }
 
-  private[this] def createBkContainer(zkClientPort: Int, bkClientPort: Int, volumeName: String): String = {
-    val bkConfigPath: String = "/home/ohara/default/config/broker.config"
-    val logDir: String       = "/home/ohara/default/logs"
-
+  private[this] def createBkContainer(zkClientPort: Int, bkClientPort: Int, volumeName: String): Seq[String] = {
+    val bkConfigPath: String = s"${containerHomePath}/config/broker.config"
+    val logDir: String       = s"${containerHomePath}/logs"
     val bkArguments = ArgumentsBuilder()
       .mainConfigFile(bkConfigPath)
       .file(bkConfigPath)
@@ -328,8 +328,9 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .append(s"advertised.listeners=PLAINTEXT://${platform.nodeNames.head}:${bkClientPort}")
       .done
       .build
-    val containerName = CommonUtils.randomString(5)
-    platform.nodeNames.foreach { nodeName =>
+    val containerNamePrefix = s"bk-${CommonUtils.randomString(5)}"
+    platform.nodeNames.map { nodeName =>
+      val containerName = s"$containerNamePrefix-$nodeName"
       result(
         containerClient.containerCreator
           .nodeName(nodeName)
@@ -340,8 +341,8 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
           .arguments(bkArguments)
           .create()
       )
-    }
-    containerName
+      containerName
+    }.toSeq
   }
 
   @After

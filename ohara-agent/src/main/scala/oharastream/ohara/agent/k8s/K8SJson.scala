@@ -86,7 +86,6 @@ object K8SJson {
   implicit val SECURITYCONTEXT_JSON_FORMAT: RootJsonFormat[SecurityContext] = jsonFormat3(SecurityContext)
 
   final case class PodSpec(
-    securityContext: SecurityContext,
     nodeSelector: Option[NodeSelector],
     hostname: String,
     hostAliases: Option[Seq[HostAliases]],
@@ -96,7 +95,7 @@ object K8SJson {
     restartPolicy: Option[RestartPolicy],
     volumes: Option[Seq[Volume]]
   )
-  implicit val SPEC_JSON_FORMAT: RootJsonFormat[PodSpec] = jsonFormat9(PodSpec)
+  implicit val SPEC_JSON_FORMAT: RootJsonFormat[PodSpec] = jsonFormat8(PodSpec)
 
   final case class Metadata(
     uid: Option[String],
