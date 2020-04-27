@@ -136,10 +136,15 @@ class TestRemoteFolderHandler extends OharaTest {
     val commandResult: Map[String, Seq[FolderInfo]] = result(remoteNodeHandler.listFolder("/tmp"))
     commandResult.foreach { node =>
       node._2.size > 0 shouldBe true
-      node._2.foreach(fileInfo => {
+      node._2.foreach { fileInfo =>
         (fileInfo.uid >= 0) shouldBe true
-      })
+      }
     }
+  }
+
+  @Test
+  def test(): Unit = {
+    println("drwxr-xr-x".substring(1, 3))
   }
 
   private[this] def parserNode(nodeInfo: String): Node = {

@@ -141,7 +141,7 @@ object RemoteFolderHandler {
             .map { agent =>
               (
                 agent.hostname,
-                agent.execute("ls -l " + path + "|awk '{print $3\",\"$4\",\"$5\",\"$9}'"),
+                agent.execute("ls -l " + path + "|awk '{print $1\",\"$3\",\"$4\",\"$5\",\"$9}'"),
                 agent.execute("cat /etc/passwd|awk 'BEGIN { FS=\":\"} {print $1\":\"$3}'")
               )
             }
@@ -154,16 +154,17 @@ object RemoteFolderHandler {
                   (fields.head, fields.last.toInt)
                 }
                 .toMap
-              val folderInfo = result._2.getOrElse("").split("\n").filter(_.split(",").size == 4).toSeq.map { record =>
+              val folderInfo = result._2.getOrElse("").split("\n").filter(_.split(",").size == 5).toSeq.map { record =>
                 val values = record.split(",")
                 FolderInfo(
+                  permission = parserPermission(values(0)),
                   uid = uidList
-                    .get(values(0))
+                    .get(values(1))
                     .getOrElse(throw new IllegalArgumentException("Please confirm your UID value")),
-                  owner = values(0),
-                  group = values(1),
-                  size = values(2),
-                  fileName = values(3)
+                  owner = values(1),
+                  group = values(2),
+                  size = values(3),
+                  fileName = values(4)
                 )
               }
               (result._1, folderInfo)
@@ -209,18 +210,38 @@ object RemoteFolderHandler {
           }
         }
     }
+
+    private[this] def parserPermission(value: String): FolderPermission = {
+      if (value.length < 3) throw new IllegalArgumentException("The permission parser error")
+      else {
+        val result = value.substring(1, 3)
+        if (result == "rw") FolderPermission.READWRITE
+        else if (result == "r-") FolderPermission.READONLY
+        else FolderPermission.UNKNOWN
+      }
+    }
   }
 }
 
 case class RemoteFolderCommandResult(state: RemoteFolderState, message: String)
 
 case class FolderInfo(
+  permission: FolderPermission,
   uid: Int,
   owner: String,
   group: String,
   size: String,
   fileName: String
 )
+
+sealed abstract class FolderPermission(val name: String)
+object FolderPermission extends Enum[FolderPermission] {
+  case object READONLY extends FolderPermission("ReadOnly")
+
+  case object READWRITE extends FolderPermission("ReadWrite")
+
+  case object UNKNOWN extends FolderPermission("Unknown")
+}
 
 sealed abstract class RemoteFolderState(val name: String)
 object RemoteFolderState extends Enum[RemoteFolderState] {
