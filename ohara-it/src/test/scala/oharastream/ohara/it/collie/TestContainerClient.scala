@@ -18,8 +18,9 @@ package oharastream.ohara.it.collie
 
 import java.util.concurrent.TimeUnit
 
-import oharastream.ohara.agent.DataCollie
+import oharastream.ohara.agent.{ArgumentsBuilder, DataCollie}
 import oharastream.ohara.agent.docker.DockerClient
+import oharastream.ohara.client.configurator.{BrokerApi, ZookeeperApi}
 import oharastream.ohara.client.configurator.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.it.{ContainerPlatform, IntegrationTest}
@@ -239,6 +240,108 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     )
     try result(c.resources()) shouldBe Map.empty
     finally c.close()
+  }
+
+  def testVolumeMount(): Unit = {
+    val zkVolumeName       = CommonUtils.randomString()
+    val zkNodePath: String = s"/tmp/zk-data"
+    val zkClientPort       = CommonUtils.availablePort()
+
+    val bkVolumeNamePrefix = CommonUtils.randomString(5)
+    val bkClientPort       = CommonUtils.availablePort()
+    val bkNodePath: String = s"/tmp/bk-data"
+    try {
+      // Create zookeeper volume
+      result(
+        containerClient.volumeCreator
+          .name(zkVolumeName)
+          .nodeName(platform.nodeNames.head)
+          .path(zkNodePath)
+          .create()
+      )
+
+      // Create broker volume
+      platform.nodeNames.foreach { nodeName =>
+        result(
+          containerClient.volumeCreator
+            .name(s"$bkVolumeNamePrefix-$nodeName")
+            .nodeName(nodeName)
+            .path(bkNodePath)
+            .create()
+        )
+      }
+
+      createZkContainer(zkClientPort, zkVolumeName)
+      createBkContainer(zkClientPort, bkClientPort, bkVolumeNamePrefix)
+
+      /*val zkContainerName = createZkContainer(zkClientPort, zkVolumeName)
+      val bkContainerName = createBkContainer(zkClientPort, bkClientPort, bkVolumeName)
+
+      containerClient.forceRemove(bkContainerName)
+      containerClient.forceRemove(zkContainerName)*/
+    } finally {
+      // TODO
+      println("close zookeeper and broker")
+    }
+  }
+
+  private[this] def createZkContainer(zkClientPort: Int, volumeName: String): String = {
+    val zkContainerConfigPath = "/home/ohara/default/conf/zoo.cfg"
+    val zkContainerDataDir    = "/home/ohara/default/data"
+    val zkMyIdPath: String    = s"$zkContainerDataDir/myid"
+    val zkArguments = ArgumentsBuilder()
+      .mainConfigFile(zkContainerConfigPath)
+      .file(zkContainerConfigPath)
+      .append("clientPort", zkClientPort)
+      .append(ZookeeperApi.DATA_DIR_KEY, zkContainerDataDir)
+      .done
+      .file(zkMyIdPath)
+      .append(0)
+      .done
+      .build
+
+    val containerName = CommonUtils.randomString(5)
+    result(
+      containerClient.containerCreator
+        .nodeName(platform.nodeNames.head)
+        .name(containerName)
+        .portMappings(Map(zkClientPort -> zkClientPort))
+        .imageName(ZookeeperApi.IMAGE_NAME_DEFAULT)
+        .mountVolumes(Map(volumeName -> zkContainerDataDir))
+        .arguments(zkArguments)
+        .create()
+    )
+    containerName
+  }
+
+  private[this] def createBkContainer(zkClientPort: Int, bkClientPort: Int, volumeName: String): String = {
+    val bkConfigPath: String = "/home/ohara/default/config/broker.config"
+    val logDir: String       = "/home/ohara/default/logs"
+
+    val bkArguments = ArgumentsBuilder()
+      .mainConfigFile(bkConfigPath)
+      .file(bkConfigPath)
+      .append("zookeeper.connect", s"${platform.nodeNames.head}:${zkClientPort}")
+      .append(BrokerApi.LOG_DIRS_KEY, logDir)
+      .append(BrokerApi.NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_KEY, 1)
+      .append(s"listeners=PLAINTEXT://:${bkClientPort}")
+      .append(s"advertised.listeners=PLAINTEXT://${platform.nodeNames.head}:${bkClientPort}")
+      .done
+      .build
+    val containerName = CommonUtils.randomString(5)
+    platform.nodeNames.foreach { nodeName =>
+      result(
+        containerClient.containerCreator
+          .nodeName(nodeName)
+          .name(containerName)
+          .portMappings(Map(bkClientPort -> bkClientPort))
+          .imageName(BrokerApi.IMAGE_NAME_DEFAULT)
+          .mountVolumes(Map(volumeName -> logDir))
+          .arguments(bkArguments)
+          .create()
+      )
+    }
+    containerName
   }
 
   @After
