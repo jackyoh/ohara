@@ -32,14 +32,6 @@ trait RemoteFolderHandler {
   def exists(path: String)(implicit executionContext: ExecutionContext): Future[Boolean]
 
   /**
-    * Get the folder UID value for the remote node
-    * @param path folder path
-    * @param executionContext thread pool
-    * @return UID value
-    */
-  def folderUID(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Int]]
-
-  /**
     * Create folder for the remote node
     * @param path new folder path
     * @param executionContext thread pool
@@ -104,21 +96,6 @@ object RemoteFolderHandler {
           .map { result =>
             !result.exists(_ == "NotExists")
           }
-
-      override def folderUID(path: String)(implicit executionContext: ExecutionContext): Future[Map[String, Int]] =
-        agent(hostnames).map { nodes =>
-          nodes
-            .map { agent =>
-              val folderName = path.split("/").last
-              val result =
-                agent.execute("ls -n " + path + "/../|grep " + folderName + "|awk '{print $3}'").getOrElse("").trim()
-              (agent.hostname, result)
-            }
-            .map { result =>
-              (result._1, result._2.toInt)
-            }
-            .toMap
-        }
 
       override def mkFolder(
         path: String

@@ -60,25 +60,6 @@ class TestRemoteFolderHandler extends OharaTest {
   }
 
   @Test
-  def testUID(): Unit = {
-    val dataCollie        = DataCollie(nodes)
-    val hostnames         = nodes.map(_.hostname)
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
-
-    val fileName = CommonUtils.randomString(5)
-    val path     = s"/tmp/${fileName}"
-    try {
-      result(remoteNodeHandler.mkFolder(path))
-      result(remoteNodeHandler.folderUID(path)).foreach { node =>
-        hostnames.exists(_ == node._1) shouldBe true
-        node._2 > 0 shouldBe true
-      }
-    } finally {
-      result(remoteNodeHandler.deleteFolder(path))
-    }
-  }
-
-  @Test
   def testMkFolderAndDelete(): Unit = {
     val dataCollie        = DataCollie(nodes)
     val hostnames         = nodes.map(_.hostname)
