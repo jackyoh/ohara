@@ -25,6 +25,7 @@ import oharastream.ohara.agent.k8s.K8SJson._
 import oharastream.ohara.client.HttpExecutor
 import oharastream.ohara.client.configurator.ContainerApi.{ContainerInfo, PortMapping}
 import oharastream.ohara.client.configurator.NodeApi.Resource
+import oharastream.ohara.client.configurator.VolumeApi.Volume
 import oharastream.ohara.common.annotations.{Optional, VisibleForTesting}
 import oharastream.ohara.common.pattern.Builder
 import oharastream.ohara.common.util.CommonUtils
@@ -293,7 +294,7 @@ object K8SClient {
               nodeName: String,
               hostname: String,
               imageName: String,
-              mountVolumes: Map[String, String],
+              volumeMaps: Map[Volume, String],
               name: String,
               command: Option[String],
               arguments: Seq[String],
@@ -318,9 +319,9 @@ object K8SClient {
                         name = labelName,
                         image = imageName,
                         volumeMounts =
-                          if (mountVolumes.isEmpty) None
+                          if (volumeMaps.isEmpty) None
                           else
-                            Some(mountVolumes.map(v => VolumeMount(v._1, v._2)).toSeq),
+                            Some(volumeMaps.map(v => VolumeMount(v._1.name, v._2)).toSeq),
                         env = if (envs.isEmpty) None else Some(envs.map(x => EnvVar(x._1, Some(x._2))).toSeq),
                         ports = if (ports.isEmpty) None else Some(ports.map(x => ContainerPort(x._1, x._2)).toSeq),
                         imagePullPolicy = Some(imagePullPolicy),
@@ -331,9 +332,11 @@ object K8SClient {
                     restartPolicy = Some(restartPolicy),
                     nodeName = None,
                     volumes =
-                      if (mountVolumes.isEmpty) None
+                      if (volumeMaps.isEmpty) None
                       else
-                        Some(mountVolumes.map(v => Volume(v._1, Some(MountPersistentVolumeClaim(v._1)))).toSeq)
+                        Some(
+                          volumeMaps.map(v => K8SVolume(v._1.name, Some(MountPersistentVolumeClaim(v._1.name)))).toSeq
+                        )
                   )
                 }
                 .flatMap(
@@ -484,6 +487,5 @@ object K8SClient {
   trait ContainerCreator extends ContainerClient.ContainerCreator {
     def pullImagePolicy(imagePullPolicy: ImagePullPolicy): ContainerCreator
     def restartPolicy(restartPolicy: RestartPolicy): ContainerCreator
-    def mountVolumes(volumes: Map[String, String]): ContainerCreator
   }
 }

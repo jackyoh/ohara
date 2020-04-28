@@ -26,6 +26,7 @@ import oharastream.ohara.agent.docker.DockerClient.{ContainerCreator, Inspector}
 import oharastream.ohara.agent.{Agent, DataCollie}
 import oharastream.ohara.client.configurator.ContainerApi.{ContainerInfo, PortMapping}
 import oharastream.ohara.client.configurator.NodeApi.{Node, Resource}
+import oharastream.ohara.client.configurator.VolumeApi.Volume
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
@@ -161,7 +162,7 @@ object DockerClient {
         nodeName: String,
         hostname: String,
         imageName: String,
-        mountVolumes: Map[String, String],
+        volumeMaps: Map[Volume, String],
         name: String,
         command: Option[String],
         arguments: Seq[String],
@@ -192,9 +193,9 @@ object DockerClient {
                   case (key, value) => s"""-e \"$key=$value\""""
                 }
                 .mkString(" "),
-              mountVolumes
+              volumeMaps
                 .map {
-                  case (key, value) => s"""-v \"$key=$value\""""
+                  case (key: Volume, value: String) => s"""-v \"${key.name}=${value}\""""
                 }
                 .mkString(" "),
               // add label so we can distinguish the containers from others

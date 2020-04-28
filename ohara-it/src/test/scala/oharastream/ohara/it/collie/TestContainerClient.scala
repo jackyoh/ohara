@@ -41,13 +41,12 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   private[this] val webHost           = "www.google.com.tw"
   private[this] val containerHomePath = "/home/ohara/default"
 
-  private[this] def createBusyBox(arguments: Seq[String], volumes: Map[String, String]): Unit =
+  private[this] def createBusyBox(arguments: Seq[String]): Unit =
     result(
       containerClient.containerCreator
         .nodeName(platform.nodeNames.head)
         .name(name)
         .imageName("busybox")
-        .mountVolumes(volumes)
         .arguments(arguments)
         .create()
     )
@@ -57,7 +56,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     def log(name: String, sinceSeconds: Option[Long]): String =
       result(containerClient.log(name, sinceSeconds)).head._2
 
-    createBusyBox(Seq("sh", "-c", "while true; do $(echo date); sleep 1; done"), Map.empty)
+    createBusyBox(Seq("sh", "-c", "while true; do $(echo date); sleep 1; done"))
     try {
       // wait the container
       await(() => log(name, None).contains("UTC"))
@@ -308,7 +307,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         .name(containerName)
         .portMappings(Map(zkClientPort -> zkClientPort))
         .imageName(ZookeeperApi.IMAGE_NAME_DEFAULT)
-        .mountVolumes(Map(volumeName -> zkContainerDataDir))
+        .volumeMaps(Map(volumeName -> zkContainerDataDir))
         .arguments(zkArguments)
         .create()
     )
@@ -337,7 +336,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
           .name(containerName)
           .portMappings(Map(bkClientPort -> bkClientPort))
           .imageName(BrokerApi.IMAGE_NAME_DEFAULT)
-          .mountVolumes(Map(volumeName -> logDir))
+          .volumeMaps(Map(volumeName -> logDir))
           .arguments(bkArguments)
           .create()
       )
