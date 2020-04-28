@@ -253,7 +253,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       group = CommonUtils.randomString(5),
       name = CommonUtils.randomString(5),
       nodeNames = Set(platform.nodeNames.head),
-      path = s"/tmp/zk-data",
+      path = s"/tmp/zk-data", // Wait the PR #4648
       state = Option.empty,
       error = Option.empty,
       tags = Map.empty,
@@ -272,27 +272,29 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       lastModified = CommonUtils.current()
     )
     val bkClientPort = CommonUtils.availablePort()
+    // Create zookeeper volume
+    result(
+      containerClient.volumeCreator
+        .name(zkVolume.name)
+        .nodeName(zkVolume.nodeNames.head)
+        .path(zkVolume.path)
+        .create()
+    )
+
+    // Create broker volume
+    result(
+      containerClient.volumeCreator
+        .name(bkVolume.name)
+        .nodeName(bkVolume.nodeNames.head)
+        .path(bkVolume.path)
+        .create()
+    )
+    val zkContainerName = s"zookeeper-${CommonUtils.randomString(5)}"
+    val bkContainerName = s"broker-${CommonUtils.randomString(5)}"
+
     try {
-      // Create zookeeper volume
-      result(
-        containerClient.volumeCreator
-          .name(zkVolume.name)
-          .nodeName(zkVolume.nodeNames.head)
-          .path(zkVolume.path)
-          .create()
-      )
-
-      // Create broker volume
-      result(
-        containerClient.volumeCreator
-          .name(bkVolume.name)
-          .nodeName(bkVolume.nodeNames.head)
-          .path(bkVolume.path)
-          .create()
-      )
-
-      createZkContainer(zkClientPort, zkVolume)
-      createBkContainer(zkClientPort, bkClientPort, bkVolume)
+      createZkContainer(zkContainerName, zkClientPort, zkVolume)
+      createBkContainer(bkContainerName, zkClientPort, bkClientPort, bkVolume)
 
       val topicKey        = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
       val numberOfRecords = 5
@@ -307,11 +309,32 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         .keySerializer(Serializer.STRING)
         .valueSerializer(Serializer.STRING)
         .build()
-      val records = consumer.poll(Duration.ofSeconds(30), numberOfRecords)
-      println(s"Record size is ${records.size()}")
+
+      try {
+        val records = consumer.poll(Duration.ofSeconds(30), numberOfRecords)
+        records.size() shouldBe numberOfRecords
+
+        // Remove zookeeper and broker the container
+        result(containerClient.forceRemove(bkContainerName))
+        result(containerClient.forceRemove(zkContainerName))
+
+        // Create new container
+        createZkContainer(zkContainerName, zkClientPort, zkVolume)
+        TimeUnit.SECONDS.sleep(20)
+        createBkContainer(bkContainerName, zkClientPort, bkClientPort, bkVolume)
+
+        writeData(topicKey, connectionProps, numberOfRecords)
+        consumer.seekToBeginning()
+        val restartRecords = consumer.poll(Duration.ofSeconds(30), numberOfRecords * 2)
+        restartRecords.size() shouldBe numberOfRecords * 2
+      } finally Releasable.close(consumer)
     } finally {
-      // TODO
-      println("close zookeeper and broker")
+      Releasable.close { () =>
+        result(containerClient.forceRemove(bkContainerName))
+        result(containerClient.forceRemove(zkContainerName))
+        result(containerClient.removeVolumes(bkVolume.name))
+        result(containerClient.removeVolumes(zkVolume.name))
+      }
     }
   }
 
@@ -332,7 +355,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     } finally producer.close()
   }
 
-  private[this] def createZkContainer(zkClientPort: Int, volume: Volume): String = {
+  private[this] def createZkContainer(containerName: String, zkClientPort: Int, volume: Volume): Unit = {
     val zkContainerConfigPath = s"${containerHomePath}/conf/zoo.cfg"
     val zkContainerDataDir    = s"${containerHomePath}/data"
     val zkMyIdPath: String    = s"$zkContainerDataDir/myid"
@@ -347,7 +370,6 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .done
       .build
 
-    val containerName = s"zookeeper-${CommonUtils.randomString(5)}"
     result(
       containerClient.containerCreator
         .nodeName(platform.nodeNames.head)
@@ -358,10 +380,9 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         .arguments(zkArguments)
         .create()
     )
-    containerName
   }
 
-  private[this] def createBkContainer(zkClientPort: Int, bkClientPort: Int, volume: Volume): String = {
+  private[this] def createBkContainer(containerName: String, zkClientPort: Int, bkClientPort: Int, volume: Volume) = {
     val bkConfigPath: String = s"${containerHomePath}/config/broker.config"
     val logDir: String       = s"${containerHomePath}/logs"
     val bkArguments = ArgumentsBuilder()
@@ -386,7 +407,6 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         .arguments(bkArguments)
         .create()
     )
-    containerName
   }
 
   @After
