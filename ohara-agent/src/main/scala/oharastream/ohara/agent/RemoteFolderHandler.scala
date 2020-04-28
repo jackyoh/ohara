@@ -39,7 +39,7 @@ trait RemoteFolderHandler {
     */
   def mkFolder(hostname: String, path: String)(
     implicit executionContext: ExecutionContext
-  ): Future[RemoteFolderCommandResult]
+  ): Future[Unit]
 
   /**
     * List folder info for the remote node
@@ -61,7 +61,7 @@ trait RemoteFolderHandler {
     */
   def deleteFolder(hostname: String, path: String)(
     implicit executionContext: ExecutionContext
-  ): Future[RemoteFolderCommandResult]
+  ): Future[Unit]
 }
 
 object RemoteFolderHandler {
@@ -93,12 +93,11 @@ object RemoteFolderHandler {
       override def mkFolder(
         hostname: String,
         path: String
-      )(implicit executionContext: ExecutionContext): Future[RemoteFolderCommandResult] =
+      )(implicit executionContext: ExecutionContext): Future[Unit] =
         agent(hostname).map { agent =>
           agent
             .execute(s"mkdir ${path}")
             .map(message => throw new IllegalArgumentException(s"Create folder error: $message"))
-            .getOrElse(RemoteFolderCommandResult("Create folder success"))
         }
 
       override def listFolder(
@@ -140,7 +139,7 @@ object RemoteFolderHandler {
       override def deleteFolder(
         hostname: String,
         path: String
-      )(implicit executionContext: ExecutionContext): Future[RemoteFolderCommandResult] =
+      )(implicit executionContext: ExecutionContext): Future[Unit] =
         agent(hostname)
           .map { agent =>
             val folderNotExists = agent.execute(s"""
@@ -155,7 +154,6 @@ object RemoteFolderHandler {
               agent
                 .execute(s"rm -rf ${path}")
                 .map(message => throw new IllegalArgumentException(s"Delete folder error: ${message}"))
-                .getOrElse(RemoteFolderCommandResult("Delete folder success"))
           }
     }
 
@@ -183,8 +181,6 @@ object RemoteFolderHandler {
     }
   }
 }
-
-case class RemoteFolderCommandResult(message: String)
 
 case class FolderInfo(
   permission: FolderPermission,

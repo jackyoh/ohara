@@ -73,14 +73,12 @@ class TestRemoteFolderHandler extends OharaTest {
     val path              = s"/tmp/${fileName}"
     val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
     try {
-      val commandResult = result(remoteNodeHandler.mkFolder(hostname, path))
-      commandResult.message shouldBe "Create folder success"
+      result(remoteNodeHandler.mkFolder(hostname, path))
 
       val listFolder = result(remoteNodeHandler.listFolder(hostname, "/tmp"))
       listFolder.exists(_.fileName == fileName) shouldBe true
     } finally {
-      val commandResult = result(remoteNodeHandler.deleteFolder(hostname, path))
-      commandResult.message shouldBe "Delete folder success"
+      result(remoteNodeHandler.deleteFolder(hostname, path))
     }
   }
 
@@ -102,9 +100,9 @@ class TestRemoteFolderHandler extends OharaTest {
     val hostnames         = nodes.map(_.hostname)
     val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
     hostnames.foreach { hostname =>
-      val commandResult: Seq[FolderInfo] = result(remoteNodeHandler.listFolder(hostname, "/tmp"))
-      commandResult.size > 0 shouldBe true
-      commandResult.foreach { fileInfo =>
+      val folders: Seq[FolderInfo] = result(remoteNodeHandler.listFolder(hostname, "/tmp"))
+      folders.size > 0 shouldBe true
+      folders.foreach { fileInfo =>
         fileInfo.uid >= 0 shouldBe true
       }
     }
