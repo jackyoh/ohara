@@ -39,81 +39,75 @@ class TestRemoteFolderHandler extends OharaTest {
   def testFolderNotExists(): Unit = {
     val dataCollie        = DataCollie(nodes)
     val hostnames         = nodes.map(_.hostname)
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
-    result(remoteNodeHandler.exists("/home/ohara100")) shouldBe false
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
+    hostnames.foreach { hostname =>
+      result(remoteNodeHandler.exists(hostname, "/home/ohara100")) shouldBe false
+    }
   }
 
   @Test
   def testFolderExists(): Unit = {
     val dataCollie        = DataCollie(nodes)
     val hostnames         = nodes.map(_.hostname)
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
 
     val fileName = CommonUtils.randomString(5)
     val path     = s"/tmp/${fileName}"
     try {
-      result(remoteNodeHandler.mkFolder(path))
-      result(remoteNodeHandler.exists(path)) shouldBe true
+      hostnames.foreach { hostname =>
+        result(remoteNodeHandler.mkFolder(hostname, path))
+        result(remoteNodeHandler.exists(hostname, path)) shouldBe true
+      }
     } finally {
-      result(remoteNodeHandler.deleteFolder(path))
+      hostnames.foreach { hostname =>
+        result(remoteNodeHandler.deleteFolder(hostname, path))
+      }
     }
   }
 
   @Test
   def testMkFolderAndDelete(): Unit = {
     val dataCollie        = DataCollie(nodes)
-    val hostnames         = nodes.map(_.hostname)
+    val hostname          = nodes.map(_.hostname).head
     val fileName          = CommonUtils.randomString(5)
     val path              = s"/tmp/${fileName}"
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
     try {
-      val commandResult = result(remoteNodeHandler.mkFolder(path))
-      commandResult.foreach { node =>
-        hostnames.exists(_ == node._1) shouldBe true
-        node._2.message.contains("Create folder success") shouldBe true
-      }
+      val commandResult = result(remoteNodeHandler.mkFolder(hostname, path))
+      commandResult.message shouldBe "Create folder success"
 
-      val nodeListFolder = result(remoteNodeHandler.listFolder("/tmp"))
-      nodeListFolder.foreach { result =>
-        result._2.exists(_.fileName == fileName) shouldBe true
-      }
+      val listFolder = result(remoteNodeHandler.listFolder(hostname, "/tmp"))
+      listFolder.exists(_.fileName == fileName) shouldBe true
     } finally {
-      val commandResult = result(remoteNodeHandler.deleteFolder(path))
-      commandResult.foreach { node =>
-        node._2.message shouldBe "Delete folder success"
-      }
+      val commandResult = result(remoteNodeHandler.deleteFolder(hostname, path))
+      commandResult.message shouldBe "Delete folder success"
     }
   }
 
   @Test
   def testRemoveFolderError(): Unit = {
     val dataCollie        = DataCollie(nodes)
-    val hostnames         = nodes.map(_.hostname)
-    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
+    val hostname          = nodes.map(_.hostname).head
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
     an[IllegalArgumentException] should be thrownBy {
       result(
-        remoteNodeHandler.deleteFolder(s"/tmp/${CommonUtils.randomString(5)}")
+        remoteNodeHandler.deleteFolder(hostname, s"/tmp/${CommonUtils.randomString(5)}")
       )
     }
   }
 
   @Test
   def testListFolder(): Unit = {
-    val dataCollie                                  = DataCollie(nodes)
-    val hostnames                                   = nodes.map(_.hostname)
-    val remoteNodeHandler                           = RemoteFolderHandler.builder().dataCollie(dataCollie).hostNames(hostnames).build()
-    val commandResult: Map[String, Seq[FolderInfo]] = result(remoteNodeHandler.listFolder("/tmp"))
-    commandResult.foreach { node =>
-      node._2.size > 0 shouldBe true
-      node._2.foreach { fileInfo =>
-        (fileInfo.uid >= 0) shouldBe true
+    val dataCollie        = DataCollie(nodes)
+    val hostnames         = nodes.map(_.hostname)
+    val remoteNodeHandler = RemoteFolderHandler.builder().dataCollie(dataCollie).build()
+    hostnames.foreach { hostname =>
+      val commandResult: Seq[FolderInfo] = result(remoteNodeHandler.listFolder(hostname, "/tmp"))
+      commandResult.size > 0 shouldBe true
+      commandResult.foreach { fileInfo =>
+        fileInfo.uid >= 0 shouldBe true
       }
     }
-  }
-
-  @Test
-  def test(): Unit = {
-    println("drwxr-xr-x".substring(1, 3))
   }
 
   private[this] def parserNode(nodeInfo: String): Node = {
