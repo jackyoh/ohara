@@ -18,6 +18,7 @@ package oharastream.ohara.agent.docker
 
 import java.util.Objects
 
+import oharastream.ohara.client.configurator.VolumeApi.Volume
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.CommonUtils
 import org.junit.Test
@@ -31,7 +32,7 @@ class TestContainerCreator extends OharaTest {
       nodeName: String,
       hostname: String,
       imageName: String,
-      mountVolumes: Map[String, String],
+      volumeMaps: Map[Volume, String],
       name: String,
       command: Option[String],
       arguments: Seq[String],
@@ -51,7 +52,7 @@ class TestContainerCreator extends OharaTest {
         Objects.requireNonNull(envs)
         Objects.requireNonNull(routes)
         Objects.requireNonNull(arguments)
-        Objects.requireNonNull(mountVolumes)
+        Objects.requireNonNull(volumeMaps)
       }
 
   @Test

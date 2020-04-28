@@ -91,8 +91,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
       .name(containerInfo.name)
       .threadPool(executionContext)
       .arguments(arguments)
-      // TODO: add volumes to containers
-      // https://github.com/oharastream/ohara/pull/4575
+      .volumeMaps(volumeMaps)
       .create()
 
   override protected def postCreate(

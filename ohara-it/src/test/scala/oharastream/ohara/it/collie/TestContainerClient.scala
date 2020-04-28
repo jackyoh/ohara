@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.agent.{ArgumentsBuilder, DataCollie}
 import oharastream.ohara.agent.docker.DockerClient
+import oharastream.ohara.client.configurator.VolumeApi.Volume
 import oharastream.ohara.client.configurator.{BrokerApi, ZookeeperApi}
 import oharastream.ohara.client.configurator.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -29,9 +30,14 @@ import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 import org.junit.{After, Test}
 import org.scalatest.matchers.should.Matchers._
+import oharastream.ohara.common.data.Serializer
+import oharastream.ohara.kafka.{Consumer, Producer}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.jdk.CollectionConverters._
+import java.time.Duration
+
+import oharastream.ohara.common.setting.TopicKey
 
 @RunWith(value = classOf[Parameterized])
 class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
@@ -243,49 +249,90 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   }
 
   def testVolumeMount(): Unit = {
-    val zkVolumeName       = CommonUtils.randomString()
-    val zkNodePath: String = s"/tmp/zk-data"
-    val zkClientPort       = CommonUtils.availablePort()
+    val zkVolume = Volume(
+      group = CommonUtils.randomString(5),
+      name = CommonUtils.randomString(5),
+      nodeNames = Set(platform.nodeNames.head),
+      path = s"/tmp/zk-data",
+      state = Option.empty,
+      error = Option.empty,
+      tags = Map.empty,
+      lastModified = CommonUtils.current()
+    )
+    val zkClientPort = CommonUtils.availablePort()
 
-    val bkVolumeNamePrefix = CommonUtils.randomString(5)
-    val bkClientPort       = CommonUtils.availablePort()
-    val bkNodePath: String = s"/tmp/bk-data"
+    val bkVolume = Volume(
+      group = CommonUtils.randomString(5),
+      name = CommonUtils.randomString(5),
+      nodeNames = Set(platform.nodeNames.head),
+      path = s"/tmp/bk-data",
+      state = Option.empty,
+      error = Option.empty,
+      tags = Map.empty,
+      lastModified = CommonUtils.current()
+    )
+    val bkClientPort = CommonUtils.availablePort()
     try {
       // Create zookeeper volume
       result(
         containerClient.volumeCreator
-          .name(zkVolumeName)
-          .nodeName(platform.nodeNames.head)
-          .path(zkNodePath)
+          .name(zkVolume.name)
+          .nodeName(zkVolume.nodeNames.head)
+          .path(zkVolume.path)
           .create()
       )
 
       // Create broker volume
-      platform.nodeNames.foreach { nodeName =>
-        result(
-          containerClient.volumeCreator
-            .name(s"$bkVolumeNamePrefix-$nodeName")
-            .nodeName(nodeName)
-            .path(bkNodePath)
-            .create()
-        )
-      }
+      result(
+        containerClient.volumeCreator
+          .name(bkVolume.name)
+          .nodeName(bkVolume.nodeNames.head)
+          .path(bkVolume.path)
+          .create()
+      )
 
-      createZkContainer(zkClientPort, zkVolumeName)
-      createBkContainer(zkClientPort, bkClientPort, bkVolumeNamePrefix)
+      createZkContainer(zkClientPort, zkVolume)
+      createBkContainer(zkClientPort, bkClientPort, bkVolume)
 
-      /*val zkContainerName = createZkContainer(zkClientPort, zkVolumeName)
-      val bkContainerName = createBkContainer(zkClientPort, bkClientPort, bkVolumeName)
+      val topicKey        = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+      val numberOfRecords = 5
+      val connectionProps = s"${platform.nodeNames.head}:${bkClientPort}"
+      writeData(topicKey, connectionProps, numberOfRecords)
 
-      containerClient.forceRemove(bkContainerName)
-      containerClient.forceRemove(zkContainerName)*/
+      val consumer = Consumer
+        .builder()
+        .connectionProps(connectionProps)
+        .offsetFromBegin()
+        .topicKey(topicKey)
+        .keySerializer(Serializer.STRING)
+        .valueSerializer(Serializer.STRING)
+        .build()
+      val records = consumer.poll(Duration.ofSeconds(30), numberOfRecords)
+      println(s"Record size is ${records.size()}")
     } finally {
       // TODO
       println("close zookeeper and broker")
     }
   }
 
-  private[this] def createZkContainer(zkClientPort: Int, volumeName: String): String = {
+  private[this] def writeData(topicKey: TopicKey, connectionProps: String, numberOfRecords: Int): Unit = {
+    val producer = Producer
+      .builder()
+      .connectionProps(connectionProps)
+      .allAcks()
+      .keySerializer(Serializer.STRING)
+      .valueSerializer(Serializer.STRING)
+      .build()
+
+    try {
+      (0 until numberOfRecords).foreach(
+        index => producer.sender().key(index.toString).value(index.toString).topicKey(topicKey).send()
+      )
+      producer.flush()
+    } finally producer.close()
+  }
+
+  private[this] def createZkContainer(zkClientPort: Int, volume: Volume): String = {
     val zkContainerConfigPath = s"${containerHomePath}/conf/zoo.cfg"
     val zkContainerDataDir    = s"${containerHomePath}/data"
     val zkMyIdPath: String    = s"$zkContainerDataDir/myid"
@@ -300,21 +347,21 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .done
       .build
 
-    val containerName = CommonUtils.randomString(5)
+    val containerName = s"zookeeper-${CommonUtils.randomString(5)}"
     result(
       containerClient.containerCreator
         .nodeName(platform.nodeNames.head)
         .name(containerName)
         .portMappings(Map(zkClientPort -> zkClientPort))
         .imageName(ZookeeperApi.IMAGE_NAME_DEFAULT)
-        .volumeMaps(Map(volumeName -> zkContainerDataDir))
+        .volumeMaps(Map(volume -> zkContainerDataDir))
         .arguments(zkArguments)
         .create()
     )
     containerName
   }
 
-  private[this] def createBkContainer(zkClientPort: Int, bkClientPort: Int, volumeName: String): Seq[String] = {
+  private[this] def createBkContainer(zkClientPort: Int, bkClientPort: Int, volume: Volume): String = {
     val bkConfigPath: String = s"${containerHomePath}/config/broker.config"
     val logDir: String       = s"${containerHomePath}/logs"
     val bkArguments = ArgumentsBuilder()
@@ -327,21 +374,19 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .append(s"advertised.listeners=PLAINTEXT://${platform.nodeNames.head}:${bkClientPort}")
       .done
       .build
-    val containerNamePrefix = s"bk-${CommonUtils.randomString(5)}"
-    platform.nodeNames.map { nodeName =>
-      val containerName = s"$containerNamePrefix-$nodeName"
-      result(
-        containerClient.containerCreator
-          .nodeName(nodeName)
-          .name(containerName)
-          .portMappings(Map(bkClientPort -> bkClientPort))
-          .imageName(BrokerApi.IMAGE_NAME_DEFAULT)
-          .volumeMaps(Map(volumeName -> logDir))
-          .arguments(bkArguments)
-          .create()
-      )
-      containerName
-    }.toSeq
+
+    val containerName = s"broker-${CommonUtils.randomString(5)}"
+    result(
+      containerClient.containerCreator
+        .nodeName(platform.nodeNames.head)
+        .name(containerName)
+        .portMappings(Map(bkClientPort -> bkClientPort))
+        .imageName(BrokerApi.IMAGE_NAME_DEFAULT)
+        .volumeMaps(Map(volume -> logDir))
+        .arguments(bkArguments)
+        .create()
+    )
+    containerName
   }
 
   @After
