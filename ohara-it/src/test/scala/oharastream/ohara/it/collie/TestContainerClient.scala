@@ -36,8 +36,8 @@ import oharastream.ohara.kafka.{Consumer, Producer}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.jdk.CollectionConverters._
 import java.time.Duration
-
 import oharastream.ohara.common.setting.TopicKey
+import oharastream.ohara.agent.docker.ContainerState
 
 @RunWith(value = classOf[Parameterized])
 class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
@@ -294,6 +294,9 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
 
     try {
       createZkContainer(zkContainerName, zkClientPort, zkVolume)
+      await { () =>
+        result(containerClient.containers(zkContainerName)).head.state.equals(ContainerState.RUNNING.name)
+      }
       createBkContainer(bkContainerName, zkClientPort, bkClientPort, bkVolume)
 
       val topicKey        = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
@@ -318,9 +321,12 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         result(containerClient.forceRemove(bkContainerName))
         result(containerClient.forceRemove(zkContainerName))
 
-        // Create new container
+        // Create a new container
         createZkContainer(zkContainerName, zkClientPort, zkVolume)
-        TimeUnit.SECONDS.sleep(20)
+        await { () =>
+          result(containerClient.containers(zkContainerName)).head.state.equals(ContainerState.RUNNING.name) &&
+          result(containerClient.log(zkContainerName, None)).head._2.contains("Expiring session")
+        }
         createBkContainer(bkContainerName, zkClientPort, bkClientPort, bkVolume)
 
         writeData(topicKey, connectionProps, numberOfRecords)
@@ -359,6 +365,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     val zkContainerConfigPath = s"${containerHomePath}/conf/zoo.cfg"
     val zkContainerDataDir    = s"${containerHomePath}/data"
     val zkMyIdPath: String    = s"$zkContainerDataDir/myid"
+
     val zkArguments = ArgumentsBuilder()
       .mainConfigFile(zkContainerConfigPath)
       .file(zkContainerConfigPath)
@@ -370,11 +377,13 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .done
       .build
 
+    val nodeName = platform.nodeNames.head
     result(
       containerClient.containerCreator
-        .nodeName(platform.nodeNames.head)
+        .nodeName(nodeName)
         .name(containerName)
         .portMappings(Map(zkClientPort -> zkClientPort))
+        .routes(Map(nodeName -> CommonUtils.address(nodeName)))
         .imageName(ZookeeperApi.IMAGE_NAME_DEFAULT)
         .volumeMaps(Map(volume -> zkContainerDataDir))
         .arguments(zkArguments)
@@ -395,18 +404,25 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .append(s"advertised.listeners=PLAINTEXT://${platform.nodeNames.head}:${bkClientPort}")
       .done
       .build
-
-    val containerName = s"broker-${CommonUtils.randomString(5)}"
+    
+    val nodeName = platform.nodeNames.head
     result(
       containerClient.containerCreator
-        .nodeName(platform.nodeNames.head)
+        .nodeName(nodeName)
         .name(containerName)
         .portMappings(Map(bkClientPort -> bkClientPort))
+        .routes(Map(nodeName -> CommonUtils.address(nodeName)))
         .imageName(BrokerApi.IMAGE_NAME_DEFAULT)
         .volumeMaps(Map(volume -> logDir))
         .arguments(bkArguments)
         .create()
     )
+  }
+
+  private[this] def checkVolumeExists(names: Seq[String]): Unit = {
+    names.foreach { volumeName =>
+      await(() => !result(containerClient.volumes()).exists(_.name == volumeName))
+    }
   }
 
   @After
