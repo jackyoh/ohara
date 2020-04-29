@@ -18,7 +18,7 @@ package oharastream.ohara.it.collie
 
 import java.util.concurrent.TimeUnit
 
-import oharastream.ohara.agent.{ArgumentsBuilder, DataCollie}
+import oharastream.ohara.agent.{ArgumentsBuilder, DataCollie, RemoteFolderHandler}
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.VolumeApi.Volume
 import oharastream.ohara.client.configurator.{BrokerApi, ZookeeperApi}
@@ -28,7 +28,7 @@ import oharastream.ohara.it.{ContainerPlatform, IntegrationTest}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-import org.junit.{After, Test}
+import org.junit.{After, AssumptionViolatedException, Test}
 import org.scalatest.matchers.should.Matchers._
 import oharastream.ohara.common.data.Serializer
 import oharastream.ohara.kafka.{Consumer, Producer}
@@ -36,6 +36,7 @@ import oharastream.ohara.kafka.{Consumer, Producer}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.jdk.CollectionConverters._
 import java.time.Duration
+
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.agent.docker.ContainerState
 
@@ -46,6 +47,9 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   private[this] val imageName         = "centos:7"
   private[this] val webHost           = "www.google.com.tw"
   private[this] val containerHomePath = "/home/ohara/default"
+  private[this] val nodes: Seq[Node] = ContainerPlatform.dockerNodes.getOrElse(
+    throw new AssumptionViolatedException(s"${ContainerPlatform.DOCKER_NODES_KEY} the key is not exists")
+  )
 
   private[this] def createBusyBox(arguments: Seq[String]): Unit =
     result(
@@ -249,50 +253,61 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
   }
 
   def testVolumeMount(): Unit = {
-    val zkVolume = Volume(
-      group = CommonUtils.randomString(5),
-      name = CommonUtils.randomString(5),
-      nodeNames = Set(platform.nodeNames.head),
-      path = s"/tmp/zk-data", // Wait the PR #4648
-      state = Option.empty,
-      error = Option.empty,
-      tags = Map.empty,
-      lastModified = CommonUtils.current()
-    )
-    val zkClientPort = CommonUtils.availablePort()
-
-    val bkVolume = Volume(
-      group = CommonUtils.randomString(5),
-      name = CommonUtils.randomString(5),
-      nodeNames = Set(platform.nodeNames.head),
-      path = s"/tmp/bk-data",
-      state = Option.empty,
-      error = Option.empty,
-      tags = Map.empty,
-      lastModified = CommonUtils.current()
-    )
-    val bkClientPort = CommonUtils.availablePort()
-    // Create zookeeper volume
-    result(
-      containerClient.volumeCreator
-        .name(zkVolume.name)
-        .nodeName(zkVolume.nodeNames.head)
-        .path(zkVolume.path)
-        .create()
-    )
-
-    // Create broker volume
-    result(
-      containerClient.volumeCreator
-        .name(bkVolume.name)
-        .nodeName(bkVolume.nodeNames.head)
-        .path(bkVolume.path)
-        .create()
-    )
+    val zkNodePath      = s"/tmp/zk-${CommonUtils.randomString(5)}"
+    val bkNodePath      = s"/tmp/bk-${CommonUtils.randomString(5)}"
+    val dataCollie      = DataCollie(nodes)
+    val remoteFolder    = RemoteFolderHandler.builder().dataCollie(dataCollie).build
     val zkContainerName = s"zookeeper-${CommonUtils.randomString(5)}"
     val bkContainerName = s"broker-${CommonUtils.randomString(5)}"
+    val zkVolumeName    = CommonUtils.randomString(5)
+    val zkNodeName      = s"${platform.nodeNames.head}"
+    val bkVolumeName    = CommonUtils.randomString(5)
+    val bkNodeName      = s"${platform.nodeNames.head}"
 
     try {
+      remoteFolder.create(zkNodeName, zkNodePath)
+      remoteFolder.create(bkNodeName, bkNodePath)
+      val zkVolume = Volume(
+        group = CommonUtils.randomString(5),
+        name = zkVolumeName,
+        nodeNames = Set(zkNodeName),
+        path = zkNodePath,
+        state = Option.empty,
+        error = Option.empty,
+        tags = Map.empty,
+        lastModified = CommonUtils.current()
+      )
+      val zkClientPort = CommonUtils.availablePort()
+
+      val bkVolume = Volume(
+        group = CommonUtils.randomString(5),
+        name = bkVolumeName,
+        nodeNames = Set(bkNodeName),
+        path = bkNodePath,
+        state = Option.empty,
+        error = Option.empty,
+        tags = Map.empty,
+        lastModified = CommonUtils.current()
+      )
+      val bkClientPort = CommonUtils.availablePort()
+      // Create zookeeper volume
+      result(
+        containerClient.volumeCreator
+          .name(zkVolume.name)
+          .nodeName(zkVolume.nodeNames.head)
+          .path(zkVolume.path)
+          .create()
+      )
+
+      // Create broker volume
+      result(
+        containerClient.volumeCreator
+          .name(bkVolume.name)
+          .nodeName(bkVolume.nodeNames.head)
+          .path(bkVolume.path)
+          .create()
+      )
+
       createZkContainer(zkContainerName, zkClientPort, zkVolume)
       await { () =>
         result(containerClient.containers(zkContainerName)).head.state.equals(ContainerState.RUNNING.name)
@@ -338,8 +353,10 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       Releasable.close { () =>
         result(containerClient.forceRemove(bkContainerName))
         result(containerClient.forceRemove(zkContainerName))
-        result(containerClient.removeVolumes(bkVolume.name))
-        result(containerClient.removeVolumes(zkVolume.name))
+        result(containerClient.removeVolumes(bkVolumeName))
+        result(containerClient.removeVolumes(zkVolumeName))
+        remoteFolder.delete(bkNodeName, bkNodePath)
+        remoteFolder.delete(zkNodeName, zkNodePath)
       }
     }
   }
@@ -417,12 +434,6 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         .arguments(bkArguments)
         .create()
     )
-  }
-
-  private[this] def checkVolumeExists(names: Seq[String]): Unit = {
-    names.foreach { volumeName =>
-      await(() => !result(containerClient.volumes()).exists(_.name == volumeName))
-    }
   }
 
   @After
