@@ -261,8 +261,9 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       TimeUnit.SECONDS.sleep(3)
       statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello'")
 
-      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
-      result.size shouldBe tableTotalCount.intValue() + 2 // Because update and insert the different timestamp
+      val expectedRow = tableTotalCount.intValue() + 2
+      val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
+      result.size shouldBe expectedRow // Because update and insert the different timestamp
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
       Releasable.close(statement)
