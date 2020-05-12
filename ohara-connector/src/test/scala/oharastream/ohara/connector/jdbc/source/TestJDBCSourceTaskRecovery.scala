@@ -188,7 +188,7 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
     rows.size shouldBe 1
     rows.head.sourceOffset.asScala.foreach(x => {
       x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:02.0,2"
+      x._2 shouldBe "2018-09-01 00:00:03.12,1"
     })
   }
 
@@ -207,7 +207,7 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
     rows.size shouldBe 2
     rows.head.sourceOffset.asScala.foreach(x => {
       x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:02.0,2"
+      x._2 shouldBe "2018-09-01 00:00:03.12,1"
     })
 
     rows.last.sourceOffset.asScala.foreach(x => {
