@@ -76,27 +76,15 @@ class JDBCSourceTask extends RowSourceTask {
           dbTableDataProvider
             .executeQuery(Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
 
-        var recoveryQueryRecordCount = 0
-
         try if (needRecovery) {
-          //Update offset for the memory
-          recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
-          resultSet.slice(0, recoveryQueryRecordCount).foreach { columns =>
-            val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
-            if (!timestampColumnValue.equals(parseOffsetInfo(inMemoryOffset).timestamp)) {
-              val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
-              topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1 + recoveryQueryRecordCount))
-              inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1 + recoveryQueryRecordCount))
-              recoveryQueryRecordCount = 0
-            } else {
-              val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
-              inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))
-              topicOffset = offsetStringResult(OffsetInfo(parseOffsetInfo(topicOffset).timestamp, queryRecordCount))
-            }
+          //Recovery and update offset in the memory
+          val recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
+          resultSet.slice(0, recoveryQueryRecordCount).zipWithIndex.foreach {
+            case (columns, index) =>
+              val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
+              inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, index + 1))
           }
-        } finally {
-          needRecovery = false
-        }
+        } finally needRecovery = false
 
         lastPoll = current
         Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
@@ -109,9 +97,8 @@ class JDBCSourceTask extends RowSourceTask {
 
           if (!timestampColumnValue.equals(parseOffsetInfo(inMemoryOffset).timestamp)) {
             val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
-            topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1 + recoveryQueryRecordCount))
-            inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1 + recoveryQueryRecordCount))
-            recoveryQueryRecordCount = 0
+            topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1))
+            inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1))
           } else {
             val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
             inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))
