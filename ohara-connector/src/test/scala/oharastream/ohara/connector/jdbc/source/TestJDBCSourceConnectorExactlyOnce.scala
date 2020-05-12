@@ -330,6 +330,6 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
 object TestJDBCSourceConnectorExactlyOnce {
   @Parameters(name = "{index} test input data time is {0} MILLISECONDS")
   def parameters(): java.util.Collection[Long] = {
-    Seq(3000L, 30000L).asJava
+    Seq(2000L, 3000L, 30000L).asJava
   }
 }

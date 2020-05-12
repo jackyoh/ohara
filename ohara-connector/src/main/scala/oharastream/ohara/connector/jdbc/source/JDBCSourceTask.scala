@@ -79,9 +79,24 @@ class JDBCSourceTask extends RowSourceTask {
         var recoveryQueryRecordCount = 0
 
         try if (needRecovery) {
-          resultSet.drop(parseOffsetInfo(topicOffset).queryRecordCount)
+          //Update offset for the memory
           recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
-        } finally if (resultSet.hasNext) needRecovery = false
+          resultSet.slice(0, recoveryQueryRecordCount).foreach { columns =>
+            val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
+            if (!timestampColumnValue.equals(parseOffsetInfo(inMemoryOffset).timestamp)) {
+              val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
+              topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1 + recoveryQueryRecordCount))
+              inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1 + recoveryQueryRecordCount))
+              recoveryQueryRecordCount = 0
+            } else {
+              val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
+              inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))
+              topicOffset = offsetStringResult(OffsetInfo(parseOffsetInfo(topicOffset).timestamp, queryRecordCount))
+            }
+          }
+        } finally {
+          needRecovery = false
+        }
 
         lastPoll = current
         Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
