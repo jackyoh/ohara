@@ -937,7 +937,9 @@ How to install K8S metrics server?
    # git clone https://github.com/kubernetes-sigs/metrics-server.git
    # git checkout tags/v0.3.7 -b v0.3.7
 
-- Below is YAML file to override the deploy/1.8+/metrics-server-deployment.yaml path file
+- Default setting can't connect to the kubernetes metrics service, Below is YAML
+  file setting, please override to the deploy/1.8+/metrics-server-deployment.yaml path file
+  For more details please refer to the https://github.com/kubernetes-sigs/metrics-server/issues/131
 
 .. code-block:: console
 
