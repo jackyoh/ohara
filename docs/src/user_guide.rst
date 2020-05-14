@@ -940,6 +940,7 @@ How to install K8S metrics server?
 - There should encounter an issue that kubelet and apiserver unable to communicate
   with metric-server with default setting. Please use following YAML setting to
   override the content of deploy/1.8+/metrics-server-deployment.yaml file.
+  For more details please refer to the https://github.com/kubernetes-sigs/metrics-server/issues/131
 
 .. code-block:: console
 
