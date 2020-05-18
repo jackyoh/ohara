@@ -49,6 +49,7 @@ class TestLoadCustomJarToWorkerCluster(platform: ContainerPlatform)
 
   @Test
   def test(): Unit = {
+    // For QA test
     val currentPath = new File(".").getCanonicalPath
     // Both jars are pre-generated. see readme in test/resources
 
