@@ -47,6 +47,7 @@ class TestDockerClient extends IntegrationTest {
 
   @Test
   def testLog(): Unit = {
+    // For QA test
     result(
       client.containerCreator
         .nodeName(remoteHostname)
