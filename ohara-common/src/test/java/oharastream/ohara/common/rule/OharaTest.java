@@ -42,16 +42,6 @@ public abstract class OharaTest {
   @Rule public final Timeout timeout = Timeout.seconds(120);
 
   /**
-   * check exception will throws
-   *
-   * @param c Exception class
-   * @param r executed method
-   */
-  protected static <T extends Throwable> T assertException(Class<T> c, Tester r) {
-    return assertException(c, r, false);
-  }
-
-  /**
    * assert the tester should throw exception containing specify exception if nested is true.
    * Otherwise, the exception thrown by tester is verified.
    *

@@ -365,54 +365,58 @@ public class TestCommonUtils extends OharaTest {
   public void testRequireConnectionPort() {
     // pass since it is ok to bind port on zero
     CommonUtils.requireBindPort(0);
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requireBindPort(65535 + 10));
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requireBindPort(-1));
+    Assert.assertThrows(
+        IllegalArgumentException.class, () -> CommonUtils.requireBindPort(65535 + 10));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CommonUtils.requireBindPort(-1));
   }
 
   @Test
   public void testRequireBindPort() {
     CommonUtils.requireBindPort(0);
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requireBindPort(65535 + 10));
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requireBindPort(-1));
+    Assert.assertThrows(
+        IllegalArgumentException.class, () -> CommonUtils.requireBindPort(65535 + 10));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CommonUtils.requireBindPort(-1));
   }
 
   @Test
   public void testRequirePositiveShort() {
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class, () -> CommonUtils.requirePositiveShort((short) -1));
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class, () -> CommonUtils.requirePositiveShort((short) 0));
   }
 
   @Test
   public void testRequirePositiveInt() {
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requirePositiveInt(-1));
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requirePositiveInt(0));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CommonUtils.requirePositiveInt(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CommonUtils.requirePositiveInt(0));
   }
 
   @Test
   public void testRequirePositiveLong() {
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requirePositiveLong(-1));
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requirePositiveLong(0));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CommonUtils.requirePositiveLong(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> CommonUtils.requirePositiveLong(0));
   }
 
   @Test
   public void testRequireNonNegativeShort() {
     CommonUtils.requireNonNegativeShort((short) 0);
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class, () -> CommonUtils.requireNonNegativeShort((short) -1));
   }
 
   @Test
   public void testRequireNonNegativeInt() {
     CommonUtils.requireNonNegativeInt(0);
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requireNonNegativeInt(-1));
+    Assert.assertThrows(
+        IllegalArgumentException.class, () -> CommonUtils.requireNonNegativeInt(-1));
   }
 
   @Test
   public void testRequireNonNegativeLong() {
     CommonUtils.requireNonNegativeLong(0);
-    assertException(IllegalArgumentException.class, () -> CommonUtils.requireNonNegativeLong(-1));
+    Assert.assertThrows(
+        IllegalArgumentException.class, () -> CommonUtils.requireNonNegativeLong(-1));
   }
 
   @Test

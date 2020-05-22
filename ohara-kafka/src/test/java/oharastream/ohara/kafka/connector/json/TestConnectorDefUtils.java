@@ -166,8 +166,9 @@ public class TestConnectorDefUtils extends OharaTest {
     ConfigDef.ConfigKey key = ConnectorDefUtils.toConfigKey(settingDef);
     Assert.assertNotNull(key.validator);
     key.validator.ensureValid(settingDef.key(), null);
-    assertException(ConfigException.class, () -> key.validator.ensureValid(settingDef.key(), 123));
-    assertException(
+    Assert.assertThrows(
+        ConfigException.class, () -> key.validator.ensureValid(settingDef.key(), 123));
+    Assert.assertThrows(
         ConfigException.class,
         () ->
             key.validator.ensureValid(

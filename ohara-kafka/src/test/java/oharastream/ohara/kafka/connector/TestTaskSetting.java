@@ -44,7 +44,7 @@ public class TestTaskSetting extends OharaTest {
   @Test
   public void nullKey() {
     Map<String, String> map = Collections.singletonMap(null, CommonUtils.randomString());
-    assertException(NullPointerException.class, () -> TaskSetting.of(map));
+    Assert.assertThrows(NullPointerException.class, () -> TaskSetting.of(map));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -55,7 +55,7 @@ public class TestTaskSetting extends OharaTest {
   @Test
   public void nullValue() {
     Map<String, String> map = Collections.singletonMap(CommonUtils.randomString(), null);
-    assertException(NullPointerException.class, () -> TaskSetting.of(map));
+    Assert.assertThrows(NullPointerException.class, () -> TaskSetting.of(map));
   }
 
   @Test(expected = IllegalArgumentException.class)

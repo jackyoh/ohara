@@ -192,8 +192,8 @@ public class TestCache extends OharaTest {
     String key = CommonUtils.randomString();
     cache.get(key);
     Assert.assertEquals(1, cache.size());
-    assertException(UnsupportedOperationException.class, () -> cache.snapshot().remove(key));
-    assertException(
+    Assert.assertThrows(UnsupportedOperationException.class, () -> cache.snapshot().remove(key));
+    Assert.assertThrows(
         UnsupportedOperationException.class,
         () -> cache.snapshot().put(key, CommonUtils.randomString()));
   }

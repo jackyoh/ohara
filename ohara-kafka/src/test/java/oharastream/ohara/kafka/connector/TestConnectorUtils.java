@@ -23,6 +23,7 @@ import oharastream.ohara.common.data.DataType;
 import oharastream.ohara.common.data.Row;
 import oharastream.ohara.common.rule.OharaTest;
 import oharastream.ohara.common.util.CommonUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestConnectorUtils extends OharaTest {
@@ -36,14 +37,14 @@ public class TestConnectorUtils extends OharaTest {
             .build();
 
     // test illegal type
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
             ConnectorUtils.match(
                 Row.of(Cell.of(column.name(), 123)), Collections.singletonList(column), true));
 
     // test illegal name
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
             ConnectorUtils.match(
@@ -58,14 +59,14 @@ public class TestConnectorUtils extends OharaTest {
         true);
 
     // test illegal type
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
             ConnectorUtils.match(
                 Row.of(Cell.of(column.newName(), 123)), Collections.singletonList(column), false));
 
     // test illegal name
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
             ConnectorUtils.match(

@@ -52,13 +52,13 @@ public class TestConnectorProps extends OharaTest {
   @Test
   public void emptyInStartingSourceTask() {
     DumbSourceTask task = new DumbSourceTask();
-    assertException(NoSuchElementException.class, () -> task.start(Collections.emptyMap()));
+    Assert.assertThrows(NoSuchElementException.class, () -> task.start(Collections.emptyMap()));
   }
 
   @Test
   public void emptyInStartingSinkTask() {
     DumbSinkTask task = new DumbSinkTask();
-    assertException(NoSuchElementException.class, () -> task.start(Collections.emptyMap()));
+    Assert.assertThrows(NoSuchElementException.class, () -> task.start(Collections.emptyMap()));
   }
 
   @Test
@@ -143,7 +143,7 @@ public class TestConnectorProps extends OharaTest {
               .checkRule(SettingDef.CheckRule.ENFORCING)
               .column(column)
               .raw());
-      assertException(
+      Assert.assertThrows(
           IllegalArgumentException.class,
           () ->
               task2.put(
@@ -254,7 +254,7 @@ public class TestConnectorProps extends OharaTest {
               .column(column)
               .raw());
       // this poll generates bad data and the check rule is "enforcing"
-      assertException(IllegalArgumentException.class, task2::poll);
+      Assert.assertThrows(IllegalArgumentException.class, task2::poll);
     } finally {
       task2.stop();
     }

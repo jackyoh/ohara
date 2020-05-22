@@ -18,19 +18,20 @@ package oharastream.ohara.common.rule;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestOharaTest extends OharaTest {
 
   @Test
   public void TestException() {
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class,
         () -> {
           throw new IllegalArgumentException("test");
         });
 
-    assertException(
+    Assert.assertThrows(
         ArithmeticException.class,
         () -> {
           throw new ArithmeticException("test");
@@ -39,7 +40,7 @@ public class TestOharaTest extends OharaTest {
 
   @Test(expected = AssertionError.class)
   public void TestExceptionError() {
-    assertException(
+    Assert.assertThrows(
         IllegalArgumentException.class,
         () -> {
           //                not match exception
@@ -50,14 +51,14 @@ public class TestOharaTest extends OharaTest {
 
   @Test(expected = AssertionError.class)
   public void TestExceptionError2() {
-    assertException(IllegalArgumentException.class, () -> {});
+    Assert.assertThrows(IllegalArgumentException.class, () -> {});
     throw new RuntimeException("assertException didn't fail , normally can't see this msg");
   }
 
   @Test
   public void TestExceptionCompare() {
     Exception e =
-        assertException(
+        Assert.assertThrows(
             RuntimeException.class,
             () -> {
               throw new RuntimeException(new ArithmeticException("test"));

@@ -32,6 +32,7 @@ import oharastream.ohara.common.util.Releasable;
 import oharastream.ohara.testing.With3Brokers;
 import org.apache.kafka.common.config.TopicConfig;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestTopicAdmin extends With3Brokers {
@@ -79,7 +80,7 @@ public class TestTopicAdmin extends With3Brokers {
         numberOfPartitions,
         client.topicDescription(topicKey).toCompletableFuture().get().numberOfPartitions());
     // decrease the number
-    assertException(
+    Assert.assertThrows(
         Exception.class, () -> client.createPartitions(topicKey, 1).toCompletableFuture().get());
     // alter an nonexistent topic
     assertException(
