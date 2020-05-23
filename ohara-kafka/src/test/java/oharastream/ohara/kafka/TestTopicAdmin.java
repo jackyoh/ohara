@@ -83,14 +83,18 @@ public class TestTopicAdmin extends With3Brokers {
     Assert.assertThrows(
         Exception.class, () -> client.createPartitions(topicKey, 1).toCompletableFuture().get());
     // alter an nonexistent topic
-    assertException(
+    Assert.assertThrows(
         NoSuchElementException.class,
-        () ->
+        () -> {
+          try {
             client
                 .createPartitions(TopicKey.of("a", CommonUtils.randomString(5)), 2)
                 .toCompletableFuture()
-                .get(),
-        true);
+                .get();
+          } catch (Exception e) {
+            throw e.getCause();
+          }
+        });
   }
 
   @Test
