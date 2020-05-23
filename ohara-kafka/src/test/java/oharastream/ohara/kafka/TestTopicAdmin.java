@@ -91,7 +91,7 @@ public class TestTopicAdmin extends With3Brokers {
                 .createPartitions(TopicKey.of("a", CommonUtils.randomString(5)), 2)
                 .toCompletableFuture()
                 .get();
-          } catch (Exception e) {
+          } catch (ExecutionException e) {
             throw e.getCause();
           }
         });
