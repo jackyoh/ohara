@@ -151,7 +151,22 @@ object NodeRoute {
     serviceCollie: ServiceCollie,
     executionContext: ExecutionContext
   ): Future[Seq[Node]] =
-    updateServices(nodes).flatMap(updateResources).flatMap(verify)
+    updateServices(nodes).flatMap(updateResources).flatMap(verify).map { nodes =>
+      nodes.map { node =>
+        Node(
+          hostname = node.hostname,
+          port = node.port,
+          user = node.user,
+          password = Option((0 until node.password.getOrElse("").length).map(_ => "*").mkString("")),
+          services = node.services,
+          state = node.state,
+          error = node.error,
+          lastModified = node.lastModified,
+          resources = node.resources,
+          tags = node.tags
+        )
+      }
+    }
 
   private[this] def hookOfGet(
     implicit serviceCollie: ServiceCollie,
