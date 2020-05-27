@@ -239,7 +239,7 @@ object BrokerApi {
   /**
     * exposed to configurator
     */
-  private[ohara] implicit val BROKER_CLUSTER_INFO_FORMAT: RootJsonFormat[BrokerClusterInfo] =
+  private[ohara] implicit val BROKER_CLUSTER_INFO_FORMAT: JsonRefiner[BrokerClusterInfo] =
     JsonRefinerBuilder[BrokerClusterInfo]
       .format(new RootJsonFormat[BrokerClusterInfo] {
         private[this] val format                            = jsonFormat5(BrokerClusterInfo)

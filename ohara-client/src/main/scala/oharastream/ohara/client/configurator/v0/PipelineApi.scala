@@ -108,7 +108,8 @@ object PipelineApi {
     override protected def raw: Map[String, JsValue] = PIPELINE_JSON_FORMAT.write(this).asJsObject.fields
   }
 
-  implicit val PIPELINE_JSON_FORMAT: RootJsonFormat[Pipeline] = jsonFormat7(Pipeline)
+  implicit val PIPELINE_JSON_FORMAT: JsonRefiner[Pipeline] =
+    JsonRefinerBuilder[Pipeline].format(jsonFormat7(Pipeline)).build
 
   /**
     * used to generate the payload and url for POST/PUT request.

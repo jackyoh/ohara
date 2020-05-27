@@ -220,12 +220,13 @@ object ConnectorApi {
     def partitionClass: String = settings.partitionClass
   }
 
-  implicit val CONNECTOR_INFO_FORMAT: RootJsonFormat[ConnectorInfo] =
-    new RootJsonFormat[ConnectorInfo] {
+  implicit val CONNECTOR_INFO_FORMAT: JsonRefiner[ConnectorInfo] = JsonRefinerBuilder[ConnectorInfo]
+    .format(new RootJsonFormat[ConnectorInfo] {
       private[this] val format                        = jsonFormat7(ConnectorInfo)
       override def read(json: JsValue): ConnectorInfo = format.read(extractSetting(json.asJsObject))
       override def write(obj: ConnectorInfo): JsValue = flattenSettings(format.write(obj).asJsObject)
-    }
+    })
+    .build
 
   /**
     * used to generate the payload and url for POST/PUT request.

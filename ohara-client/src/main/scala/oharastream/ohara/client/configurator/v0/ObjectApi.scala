@@ -96,10 +96,12 @@ object ObjectApi {
       new ObjectInfo(settings + (LAST_MODIFIED_KEY -> JsNumber(lastModified)))
   }
 
-  implicit val OBJECT_JSON_FORMAT: RootJsonFormat[ObjectInfo] = new RootJsonFormat[ObjectInfo] {
-    override def write(obj: ObjectInfo): JsValue = JsObject(obj.settings)
-    override def read(json: JsValue): ObjectInfo = new ObjectInfo(json.asJsObject.fields)
-  }
+  implicit val OBJECT_JSON_FORMAT: JsonRefiner[ObjectInfo] = JsonRefinerBuilder[ObjectInfo]
+    .format(new RootJsonFormat[ObjectInfo] {
+      override def write(obj: ObjectInfo): JsValue = JsObject(obj.settings)
+      override def read(json: JsValue): ObjectInfo = new ObjectInfo(json.asJsObject.fields)
+    })
+    .build
 
   trait Request {
     private[this] val settings: mutable.Map[String, JsValue] = mutable.Map[String, JsValue]()

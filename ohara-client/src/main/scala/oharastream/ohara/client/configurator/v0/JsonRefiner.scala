@@ -17,7 +17,7 @@
 package oharastream.ohara.client.configurator.v0
 
 import oharastream.ohara.common.setting.SettingDef
-import spray.json.{JsValue, RootJsonFormat}
+import spray.json.{JsObject, JsValue, RootJsonFormat}
 
 /**
   * Except for akka json function, ohara format expose the function used to verify the input key and value. The function
@@ -56,4 +56,11 @@ trait JsonRefiner[T] extends RootJsonFormat[T] {
     * @param fields keys and values
     */
   def check(fields: Map[String, JsValue]): Map[String, JsValue]
+
+  def response(obj: T): T = {
+    val result: Map[String, JsValue] = write(obj).asJsObject.fields.filterNot(x => {
+      x._1 == "password"
+    })
+    read(JsObject(result))
+  }
 }

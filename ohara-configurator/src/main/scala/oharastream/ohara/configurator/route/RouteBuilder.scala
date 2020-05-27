@@ -202,7 +202,7 @@ object RouteBuilder {
     // since it must have name field.
     rm: JsonRefiner[Creation],
     rm1: RootJsonFormat[Updating],
-    rm2: RootJsonFormat[Res],
+    rm2: JsonRefiner[Res],
     executionContext: ExecutionContext
   ): RouteBuilder[Creation, Updating, Res] =
     (
@@ -231,7 +231,10 @@ object RouteBuilder {
                     complete(
                       hook(creation)
                         .flatMap(res => store.addIfAbsent(res))
-                        .flatMap(res => hookAfterCreation.map(hook => hook(res)).getOrElse(Future.successful(res)))
+                        .flatMap(res => {
+                          val newRes = rm2.response(res)
+                          hookAfterCreation.map(hook => hook(newRes)).getOrElse(Future.successful(newRes))
+                        })
                     )
                 )
                 .getOrElse(routeToOfficialUrl(s"/$root"))

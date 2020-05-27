@@ -99,7 +99,7 @@ package object route {
     serviceCollie: ServiceCollie,
     rm: JsonRefiner[Creation],
     rm1: RootJsonFormat[Updating],
-    rm2: RootJsonFormat[Cluster],
+    rm2: JsonRefiner[Cluster],
     executionContext: ExecutionContext
   ): server.Route =
     RouteBuilder[Creation, Updating, Cluster]()

@@ -191,7 +191,7 @@ object NodeApi {
     )
   }
 
-  implicit val NODE_JSON_FORMAT: RootJsonFormat[Node] = jsonFormat10(Node.apply)
+  implicit val NODE_JSON_FORMAT: JsonRefiner[Node] = JsonRefinerBuilder[Node].format(jsonFormat10(Node.apply)).build
 
   /**
     * used to generate the payload and url for POST/PUT request.
