@@ -68,7 +68,7 @@ class TestNodeRoute extends OharaTest {
     res.hostname shouldBe hostname
     res.port.get shouldBe port
     res.user.get shouldBe user
-    res.password.get shouldBe (0 until password.length).map(_ => "*").mkString("")
+    res.password.isEmpty shouldBe true
 
     result(nodeApi.list()).size shouldBe (1 + numberOfDefaultNodes)
     compare(result(nodeApi.list()).find(_.name == hostname).get, res)
@@ -197,7 +197,7 @@ class TestNodeRoute extends OharaTest {
     updated.name shouldBe expected.name
     updated.port shouldBe expected.port
     updated.user shouldBe expected.user
-    updated.password shouldBe Some((0 until expected.password.getOrElse("").length).map(_ => "*").mkString(""))
+    updated.password.isEmpty shouldBe true
   }
 
   @Test

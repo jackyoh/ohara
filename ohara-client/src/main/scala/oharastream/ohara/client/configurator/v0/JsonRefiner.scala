@@ -57,7 +57,7 @@ trait JsonRefiner[T] extends RootJsonFormat[T] {
     */
   def check(fields: Map[String, JsValue]): Map[String, JsValue]
 
-  def response(obj: T): T = {
+  def filter(obj: T): T = {
     val result: Map[String, JsValue] = write(obj).asJsObject.fields.filterNot(x => {
       x._1 == "password"
     })

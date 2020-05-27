@@ -232,7 +232,7 @@ object RouteBuilder {
                       hook(creation)
                         .flatMap(res => store.addIfAbsent(res))
                         .flatMap(res => {
-                          val newRes = rm2.response(res)
+                          val newRes = rm2.filter(res)
                           hookAfterCreation.map(hook => hook(newRes)).getOrElse(Future.successful(newRes))
                         })
                     )
@@ -246,7 +246,7 @@ object RouteBuilder {
                     .values[Res]()
                     .flatMap(hookOfList(_))
                     .map { x =>
-                      x.map(res => rm2.response(res))
+                      x.map(res => rm2.filter(res))
                     }
                     .map(_.filter(_.matched(QueryRequest(params.filter {
                       // the empty stuff causes false always since there is nothing matched to "empty"
@@ -263,7 +263,7 @@ object RouteBuilder {
                 rm.check(GROUP_KEY, JsString(group)).value,
                 rm.check(NAME_KEY, JsString(name)).value
               )
-            get(complete(store.value[Res](key).flatMap(hookOfGet(_)).map(rm2.response(_)))) ~
+            get(complete(store.value[Res](key).flatMap(hookOfGet(_)).map(rm2.filter(_)))) ~
               delete(
                 complete(
                   hookBeforeDelete(key).map(_ => key).flatMap(store.remove[Res](_).map(_ => StatusCodes.NoContent))
@@ -282,7 +282,7 @@ object RouteBuilder {
                               .flatMap(store.add)
                               .flatMap(
                                 res => {
-                                  val newRes = rm2.response(res)
+                                  val newRes = rm2.filter(res)
                                   hookAfterUpdating.map(hook => hook(newRes)).getOrElse(Future.successful(newRes))
                                 }
                               )
