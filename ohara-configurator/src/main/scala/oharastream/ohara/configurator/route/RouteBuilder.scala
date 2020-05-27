@@ -245,6 +245,9 @@ object RouteBuilder {
                   store
                     .values[Res]()
                     .flatMap(hookOfList(_))
+                    .map { x =>
+                      x.map(res => rm2.response(res))
+                    }
                     .map(_.filter(_.matched(QueryRequest(params.filter {
                       // the empty stuff causes false always since there is nothing matched to "empty"
                       // hence, we remove them from parameters for careless users :)
@@ -260,7 +263,7 @@ object RouteBuilder {
                 rm.check(GROUP_KEY, JsString(group)).value,
                 rm.check(NAME_KEY, JsString(name)).value
               )
-            get(complete(store.value[Res](key).flatMap(hookOfGet(_)))) ~
+            get(complete(store.value[Res](key).flatMap(hookOfGet(_)).map(rm2.response(_)))) ~
               delete(
                 complete(
                   hookBeforeDelete(key).map(_ => key).flatMap(store.remove[Res](_).map(_ => StatusCodes.NoContent))
@@ -278,7 +281,10 @@ object RouteBuilder {
                               .flatMap(previous => hook(key = key, updating = update, previous = previous))
                               .flatMap(store.add)
                               .flatMap(
-                                res => hookAfterUpdating.map(hook => hook(res)).getOrElse(Future.successful(res))
+                                res => {
+                                  val newRes = rm2.response(res)
+                                  hookAfterUpdating.map(hook => hook(newRes)).getOrElse(Future.successful(newRes))
+                                }
                               )
                           )
                       )
