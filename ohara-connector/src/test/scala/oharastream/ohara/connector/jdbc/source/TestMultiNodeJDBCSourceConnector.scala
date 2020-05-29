@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 is-land
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Statement
@@ -35,6 +51,10 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     val statement: Statement = db.connection.createStatement()
 
     statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-05-20 00:00:00', 'a11', 'a12', 1)"
+    )
+
+    /*statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
     )
     statement.executeUpdate(
@@ -56,7 +76,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     )
     statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
-    )
+    )*/
   }
 
   @Test
@@ -74,7 +94,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         .settings(props.toMap)
         .create()
     )
-    TimeUnit.SECONDS.sleep(5)
+    TimeUnit.SECONDS.sleep(15)
     /*val record = pollData(topicKey, 0 seconds, 0)
     println(record)*/
   }

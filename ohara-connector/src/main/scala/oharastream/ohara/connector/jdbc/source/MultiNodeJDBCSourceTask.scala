@@ -1,20 +1,33 @@
+/*
+ * Copyright 2019 is-land
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 import java.util
-import java.util.concurrent.TimeUnit
-
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.kafka.connector.{RowSourceRecord, RowSourceTask, TaskSetting}
-
 import scala.jdk.CollectionConverters._
 
 class MultiNodeJDBCSourceTask extends RowSourceTask {
   private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
   private[this] var client: DatabaseClient                               = _
-  private[this] var testCount: Int                                       = 0
-  private[this] var dbProduct: String = _
+  private[this] var dbProduct: String                                    = _
+  private[this] var offsetCache: JDBCOffsetCache                         = _
 
   override protected def run(settings: TaskSetting): Unit = {
     jdbcSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
@@ -24,12 +37,12 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
       .password(jdbcSourceConnectorConfig.dbPassword)
       .build
     dbProduct = client.connection.getMetaData.getDatabaseProductName
+    offsetCache = new JDBCOffsetCache()
   }
 
   override protected def pollRecords(): util.List[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    TimeUnit.SECONDS.sleep(1)
 
     val firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
 
@@ -45,12 +58,11 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
       }
       // TODO for query data
       println(s"Start timestamp is: ${startTimestamp}    Stop timestamp is: ${stopTimestamp}")
+
+      val timestampTableParation = s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
+      offsetCache.update(timestampTableParation, JDBCOffsetInfo(0, true)) // TODO Get database data
     }
     Seq.empty.asJava
-  }
-
-  override protected def terminate(): Unit = {
-    // Nothing
   }
 
   private[this] def tableFirstTimestampValue(tableName: String, timestampColumnName: String): Option[Timestamp] = {
@@ -66,13 +78,15 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def partitionIsCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
-    startTimestamp.getTime()
-    stopTimestamp.getTime()
-
-    testCount = testCount + 1
-    !(testCount % 10 == 0)
-
-    //false
+    val timestampTableParation =
+      tableTimestampParationKey(jdbcSourceConnectorConfig.dbTableName, startTimestamp, stopTimestamp)
+    offsetCache.loadIfNeed(rowContext, timestampTableParation)
+    val offset: Option[JDBCOffsetInfo] = offsetCache.readOffset(timestampTableParation)
+    offset
+      .map(
+        _.isCompleted
+      )
+      .getOrElse(false)
   }
 
   private[this] def overCurrentTimestamp(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
@@ -88,5 +102,17 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
       } finally Releasable.close(rs)
     } finally Releasable.close(stmt)
+  }
+
+  private[this] def tableTimestampParationKey(
+    tableName: String,
+    startTimestamp: Timestamp,
+    stopTimestamp: Timestamp
+  ): String = {
+    s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
+  }
+
+  override protected def terminate(): Unit = {
+    // Nothing
   }
 }
