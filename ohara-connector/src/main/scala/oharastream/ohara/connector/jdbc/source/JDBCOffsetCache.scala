@@ -22,9 +22,9 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 class JDBCOffsetCache {
-  private[this] val TABLE_PARTITION_KEY: String = "jdbc.table.timestamp"
-  private[this] val TABLE_OFFSET_KEY: String    = "jdbc.table.info"
-  private[this] val cache                       = mutable.Map[String, JDBCOffsetInfo]()
+  private[source] val TABLE_PARTITION_KEY: String = "jdbc.table.timestamp"
+  private[this] val TABLE_OFFSET_KEY: String      = "jdbc.table.info"
+  private[this] val cache                         = mutable.Map[String, JDBCOffsetInfo]()
 
   def loadIfNeed(context: RowSourceContext, tableTimestampPartition: String): Unit = {
     if (cache.get(tableTimestampPartition).isEmpty) {

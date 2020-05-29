@@ -22,8 +22,11 @@ import java.util.concurrent.TimeUnit
 import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
+import oharastream.ohara.common.data.{Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.kafka.Consumer
+import oharastream.ohara.kafka.Consumer.Record
 import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.testing.With3Brokers3Workers
 import oharastream.ohara.testing.service.Database
@@ -94,20 +97,24 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         .settings(props.toMap)
         .create()
     )
-    TimeUnit.SECONDS.sleep(50)
-    /*val record = pollData(topicKey, 0 seconds, 0)
-    println(record)*/
+    TimeUnit.SECONDS.sleep(15)
+    val record = pollData(topicKey, 10 seconds, 2)
+    println("================================")
+    record.head.key().get().cells().forEach { x =>
+      println(s"${x.name()}   ${x.value()}")
+    }
+    println("================================")
   }
   private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
 
-  /*private[this] def pollData(
-                              topicKey: TopicKey,
-                              timeout: scala.concurrent.duration.Duration,
-                              size: Int
-                            ): Seq[Record[Row, Array[Byte]]] = {
+  private[this] def pollData(
+    topicKey: TopicKey,
+    timeout: scala.concurrent.duration.Duration,
+    size: Int
+  ): Seq[Record[Row, Array[Byte]]] = {
     val consumer = Consumer
       .builder()
-      .topicName(topicKey.topicNameOnKafka)
+      .topicKey(topicKey)
       .offsetFromBegin()
       .connectionProps(testUtil.brokersConnProps)
       .keySerializer(Serializer.ROW)
@@ -115,7 +122,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
       .build()
     try consumer.poll(java.time.Duration.ofNanos(timeout.toNanos), size).asScala.toSeq
     finally consumer.close()
-  }*/
+  }
 
   private[this] val props = JDBCSourceConnectorConfig(
     TaskSetting.of(
