@@ -45,7 +45,6 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   override protected def pollRecords(): util.List[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val taskHash            = jdbcSourceConnectorConfig.taskHash
     val firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
 
     if (firstTimestampValue.nonEmpty) {
@@ -59,11 +58,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         if (overCurrentTimestamp(startTimestamp, stopTimestamp)) return Seq.empty.asJava
       }
 
-      println(
-        s"TaskHash is: ${taskHash} Start timestamp is: ${startTimestamp}    Stop timestamp is: ${stopTimestamp}"
-      )
-      val timestampTablePartition = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
-      offsetCache.update(timestampTablePartition, JDBCOffsetInfo(0, true)) // TODO Get database data
+      return queryData(startTimestamp, stopTimestamp).asJava
     }
 
     Seq.empty.asJava
@@ -106,6 +101,17 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
       } finally Releasable.close(rs)
     } finally Releasable.close(stmt)
+  }
+
+  private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
+    val tableName = jdbcSourceConnectorConfig.dbTableName
+    val taskHash  = jdbcSourceConnectorConfig.taskHash
+    println(
+      s"TaskHash is: ${taskHash} Start timestamp is: ${startTimestamp}    Stop timestamp is: ${stopTimestamp}"
+    )
+    val timestampTablePartition = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+    offsetCache.update(timestampTablePartition, JDBCOffsetInfo(0, true)) // TODO Get database data
+    Seq.empty
   }
 
   private[this] def tableTimestampParationKey(
