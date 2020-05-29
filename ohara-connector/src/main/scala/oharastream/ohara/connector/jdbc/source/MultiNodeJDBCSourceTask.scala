@@ -18,9 +18,11 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 import java.util
+
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.kafka.connector.{RowSourceRecord, RowSourceTask, TaskSetting}
+
 import scala.jdk.CollectionConverters._
 
 class MultiNodeJDBCSourceTask extends RowSourceTask {
@@ -43,25 +45,27 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   override protected def pollRecords(): util.List[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-
+    val taskHash            = jdbcSourceConnectorConfig.taskHash
     val firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
 
     if (firstTimestampValue.nonEmpty) {
       var startTimestamp = firstTimestampValue.get
       var stopTimestamp  = new Timestamp(startTimestamp.getTime() + 86400000)
 
-      while (partitionIsCompleted(startTimestamp, stopTimestamp)) { // TODO Check hash code
+      while (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
         startTimestamp = stopTimestamp
         stopTimestamp = new Timestamp(startTimestamp.getTime() + 86400000)
 
         if (overCurrentTimestamp(startTimestamp, stopTimestamp)) return Seq.empty.asJava
       }
-      // TODO for query data
-      println(s"Start timestamp is: ${startTimestamp}    Stop timestamp is: ${stopTimestamp}")
 
-      val timestampTableParation = s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
-      offsetCache.update(timestampTableParation, JDBCOffsetInfo(0, true)) // TODO Get database data
+      println(
+        s"TaskHash is: ${taskHash} Start timestamp is: ${startTimestamp}    Stop timestamp is: ${stopTimestamp}"
+      )
+      val timestampTablePartition = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+      offsetCache.update(timestampTablePartition, JDBCOffsetInfo(0, true)) // TODO Get database data
     }
+
     Seq.empty.asJava
   }
 
@@ -110,6 +114,14 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     stopTimestamp: Timestamp
   ): String = {
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
+  }
+
+  private[this] def isRunningTask(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
+    val tableName         = jdbcSourceConnectorConfig.dbTableName
+    val taskTotal         = jdbcSourceConnectorConfig.taskTotal
+    val taskHash          = jdbcSourceConnectorConfig.taskHash
+    val partitionHashCode = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp).hashCode()
+    Math.abs(partitionHashCode) % taskTotal == taskHash
   }
 
   override protected def terminate(): Unit = {

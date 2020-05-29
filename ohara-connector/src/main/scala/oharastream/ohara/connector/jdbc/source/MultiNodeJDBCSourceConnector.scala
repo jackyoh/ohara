@@ -25,7 +25,16 @@ class MultiNodeJDBCSourceConnector extends RowSourceConnector {
 
   override def taskClass(): Class[_ <: RowSourceTask] = classOf[MultiNodeJDBCSourceTask]
 
-  override protected def taskSettings(maxTasks: Int): util.List[TaskSetting] = Seq.fill(maxTasks)(settings).asJava
+  override protected def taskSettings(maxTasks: Int): util.List[TaskSetting] = {
+    Seq
+      .fill(maxTasks)(settings)
+      .zipWithIndex
+      .map {
+        case (setting, index) =>
+          setting.append(Map(TASK_TOTAL_KEY -> maxTasks.toString, TASK_HASH_KEY -> index.toString).asJava)
+      }
+      .asJava
+  }
 
   override protected def run(settings: TaskSetting): Unit = {
     this.settings = settings

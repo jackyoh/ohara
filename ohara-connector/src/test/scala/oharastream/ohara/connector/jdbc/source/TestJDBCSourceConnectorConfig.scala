@@ -125,7 +125,9 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
       jdbcFrequenceTime = Duration("0 second"),
-      timestampColumnName = "123"
+      timestampColumnName = "123",
+      taskTotal = 3,
+      taskHash = 1
     )
 
     config.toMap.contains(DB_CATALOG_PATTERN) shouldBe false

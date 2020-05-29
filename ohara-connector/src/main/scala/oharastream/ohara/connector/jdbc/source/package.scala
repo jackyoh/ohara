@@ -19,6 +19,8 @@ package oharastream.ohara.connector.jdbc
 import scala.concurrent.duration.Duration
 
 package object source {
+  val TASK_TOTAL_KEY                        = "task.total"
+  val TASK_HASH_KEY                         = "tash.hash"
   val DB_URL: String                        = "source.db.url"
   val DB_USERNAME: String                   = "source.db.username"
   val DB_PASSWORD: String                   = "source.db.password"

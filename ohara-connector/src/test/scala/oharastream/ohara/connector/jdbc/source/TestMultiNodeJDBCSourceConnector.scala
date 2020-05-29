@@ -51,7 +51,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     val statement: Statement = db.connection.createStatement()
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-05-20 00:00:00', 'a11', 'a12', 1)"
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 00:00:00', 'a11', 'a12', 1)"
     )
 
     /*statement.executeUpdate(
@@ -94,7 +94,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         .settings(props.toMap)
         .create()
     )
-    TimeUnit.SECONDS.sleep(15)
+    TimeUnit.SECONDS.sleep(50)
     /*val record = pollData(topicKey, 0 seconds, 0)
     println(record)*/
   }
@@ -124,7 +124,9 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         DB_USERNAME           -> db.user,
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )
