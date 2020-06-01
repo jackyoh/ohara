@@ -279,7 +279,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
     connectorAdmin
       .connectorCreator()
       .connectorKey(connectorKey)
-      .connectorClass(classOf[JDBCSourceConnector])
+      .connectorClass(classOf[MultiNodeJDBCSourceConnector])
       .topicKey(topicKey)
       .numberOfTasks(1)
       .settings(jdbcSourceConnectorProps.toMap)
@@ -309,7 +309,9 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         DB_USERNAME           -> db.user,
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

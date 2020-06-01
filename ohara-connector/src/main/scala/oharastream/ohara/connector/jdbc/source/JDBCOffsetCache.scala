@@ -22,14 +22,12 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 class JDBCOffsetCache {
-  private[source] val TABLE_PARTITION_KEY: String = "jdbc.table.timestamp"
-  private[this] val TABLE_OFFSET_KEY: String      = "jdbc.table.info"
-  private[this] val cache                         = mutable.Map[String, JDBCOffsetInfo]()
+  private[this] val cache = mutable.Map[String, JDBCOffsetInfo]()
 
   def loadIfNeed(context: RowSourceContext, tableTimestampPartition: String): Unit = {
     if (cache.get(tableTimestampPartition).isEmpty) {
       val offset: Map[String, _] =
-        context.offset(Map(TABLE_PARTITION_KEY -> tableTimestampPartition).asJava).asScala.toMap
+        context.offset(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> tableTimestampPartition).asJava).asScala.toMap
       if (offset.nonEmpty) update(tableTimestampPartition, offsetValue(offset))
     }
   }
@@ -43,10 +41,17 @@ class JDBCOffsetCache {
   }
 
   private[this] def offsetValue(offset: Map[String, _]): JDBCOffsetInfo = {
-    val value      = offset(TABLE_OFFSET_KEY).toString()
+    val value      = offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString()
     val offsetInfo = value.split(",")
     JDBCOffsetInfo(offsetInfo.head.toInt, offsetInfo.last.toBoolean)
   }
 }
 
-case class JDBCOffsetInfo(value: Int, isCompleted: Boolean)
+object JDBCOffsetCache {
+  private[source] val TABLE_PARTITION_KEY: String = "jdbc.table.timestamp"
+  private[source] val TABLE_OFFSET_KEY: String    = "jdbc.table.info"
+}
+
+case class JDBCOffsetInfo(value: Int, isCompleted: Boolean) {
+  override def toString(): String = s"$value,$isCompleted"
+}

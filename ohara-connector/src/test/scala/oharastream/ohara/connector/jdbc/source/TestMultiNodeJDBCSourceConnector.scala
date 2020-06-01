@@ -57,6 +57,26 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
       s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 00:00:00', 'a11', 'a12', 1)"
     )
 
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 01:00:00', 'a11', 'a12', 11)"
+    )
+
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 02:00:00', 'a11', 'a12', 111)"
+    )
+
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-21 00:00:00', 'a21', 'a22', 2)"
+    )
+
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-22 00:00:00', 'a31', 'a32', 3)"
+    )
+
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-23 00:00:00', 'a41', 'a42', 4)"
+    )
+
     /*statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
     )
@@ -98,11 +118,15 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         .create()
     )
     TimeUnit.SECONDS.sleep(15)
-    val record = pollData(topicKey, 10 seconds, 2)
+    val records = pollData(topicKey, 50 seconds, 2)
     println("================================")
-    record.head.key().get().cells().forEach { x =>
-      println(s"${x.name()}   ${x.value()}")
+    records.foreach { record =>
+      record.key().get().cells().forEach { x =>
+        println(s"${x.name()}   ${x.value()}")
+      }
+      println("")
     }
+    println(s"Record size is ${records.size}")
     println("================================")
   }
   private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)

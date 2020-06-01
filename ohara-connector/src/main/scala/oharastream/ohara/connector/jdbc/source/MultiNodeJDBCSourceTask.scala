@@ -111,10 +111,29 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(stmt)
   }
 
+  private[this] def tablePartitionCount(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
+    val tableName           = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val sql =
+      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
+
+    val statement = client.connection.prepareStatement(sql)
+    try {
+      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      val resultSet = statement.executeQuery()
+      try {
+        if (resultSet.next()) resultSet.getInt(1)
+        else 0
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(statement)
+  }
+
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
 
+    val partitionCount = tablePartitionCount(startTimestamp, stopTimestamp)
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
 
@@ -129,26 +148,29 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
-        val rowSourceRecords = results.flatMap { columns =>
-          val newSchema =
-            if (schema.isEmpty)
-              columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-            else schema
+        results.zipWithIndex.flatMap {
+          case (columns, rowIndex) =>
+            val newSchema =
+              if (schema.isEmpty)
+                columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+              else schema
 
-          topics.map(
-            RowSourceRecord
-              .builder()
-              .sourcePartition(Map("jdbc.table.timestamp" -> timestampTablePartition).asJava)
-              //Writer Offset
-              .sourceOffset(Map("jdbc.table.info" -> "0,true").asJava)
-              //Create Ohara Row
-              .row(row(newSchema, columns))
-              .topicKey(_)
-              .build()
-          )
+            val isCompleted = rowIndex == (partitionCount - 1)
+            val offset      = JDBCOffsetInfo(rowIndex, isCompleted)
+
+            offsetCache.update(timestampTablePartition, offset)
+            topics.map(
+              RowSourceRecord
+                .builder()
+                .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> timestampTablePartition).asJava)
+                //Writer Offset
+                .sourceOffset(Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> JDBCOffsetInfo(rowIndex, false).toString).asJava)
+                //Create Ohara Row
+                .row(row(newSchema, columns))
+                .topicKey(_)
+                .build()
+            )
         }.toSeq
-        offsetCache.update(timestampTablePartition, JDBCOffsetInfo(0, true))
-        rowSourceRecords
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
   }
