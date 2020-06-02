@@ -54,10 +54,10 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     val statement: Statement = db.connection.createStatement()
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 00:00:00', 'a11', 'a12', 1)"
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 00:00:00', 'a11', 'a12', 1)"
     )
 
-    statement.executeUpdate(
+    /*statement.executeUpdate(
       s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 01:00:00', 'a11', 'a12', 11)"
     )
 
@@ -75,7 +75,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
 
     statement.executeUpdate(
       s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-23 00:00:00', 'a41', 'a42', 4)"
-    )
+    )*/
 
     /*statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"

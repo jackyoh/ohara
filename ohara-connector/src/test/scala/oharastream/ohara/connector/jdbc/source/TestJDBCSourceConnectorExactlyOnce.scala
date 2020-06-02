@@ -75,7 +75,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       try {
         while ((CommonUtils.current() - startTime) <= inputDataTime) {
           // 432000000 is 5 days ago
-          val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
+          val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue() + 3600000)
           preparedStatement.setTimestamp(1, timestampData)
           rowData().asScala.zipWithIndex.foreach {
             case (result, index) => {

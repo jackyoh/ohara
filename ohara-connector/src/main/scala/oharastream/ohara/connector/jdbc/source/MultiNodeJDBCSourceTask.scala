@@ -37,6 +37,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   private[this] var offsetCache: JDBCOffsetCache                         = _
   private[this] var topics: Seq[TopicKey]                                = _
   private[this] var schema: Seq[Column]                                  = _
+
   override protected def run(settings: TaskSetting): Unit = {
     jdbcSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
     client = DatabaseClient.builder
@@ -56,16 +57,19 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
 
     if (firstTimestampValue.nonEmpty) {
-      var startTimestamp = firstTimestampValue.get
-      var stopTimestamp  = new Timestamp(startTimestamp.getTime() + 86400000)
+      var startTimestamp: Timestamp = firstTimestampValue.get
+      var stopTimestamp: Timestamp  = new Timestamp(startTimestamp.getTime() + 86400000)
 
       while (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
+        println(s"ISCOMPLETED=${partitionIsCompleted(startTimestamp, stopTimestamp)}")
         startTimestamp = stopTimestamp
         stopTimestamp = new Timestamp(startTimestamp.getTime() + 86400000)
 
-        if (overCurrentTimestamp(startTimestamp, stopTimestamp)) return Seq.empty.asJava
+        if (overCurrentTimestamp(startTimestamp, stopTimestamp)) {
+          return Seq.empty.asJava
+        }
       }
-
+      println(s"StartTimestamp: ${startTimestamp}   StopTimestamp: ${stopTimestamp}")
       return queryData(startTimestamp, stopTimestamp).asJava
     }
 
@@ -111,7 +115,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(stmt)
   }
 
-  private[this] def tablePartitionCount(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
+  /*private[this] def tablePartitionCount(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val sql =
@@ -127,13 +131,13 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         else 0
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
-  }
+  }*/
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
 
-    val partitionCount = tablePartitionCount(startTimestamp, stopTimestamp)
+    //val partitionCount = tablePartitionCount(startTimestamp, stopTimestamp)
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
 
@@ -148,29 +152,39 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
-        results.zipWithIndex.flatMap {
-          case (columns, rowIndex) =>
-            val newSchema =
-              if (schema.isEmpty)
-                columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-              else schema
+        results.zipWithIndex
+          /*.filter {
+            case (_, index) =>
+              val offset: Option[JDBCOffsetInfo] =
+                offsetCache.readOffset(tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
+              index >= offset.getOrElse(JDBCOffsetInfo(0, false)).value
+          }*/
+          .flatMap {
+            case (columns, rowIndex) =>
+              val newSchema =
+                if (schema.isEmpty)
+                  columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+                else schema
 
-            val isCompleted = rowIndex == (partitionCount - 1)
-            val offset      = JDBCOffsetInfo(rowIndex, isCompleted)
+              //val isCompleted = rowIndex == (partitionCount - 1)
+              val offset      = JDBCOffsetInfo(rowIndex, true)
 
-            offsetCache.update(timestampTablePartition, offset)
-            topics.map(
-              RowSourceRecord
-                .builder()
-                .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> timestampTablePartition).asJava)
-                //Writer Offset
-                .sourceOffset(Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> JDBCOffsetInfo(rowIndex, false).toString).asJava)
-                //Create Ohara Row
-                .row(row(newSchema, columns))
-                .topicKey(_)
-                .build()
-            )
-        }.toSeq
+              offsetCache.update(timestampTablePartition, offset)
+              topics.map(
+                RowSourceRecord
+                  .builder()
+                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> timestampTablePartition).asJava)
+                  //Writer Offset
+                  .sourceOffset(
+                    Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> JDBCOffsetInfo(rowIndex, true).toString).asJava
+                  )
+                  //Create Ohara Row
+                  .row(row(newSchema, columns))
+                  .topicKey(_)
+                  .build()
+              )
+          }
+          .toSeq
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
   }
