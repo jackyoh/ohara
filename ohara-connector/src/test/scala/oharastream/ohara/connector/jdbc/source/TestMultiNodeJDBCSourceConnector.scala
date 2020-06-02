@@ -58,6 +58,10 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
       s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 00:00:00', 'a11', 'a12', 1)"
     )
 
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 01:00:00', 'a11', 'a12', 1)"
+    )
+
     /*statement.executeUpdate(
       s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2019-05-20 01:00:00', 'a11', 'a12', 11)"
     )
@@ -129,8 +133,13 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     }
     println(s"Record size is ${records.size}")
     println("================================")
-    result(connectorAdmin.delete(connectorKey))
-    result(
+    result(connectorAdmin.pause(connectorKey))
+    val statement: Statement = db.connection.createStatement()
+
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 02:00:00', 'a11', 'a12', 1)"
+    )
+    /*result(
       connectorAdmin
         .connectorCreator()
         .connectorKey(connectorKey)
@@ -139,9 +148,20 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         .numberOfTasks(3)
         .settings(props.toMap)
         .create()
-    )
+    )*/
+    result(connectorAdmin.resume(connectorKey))
     TimeUnit.SECONDS.sleep(15)
 
+    val records2 = pollData(topicKey, 50 seconds, 2)
+    println("================================")
+    records2.foreach { record =>
+      record.key().get().cells().forEach { x =>
+        println(s"${x.name()}   ${x.value()}")
+      }
+      println("")
+    }
+    println(s"Record size is ${records2.size}")
+    println("================================")
   }
   private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
 
@@ -158,6 +178,7 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
       .keySerializer(Serializer.ROW)
       .valueSerializer(Serializer.BYTES)
       .build()
+    consumer.seekToBeginning()
     try consumer.poll(java.time.Duration.ofNanos(timeout.toNanos), size).asScala.toSeq
     finally consumer.close()
   }

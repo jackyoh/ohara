@@ -56,7 +56,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
     startTimestamp = firstTimestampValue
-    stopTimestamp = new Timestamp(startTimestamp.getTime() + 86400000)
+    stopTimestamp = new Timestamp(startTimestamp.getTime() + 3600000)
   }
 
   override protected def pollRecords(): util.List[RowSourceRecord] = {
@@ -68,7 +68,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
           queryData(startTimestamp, stopTimestamp).asJava
         else Seq.empty.asJava
       startTimestamp = stopTimestamp
-      stopTimestamp = new Timestamp(startTimestamp.getTime() + 86400000)
+      stopTimestamp = new Timestamp(startTimestamp.getTime() + 3600000)
       resultRecords
     }
   }
@@ -85,18 +85,6 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(statement)
   }
 
-  /*private[this] def partitionIsCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
-    val timestampTableParation =
-      tableTimestampParationKey(jdbcSourceConnectorConfig.dbTableName, startTimestamp, stopTimestamp)
-    offsetCache.loadIfNeed(rowContext, timestampTableParation)
-    val offset: Option[JDBCOffsetInfo] = offsetCache.readOffset(timestampTableParation)
-    offset
-      .map(
-        _.isCompleted
-      )
-      .getOrElse(false)
-  }*/
-
   private[this] def overCurrentTimestamp(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
@@ -112,25 +100,8 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(stmt)
   }
 
-  /*private[this] def tablePartitionCount(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val sql =
-      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
-
-    val statement = client.connection.prepareStatement(sql)
-    try {
-      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-      val resultSet = statement.executeQuery()
-      try {
-        if (resultSet.next()) resultSet.getInt(1)
-        else 0
-      } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
-  }*/
-
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
+    println(s"Start timestamp: ${startTimestamp}   Stop timestamp: ${stopTimestamp}")
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
 
@@ -151,37 +122,38 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
 
         offsetCache.loadIfNeed(rowContext, timestampTablePartition)
         val sourceRecords = results.zipWithIndex
-        .filter {
+          .filter {
             case (_, index) =>
               val offset: Option[JDBCOffsetInfo] =
                 offsetCache.readOffset(tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
-              index >= offset.getOrElse(JDBCOffsetInfo(0, false)).value
+              index >= offset.getOrElse(JDBCOffsetInfo(0)).index
           }
-        .flatMap {
-          case (columns, rowIndex) =>
-            val newSchema =
-              if (schema.isEmpty)
-                columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-              else schema
+          .flatMap {
+            case (columns, rowIndex) =>
+              // println(s"Start timestamp: ${startTimestamp}   Stop timestamp: ${stopTimestamp}  RowIndex: ${rowIndex + 1}")
+              val newSchema =
+                if (schema.isEmpty)
+                  columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+                else schema
 
-            //val isCompleted = rowIndex == (partitionCount - 1)
-            val offset = JDBCOffsetInfo(rowIndex + 1, true)
-            offsetCache.update(timestampTablePartition, offset)
+              val offset = JDBCOffsetInfo(rowIndex + 1)
+              offsetCache.update(timestampTablePartition, offset)
 
-            topics.map(
-              RowSourceRecord
-                .builder()
-                .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> timestampTablePartition).asJava)
-                //Writer Offset
-                .sourceOffset(
-                  Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> offset.toString).asJava
-                )
-                //Create Ohara Row
-                .row(row(newSchema, columns))
-                .topicKey(_)
-                .build()
-            )
-        }.toSeq
+              topics.map(
+                RowSourceRecord
+                  .builder()
+                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> timestampTablePartition).asJava)
+                  //Writer Offset
+                  .sourceOffset(
+                    Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> offset.toString).asJava
+                  )
+                  //Create Ohara Row
+                  .row(row(newSchema, columns))
+                  .topicKey(_)
+                  .build()
+              )
+          }
+          .toSeq
         sourceRecords
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
@@ -242,6 +214,10 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   }
 
   override protected def terminate(): Unit = {
-    // Nothing
+    val tableName           = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
+    startTimestamp = firstTimestampValue
+    stopTimestamp = new Timestamp(startTimestamp.getTime() + 3600000)
   }
 }
