@@ -35,6 +35,7 @@ import org.junit.{Before, Test}
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
   private[this] val db                  = Database.local()
@@ -128,6 +129,19 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     }
     println(s"Record size is ${records.size}")
     println("================================")
+    result(connectorAdmin.delete(connectorKey))
+    result(
+      connectorAdmin
+        .connectorCreator()
+        .connectorKey(connectorKey)
+        .connectorClass(classOf[MultiNodeJDBCSourceConnector])
+        .topicKey(topicKey)
+        .numberOfTasks(3)
+        .settings(props.toMap)
+        .create()
+    )
+    TimeUnit.SECONDS.sleep(15)
+
   }
   private[this] def result[T](future: Future[T]): T = Await.result(future, 10 seconds)
 
