@@ -123,13 +123,13 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       resultRecords.size shouldBe tableTotalCount.intValue()
 
       // Check the topic data is equals the database table
-      /*val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
       val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       val topicData: Seq[String] = resultRecords
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
         .toSeq
-      checkData(tableData, topicData)*/
+      checkData(tableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
       Releasable.close(statement)
@@ -172,14 +172,14 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       resultRecords.size shouldBe tableTotalCount.intValue()
 
       // Check the topic data is equals the database table
-      /*val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
 
       val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
       val topicData: Seq[String] = resultRecords
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
         .toSeq
-      checkData(tableData, topicData)*/
+      checkData(tableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
       Releasable.close(statement)
@@ -219,7 +219,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
       )
 
-      /*TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
+      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
       val topicData: Seq[String] = result
@@ -229,7 +229,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
       val resultTableData: Seq[String] =
         Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
-      checkData(resultTableData, topicData)*/
+      checkData(resultTableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
       Releasable.close(statement)
@@ -298,13 +298,13 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       .create()
   }
 
-  /*private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
+  private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
     tableData.zipWithIndex.foreach {
       case (record, index) => {
         record shouldBe topicData(index)
       }
     }
-  }*/
+  }
 
   private[this] def rowData(): Row = {
     Row.of(

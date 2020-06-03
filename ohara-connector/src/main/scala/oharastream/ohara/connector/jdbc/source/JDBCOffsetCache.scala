@@ -36,13 +36,13 @@ class JDBCOffsetCache {
     this.cache.put(tableTimestampPartition, value)
   }
 
-  def readOffset(tableTimestampPartition: String): Option[JDBCOffsetInfo] = {
-    this.cache.get(tableTimestampPartition)
+  def readOffset(tableTimestampPartition: String): JDBCOffsetInfo = {
+    this.cache.get(tableTimestampPartition).getOrElse(JDBCOffsetInfo(0))
   }
 
   private[this] def offsetValue(offset: Map[String, _]): JDBCOffsetInfo = {
-    val offsetInfo = offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().split(",")
-    JDBCOffsetInfo(offsetInfo.head.toInt, offsetInfo.last.toBoolean)
+    val index = offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().toInt
+    JDBCOffsetInfo(index)
   }
 }
 
@@ -51,6 +51,6 @@ object JDBCOffsetCache {
   private[source] val TABLE_OFFSET_KEY: String    = "jdbc.table.info"
 }
 
-case class JDBCOffsetInfo(index: Int, isCompleted: Boolean) {
-  override def toString(): String = s"$index,$isCompleted"
+case class JDBCOffsetInfo(index: Int) {
+  override def toString(): String = s"$index"
 }

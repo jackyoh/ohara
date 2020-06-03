@@ -56,7 +56,6 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     var startTimestamp      = tableFirstTimestampValue(tableName, timestampColumnName)
     var stopTimestamp       = new Timestamp(startTimestamp.getTime() + 86400000)
-    offsetCache.loadIfNeed(rowContext, tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
 
     while (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
       startTimestamp = stopTimestamp
@@ -100,12 +99,8 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-
-    // val partitionCount = tablePartitionCount(startTimestamp, stopTimestamp)
-    val resultCount = testTableCount(startTimestamp, stopTimestamp)
-    println(s"StartTimestamp: ${startTimestamp}    StopTimestamp: ${stopTimestamp}  Count: ${resultCount}")
     val sql =
-      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
+      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
 
     val statement = client.connection.prepareStatement(sql)
     try {
@@ -118,29 +113,23 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
-        val offset: Option[JDBCOffsetInfo] =
+        val offset: JDBCOffsetInfo =
           offsetCache.readOffset(tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
 
         val sourceRecords = results.zipWithIndex
           .filter {
             case (_, index) =>
-              //println(s"startTimestamp: ${startTimestamp}  stopTimestamp: ${stopTimestamp}  index:${index}")
-              index >= offset.getOrElse(JDBCOffsetInfo(0, false)).index
+              index >= offset.index
           }
           .flatMap {
             case (columns, rowIndex) =>
-              println(s"ROWINDEX IS ${rowIndex + 1}")
-
-              // println(s"Start timestamp: ${startTimestamp}   Stop timestamp: ${stopTimestamp}  RowIndex: ${rowIndex + 1}")
               val newSchema =
                 if (schema.isEmpty)
                   columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
                 else schema
-              val offset = JDBCOffsetInfo(rowIndex + 1, false)
-              //println(s"UPDATE: ${timestampTablePartition}    ${offset}")
-              // println(s"OFFSET IS ${offset}")
+              val offset = JDBCOffsetInfo(rowIndex + 1)
               offsetCache.update(timestampTablePartition, offset)
-              println(s"${row(newSchema, columns)}")
+
               topics.map(
                 RowSourceRecord
                   .builder()
@@ -158,7 +147,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
           .toSeq
 
         if (sourceRecords.isEmpty) {
-          val offset = JDBCOffsetInfo(0, true)
+          val offset = JDBCOffsetInfo(0)
           offsetCache.update(timestampTablePartition, offset)
         }
         sourceRecords
@@ -175,15 +164,29 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def partitionIsCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
-    val timestampTableParation =
-      tableTimestampParationKey(jdbcSourceConnectorConfig.dbTableName, startTimestamp, stopTimestamp)
-    offsetCache.loadIfNeed(rowContext, timestampTableParation)
-    val offset: Option[JDBCOffsetInfo] = offsetCache.readOffset(timestampTableParation)
-    offset
-      .map(
-        _.isCompleted
-      )
-      .getOrElse(false)
+    val tableName           = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+    offsetCache.loadIfNeed(rowContext, tablePartition)
+    val sql =
+      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
+
+    val statement = client.connection.prepareStatement(sql)
+    try {
+      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      val resultSet = statement.executeQuery()
+      try {
+        val dbCount =
+          if (resultSet.next()) resultSet.getInt(1)
+          else 0
+
+        val offset: JDBCOffsetInfo =
+          offsetCache.readOffset(tablePartition)
+        val offsetIndex = offset.index
+        offsetIndex == dbCount
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(statement)
   }
 
   private[this] def isRunningTask(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
@@ -198,42 +201,6 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
     rdbTables.head.columns
   }
-
-  private[this] def testTableCount(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val sql =
-      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
-
-    val statement = client.connection.prepareStatement(sql)
-    try {
-      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-      val resultSet = statement.executeQuery()
-      try {
-        if (resultSet.next()) resultSet.getInt(1)
-        else 0
-      } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
-  }
-
-  /*private[this] def tablePartitionCount(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val sql =
-      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
-
-    val statement = client.connection.prepareStatement(sql)
-    try {
-      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-      val resultSet = statement.executeQuery()
-      try {
-        if (resultSet.next()) resultSet.getInt(1)
-        else 0
-      } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
-  }*/
 
   private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row = {
     Row.of(
@@ -268,5 +235,5 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
       .getOrElse(throw new RuntimeException(s"Database Table not have the $schemaColumnName column"))
   }
 
-  override protected def terminate(): Unit = {}
+  override protected def terminate(): Unit = Releasable.close(client)
 }
