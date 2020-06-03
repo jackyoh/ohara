@@ -11,4 +11,18 @@ class TestCurrentTimestamp extends OharaTest {
     val currentTime = new Timestamp(CommonUtils.current())
     println(currentTime)
   }
+
+  @Test
+  def test2(): Unit = {
+    val a = Seq()
+    a.zipWithIndex
+      .filter {
+        case (_, index) =>
+          println(s"Index is ${index}")
+          index >= 2
+      }
+      .foreach {
+        case (_, _) => println("aaa")
+      }
+  }
 }
