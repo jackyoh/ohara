@@ -258,24 +258,14 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello')"
       )
+      //TimeUnit.SECONDS.sleep(3)
+      //statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello'")
+      statement.executeUpdate(s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello1')")
       TimeUnit.SECONDS.sleep(10)
-      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello'")
-      TimeUnit.SECONDS.sleep(10)
-      val expectedRow = tableTotalCount.intValue() + 2
+      statement.executeUpdate(s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello2')")
+      val expectedRow = tableTotalCount.intValue() + 3
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
-      //result.size shouldBe expectedRow // Because update and insert the different timestamp
-      println("=================================================")
-      result.foreach { x =>
-        println(x.key().get().cell(timestampColumnName).value())
-      }
-      println("==================================================")
-      val testStatement = client.connection.createStatement()
-      val testResult    = testStatement.executeQuery(s"SELECT * FROM $tableName")
-      println("===DB===")
-      while (testResult.next()) {
-        println(s"${testResult.getTimestamp(timestampColumnName)}   ${testResult.getString(queryColumn)}")
-      }
-      println("===DB-FINALLY===")
+      result.size shouldBe expectedRow // Because update and insert the different timestamp
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
       Releasable.close(statement)

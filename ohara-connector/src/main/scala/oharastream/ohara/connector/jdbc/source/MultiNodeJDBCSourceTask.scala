@@ -56,13 +56,16 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     var startTimestamp      = tableFirstTimestampValue(tableName, timestampColumnName)
     var stopTimestamp       = new Timestamp(startTimestamp.getTime() + 86400000)
-
+    val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+    offsetCache.loadIfNeed(rowContext, tablePartition)
     while (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
       startTimestamp = stopTimestamp
       stopTimestamp = new Timestamp(startTimestamp.getTime() + 86400000)
 
       if (overCurrentTimestamp(startTimestamp, stopTimestamp)) {
-        return queryData(startTimestamp, stopTimestamp).asJava
+        if (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
+          return Seq.empty.asJava
+        } else return queryData(startTimestamp, stopTimestamp).asJava
       }
     }
     queryData(startTimestamp, stopTimestamp).asJava
@@ -166,8 +169,8 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
   private[this] def partitionIsCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
-    offsetCache.loadIfNeed(rowContext, tablePartition)
+
+
     val sql =
       s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
 
@@ -180,10 +183,11 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         val dbCount =
           if (resultSet.next()) resultSet.getInt(1)
           else 0
-
+        val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
         val offset: JDBCOffsetInfo =
           offsetCache.readOffset(tablePartition)
         val offsetIndex = offset.index
+
         offsetIndex == dbCount
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)

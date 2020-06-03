@@ -35,7 +35,7 @@ import org.junit.{Before, Test}
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
   private[this] val db                  = Database.local()
@@ -55,11 +55,11 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     val statement: Statement = db.connection.createStatement()
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 00:00:00', 'a11', 'a12', 1)"
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-05-20 00:00:00', 'a11', 'a12', 1)"
     )
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 01:00:00', 'a11', 'a12', 1)"
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-05-20 01:00:00', 'a11', 'a12', 1)"
     )
 
     /*statement.executeUpdate(
@@ -133,11 +133,11 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
     }
     println(s"Record size is ${records.size}")
     println("================================")
-    result(connectorAdmin.pause(connectorKey))
+    //result(connectorAdmin.pause(connectorKey))
     val statement: Statement = db.connection.createStatement()
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES('2020-04-20 02:00:00', 'a11', 'a12', 1)"
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES(NOW(), 'a11', 'a12', 1)"
     )
     /*result(
       connectorAdmin
@@ -149,9 +149,12 @@ class TestMultiNodeJDBCSourceConnector extends With3Brokers3Workers {
         .settings(props.toMap)
         .create()
     )*/
-    result(connectorAdmin.resume(connectorKey))
+    //result(connectorAdmin.resume(connectorKey))
     TimeUnit.SECONDS.sleep(15)
-
+    statement.executeUpdate(
+      s"INSERT INTO $tableName(column1, column2, column3, column4) VALUES(NOW(), 'a11', 'a12', 1)"
+    )
+    TimeUnit.SECONDS.sleep(5)
     val records2 = pollData(topicKey, 50 seconds, 2)
     println("================================")
     records2.foreach { record =>
