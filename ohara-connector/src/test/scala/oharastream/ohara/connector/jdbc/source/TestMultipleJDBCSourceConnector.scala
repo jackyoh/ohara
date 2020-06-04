@@ -74,7 +74,7 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers {
     statement.executeUpdate(s"INSERT INTO $tableName(column1) VALUES('2018-09-01 00:00:05')")
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 MINUTE, 'a41', 'a42', 4)"
+      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
     )
     statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
@@ -91,7 +91,7 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers {
         .connectorKey(connectorKey1)
         .connectorClass(classOf[JDBCSourceConnector])
         .topicKey(topicKey)
-        .numberOfTasks(1)
+        .numberOfTasks(3)
         .settings(props.toMap)
         .create()
     )
@@ -173,7 +173,9 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers {
         DB_USERNAME           -> db.user,
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

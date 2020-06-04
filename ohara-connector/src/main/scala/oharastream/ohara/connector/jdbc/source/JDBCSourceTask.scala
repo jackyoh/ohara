@@ -15,135 +15,192 @@
  */
 
 package oharastream.ohara.connector.jdbc.source
-import java.sql.Timestamp
 
-import com.typesafe.scalalogging.Logger
+import java.sql.Timestamp
+import java.util
+
+import oharastream.ohara.client.configurator.v0.InspectApi.{RdbColumn, RdbTable}
+import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.connector.jdbc.util.ColumnInfo
-import oharastream.ohara.kafka.connector._
+import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
+import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
+import oharastream.ohara.kafka.connector.{RowSourceRecord, RowSourceTask, TaskSetting}
 
 import scala.jdk.CollectionConverters._
-import scala.concurrent.duration.Duration
 
 class JDBCSourceTask extends RowSourceTask {
-  private[this] lazy val logger                                          = Logger(getClass.getName)
   private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
-  private[this] var dbTableDataProvider: DBTableDataProvider             = _
-  private[this] var schema: Seq[Column]                                  = _
+  private[this] var client: DatabaseClient                               = _
+  private[this] var dbProduct: String                                    = _
+  private[this] var offsetCache: JDBCOffsetCache                         = _
   private[this] var topics: Seq[TopicKey]                                = _
-  private[this] var inMemoryOffsets: Offsets                             = _
-  private[this] var topicOffsets: Offsets                                = _
-  private[this] var lastPoll: Long                                       = -1
-  private[this] var needRecovery: Boolean                                = false
+  private[this] var schema: Seq[Column]                                  = _
+  private[this] val TIMESTAMP_PARATION_RNAGE: Int                        = 86400000 // 1 day
 
-  /**
-    * Start the Task. This should handle any configuration parsing and one-time setup from the task.
-    *
-    * @param settings initial configuration
-    */
   override protected[source] def run(settings: TaskSetting): Unit = {
-    logger.info("Starting JDBC Source Connector")
     jdbcSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
-
-    dbTableDataProvider = new DBTableDataProvider(jdbcSourceConnectorConfig)
-
-    schema = settings.columns.asScala.toSeq
+    client = DatabaseClient.builder
+      .url(jdbcSourceConnectorConfig.dbURL)
+      .user(jdbcSourceConnectorConfig.dbUserName)
+      .password(jdbcSourceConnectorConfig.dbPassword)
+      .build
+    dbProduct = client.connection.getMetaData.getDatabaseProductName
+    offsetCache = new JDBCOffsetCache()
     topics = settings.topicKeys().asScala.toSeq
-    val tableName = jdbcSourceConnectorConfig.dbTableName
-    inMemoryOffsets = new Offsets(rowContext, tableName)
-    topicOffsets = new Offsets(rowContext, tableName)
-    needRecovery = true
+    schema = settings.columns.asScala.toSeq
   }
 
-  /**
-    * Poll this SourceTask for new records. This method should block if no data is currently available.
-    *
-    * @return a array from RowSourceRecord
-    */
-  override protected[source] def pollRecords(): java.util.List[RowSourceRecord] =
-    try {
-      val current                 = CommonUtils.current()
-      val frequenceTime: Duration = jdbcSourceConnectorConfig.jdbcFrequenceTime
+  override protected def pollRecords(): util.List[RowSourceRecord] = {
+    val tableName           = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    var startTimestamp      = tableFirstTimestampValue(tableName, timestampColumnName)
+    var stopTimestamp       = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARATION_RNAGE)
+    val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+    offsetCache.loadIfNeed(rowContext, tablePartition)
+    while (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
+      startTimestamp = stopTimestamp
+      stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARATION_RNAGE)
 
-      if (isRunningQuery(current, lastPoll, frequenceTime)) {
-        val tableName: String           = jdbcSourceConnectorConfig.dbTableName
-        val timestampColumnName: String = jdbcSourceConnectorConfig.timestampColumnName
-        val flushDataSize: Int          = jdbcSourceConnectorConfig.jdbcFlushDataSize
-        var inMemoryOffset              = inMemoryOffsets.readOffset()
-        var topicOffset                 = topicOffsets.readOffset()
-        val resultSet: QueryResultIterator =
-          dbTableDataProvider
-            .executeQuery(Timestamp.valueOf(parseOffsetInfo(inMemoryOffset).timestamp))
-
-        try if (needRecovery) {
-          //Recovery and update offset in the memory
-          val recoveryQueryRecordCount = parseOffsetInfo(topicOffset).queryRecordCount
-          resultSet.slice(0, recoveryQueryRecordCount).zipWithIndex.foreach {
-            case (columns, index) =>
-              val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
-              inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, index + 1))
-          }
-        } finally needRecovery = false
-
-        lastPoll = current
-        Option(resultSet.slice(0, flushDataSize).flatMap { columns =>
-          val newSchema =
-            if (schema.isEmpty)
-              columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-            else schema
-
-          val timestampColumnValue = dbTimestampColumnValue(columns, timestampColumnName)
-
-          if (!timestampColumnValue.equals(parseOffsetInfo(inMemoryOffset).timestamp)) {
-            val previousTimestamp = parseOffsetInfo(inMemoryOffset).timestamp
-            topicOffset = offsetStringResult(OffsetInfo(previousTimestamp, 1))
-            inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, 1))
-          } else {
-            val queryRecordCount = parseOffsetInfo(inMemoryOffset).queryRecordCount + 1
-            inMemoryOffset = offsetStringResult(OffsetInfo(timestampColumnValue, queryRecordCount))
-            topicOffset = offsetStringResult(OffsetInfo(parseOffsetInfo(topicOffset).timestamp, queryRecordCount))
-          }
-          inMemoryOffsets.updateOffset(inMemoryOffset)
-          logger.debug(s"Topic offset is $topicOffset and Memory offset is $inMemoryOffset")
-
-          topics.map(
-            RowSourceRecord
-              .builder()
-              .sourcePartition(JDBCSourceTask.partition(tableName).asJava)
-              //Writer Offset
-              .sourceOffset(JDBCSourceTask.offset(topicOffset).asJava)
-              //Create Ohara Row
-              .row(row(newSchema, columns))
-              .topicKey(_)
-              .build()
-          )
-        }).map { rowSourceRecords =>
-            if (rowSourceRecords.isEmpty) {
-              inMemoryOffsets.updateOffset(inMemoryOffset)
-              dbTableDataProvider.releaseResultSet(true)
-              Seq.empty
-            } else rowSourceRecords
-          }
-          .get
-          .toList
-          .asJava
-      } else {
-        Seq.empty.asJava
+      if (overCurrentTimestamp(startTimestamp, stopTimestamp)) {
+        if (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
+          return Seq.empty.asJava
+        } else return queryData(startTimestamp, stopTimestamp).asJava
       }
-    } catch {
-      case e: Throwable =>
-        logger.error(e.getMessage, e)
-        Seq.empty.asJava
     }
+    queryData(startTimestamp, stopTimestamp).asJava
+  }
 
-  /**
-    * Signal this SourceTask to stop. In SourceTasks, this method only needs to signal to the task that it should stop
-    * trying to poll for new data and interrupt any outstanding poll() requests. It is not required that the task has
-    * fully stopped. Note that this method necessarily may be invoked from a different thread than pollRecords() and commitOffsets()
-    */
-  override protected def terminate(): Unit = Releasable.close(dbTableDataProvider)
+  private[this] def tableFirstTimestampValue(tableName: String, timestampColumnName: String): Timestamp = {
+    val statement = client.connection.createStatement()
+    try {
+      val resultSet =
+        statement.executeQuery(s"SELECT $timestampColumnName FROM $tableName ORDER BY $timestampColumnName")
+      try {
+        if (!resultSet.next()) new Timestamp(CommonUtils.current())
+        else resultSet.getTimestamp(timestampColumnName)
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(statement)
+  }
+
+  private[this] def overCurrentTimestamp(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
+    startTimestamp.getTime()
+    val query = dbProduct.toLowerCase match {
+      case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
+      case _              => "SELECT CURRENT_TIMESTAMP;"
+    }
+    val stmt = client.connection.createStatement()
+    try {
+      val rs = stmt.executeQuery(query)
+      try {
+        val currentTimestamp = if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
+        stopTimestamp.getTime > currentTimestamp.getTime
+      } finally Releasable.close(rs)
+    } finally Releasable.close(stmt)
+  }
+
+  private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
+    val tableName           = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val sql =
+      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
+
+    val prepareStatement = client.connection.prepareStatement(sql)
+    try {
+      prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
+      prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+      prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      val resultSet = prepareStatement.executeQuery()
+      try {
+        val tableTimestampPartition                    = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+        val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
+        val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
+        val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
+
+        val offset: JDBCOffsetInfo =
+          offsetCache.readOffset(tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
+
+        results.zipWithIndex
+          .filter {
+            case (_, index) =>
+              index >= offset.index
+          }
+          .take(1000)
+          .flatMap {
+            case (columns, rowIndex) =>
+              val newSchema =
+                if (schema.isEmpty)
+                  columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+                else schema
+              val offset = JDBCOffsetInfo(rowIndex + 1)
+              offsetCache.update(tableTimestampPartition, offset)
+
+              topics.map(
+                RowSourceRecord
+                  .builder()
+                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> tableTimestampPartition).asJava)
+                  //Writer Offset
+                  .sourceOffset(
+                    Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> offset.toString).asJava
+                  )
+                  //Create Ohara Row
+                  .row(row(newSchema, columns))
+                  .topicKey(_)
+                  .build()
+              )
+          }
+          .toSeq
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(prepareStatement)
+  }
+
+  private[this] def tableTimestampParationKey(
+    tableName: String,
+    startTimestamp: Timestamp,
+    stopTimestamp: Timestamp
+  ): String = {
+    s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
+  }
+
+  private[this] def partitionIsCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
+    val tableName           = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+
+    val sql =
+      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
+
+    val statement = client.connection.prepareStatement(sql)
+    try {
+      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      val resultSet = statement.executeQuery()
+      try {
+        val dbCount =
+          if (resultSet.next()) resultSet.getInt(1)
+          else 0
+        val tablePartition = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+        val offset: JDBCOffsetInfo =
+          offsetCache.readOffset(tablePartition)
+        val offsetIndex = offset.index
+
+        offsetIndex == dbCount
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(statement)
+  }
+
+  private[this] def isRunningTask(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
+    val tableName         = jdbcSourceConnectorConfig.dbTableName
+    val taskTotal         = jdbcSourceConnectorConfig.taskTotal
+    val taskHash          = jdbcSourceConnectorConfig.taskHash
+    val partitionHashCode = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp).hashCode()
+    Math.abs(partitionHashCode) % taskTotal == taskHash
+  }
+
+  private[source] def columns(tableName: String): Seq[RdbColumn] = {
+    val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
+    rdbTables.head.columns
+  }
 
   private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row = {
     Row.of(
@@ -178,52 +235,5 @@ class JDBCSourceTask extends RowSourceTask {
       .getOrElse(throw new RuntimeException(s"Database Table not have the $schemaColumnName column"))
   }
 
-  private[source] def dbTimestampColumnValue(dbColumnInfo: Seq[ColumnInfo[_]], timestampColumnName: String): String =
-    dbColumnInfo
-      .find(_.columnName == timestampColumnName)
-      .map(_.value.asInstanceOf[Timestamp].toString)
-      .getOrElse(
-        throw new RuntimeException(s"$timestampColumnName not in ${jdbcSourceConnectorConfig.dbTableName} table.")
-      )
-
-  private[source] def isRunningQuery(currentTime: Long, lastPoll: Long, frequenceTime: Duration): Boolean =
-    (currentTime - lastPoll) > frequenceTime.toMillis
-
-  /**
-    * Offset format is ${TimestampOffset},${QueryRecordCount}
-    * Example: 2018-09-01 00:00:00,0
-    * @param offsetInfo
-    * @return offset value
-    */
-  private[this] def offsetStringResult(offsetInfo: OffsetInfo): String = {
-    offsetInfo.timestamp + "," + offsetInfo.queryRecordCount
-  }
-
-  private[this] def parseOffsetInfo(offsetString: String): OffsetInfo = {
-    val offset = offsetString.split(",")
-    OffsetInfo(offset.head, offset.last.toInt)
-  }
-
-  private class Offsets(context: RowSourceContext, tableName: String) {
-    private[this] val offsets: Map[String, _] = context.offset(JDBCSourceTask.partition(tableName).asJava).asScala.toMap
-    private[this] var cache: Map[String, String] =
-      if (offsets.isEmpty) Map(tableName -> offsetStringResult(OffsetInfo(new Timestamp(0).toString, 0)))
-      else Map(tableName                 -> offsets(JDBCSourceTask.DB_TABLE_OFFSET_KEY).asInstanceOf[String])
-
-    private[source] def updateOffset(timestamp: String): Unit = {
-      this.cache = Map(tableName -> timestamp)
-    }
-
-    private[source] def readOffset(): String = this.cache(tableName)
-  }
-
-  private[this] case class OffsetInfo(timestamp: String, queryRecordCount: Int)
-}
-
-object JDBCSourceTask {
-  private[source] val DB_TABLE_NAME_KEY   = "db.table.name"
-  private[source] val DB_TABLE_OFFSET_KEY = "db.table.offset"
-
-  def partition(tableName: String): Map[String, _] = Map(DB_TABLE_NAME_KEY   -> tableName)
-  def offset(timestamp: String): Map[String, _]    = Map(DB_TABLE_OFFSET_KEY -> timestamp)
+  override protected def terminate(): Unit = Releasable.close(client)
 }

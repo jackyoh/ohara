@@ -140,7 +140,7 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers {
             .connectorKey(connectorKey)
             .connectorClass(classOf[JDBCSourceConnector])
             .topicKey(topicKey)
-            .numberOfTasks(1)
+            .numberOfTasks(3)
             .settings(props.toMap)
             .create()
         )
@@ -186,7 +186,9 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers {
         DB_TABLENAME          -> tableName,
         TIMESTAMP_COLUMN_NAME -> timestampColumnName,
         JDBC_FETCHDATA_SIZE   -> "1",
-        JDBC_FLUSHDATA_SIZE   -> "1"
+        JDBC_FLUSHDATA_SIZE   -> "1",
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

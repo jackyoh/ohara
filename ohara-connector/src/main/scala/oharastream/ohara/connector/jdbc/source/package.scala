@@ -27,7 +27,8 @@ package object source {
   val DB_SCHEMA_PATTERN: String             = "source.schema.pattern"
   val JDBC_FETCHDATA_SIZE: String           = "source.jdbc.fetch.size"
   val JDBC_FLUSHDATA_SIZE: String           = "source.jdbc.flush.size"
-  val JDBC_FREQUENCE_TIME: String           = "source.jdbc.frequence.time"
+  val TASK_TOTAL_KEY                        = "task.total"
+  val TASK_HASH_KEY                         = "tash.hash"
   val MODE: String                          = "mode"
   val MODE_DEFAULT                          = "timestamp"
   val JDBC_FETCHDATA_SIZE_DEFAULT: Int      = 1000

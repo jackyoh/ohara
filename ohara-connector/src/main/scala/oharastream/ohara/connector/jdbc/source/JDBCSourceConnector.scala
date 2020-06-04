@@ -16,17 +16,16 @@
 
 package oharastream.ohara.connector.jdbc.source
 
+import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
+import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.setting.SettingDef
-import oharastream.ohara.kafka.connector._
-import org.slf4j.{Logger, LoggerFactory}
+import oharastream.ohara.common.util.Releasable
 
 import scala.jdk.CollectionConverters._
+import oharastream.ohara.kafka.connector.{RowSourceConnector, RowSourceTask, TaskSetting}
 
-/**
-  * This class for JDBC Source connector plugin
-  */
 class JDBCSourceConnector extends RowSourceConnector {
   private[this] var settings: TaskSetting = _
 
@@ -40,53 +39,50 @@ class JDBCSourceConnector extends RowSourceConnector {
     this.settings = settings
 
     val jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
-    val tableName                                            = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName                                  = jdbcSourceConnectorConfig.timestampColumnName
+    val tableName: String                                    = jdbcSourceConnectorConfig.dbTableName
+    val timestampColumnName: String                          = jdbcSourceConnectorConfig.timestampColumnName
 
-    val dbTableDataProvider: DBTableDataProvider = new DBTableDataProvider(jdbcSourceConnectorConfig)
+    val client = DatabaseClient.builder
+      .url(jdbcSourceConnectorConfig.dbURL)
+      .user(jdbcSourceConnectorConfig.dbUserName)
+      .password(jdbcSourceConnectorConfig.dbPassword)
+      .build
     try {
-      checkTimestampColumnName(timestampColumnName)
+      checkTimestampColumnNameFormat(timestampColumnName)
 
-      if (!dbTableDataProvider.isTableExists(tableName))
+      if (client.tableQuery.tableName(tableName).execute().isEmpty)
         throw new NoSuchElementException(s"$tableName table is not found.")
-    } finally dbTableDataProvider.close()
+    } finally Releasable.close(client)
   }
 
   /**
-    * Returns the RowSourceTask implementation for this Connector.
+    * Returns the RowSourceTask implementation for this JDBC source Connector.
     *
     * @return a JDBCSourceTask class
     */
-  override protected def taskClass(): Class[_ <: RowSourceTask] = {
-    classOf[JDBCSourceTask]
-  }
+  override def taskClass(): Class[_ <: RowSourceTask] = classOf[JDBCSourceTask]
 
   /**
-    * Return the settings for source task.
+    * Return the settings for the jdbc source task.
     *
     * @return a seq from settings
     */
-  override protected def taskSettings(maxTasks: Int): java.util.List[TaskSetting] = {
-    //TODO
-    Seq(settings).asJava
+  override protected def taskSettings(maxTasks: Int): util.List[TaskSetting] = {
+    Seq
+      .fill(maxTasks)(settings)
+      .zipWithIndex
+      .map {
+        case (setting, index) =>
+          setting.append(Map(TASK_TOTAL_KEY -> maxTasks.toString, TASK_HASH_KEY -> index.toString).asJava)
+      }
+      .asJava
   }
 
   /**
     * stop this connector
     */
   override protected def terminate(): Unit = {
-    //TODO
-  }
-
-  protected[jdbc] def checkTimestampColumnName(timestampColumnName: String): Unit = {
-    if (timestampColumnName == null)
-      throw new NoSuchElementException(s"Timestamp column is null, Please input timestamp type column name.")
-
-    if (timestampColumnName.isEmpty)
-      throw new NoSuchElementException(s"Timestamp column is empty, Please input timestamp type column name.")
-
-    if (!timestampColumnName.matches("^[a-zA-Z]{1}.*"))
-      throw new IllegalArgumentException("Your column name input error, Please checkout your column name.")
+    // Nothing
   }
 
   /**
@@ -174,18 +170,17 @@ class JDBCSourceConnector extends RowSourceConnector {
         .key(JDBC_FLUSHDATA_SIZE)
         .optional(JDBC_FLUSHDATA_SIZE_DEFAULT)
         .orderInGroup(counter.getAndIncrement())
-        .build(),
-      JDBC_FREQUENCE_TIME -> SettingDef
-        .builder()
-        .displayName("Fetch data frequence")
-        .documentation("Setting fetch data frequency from database")
-        .key(JDBC_FREQUENCE_TIME)
-        .optional(java.time.Duration.ofMillis(JDBC_FREQUENCE_TIME_DEFAULT.toMillis))
-        .orderInGroup(counter.getAndIncrement())
         .build()
     ).asJava
-}
 
-object JDBCSourceConnector {
-  val LOG: Logger = LoggerFactory.getLogger(classOf[JDBCSourceConnector])
+  protected[jdbc] def checkTimestampColumnNameFormat(timestampColumnName: String): Unit = {
+    if (timestampColumnName == null)
+      throw new NoSuchElementException(s"Timestamp column is null, Please input timestamp type column name.")
+
+    if (timestampColumnName.isEmpty)
+      throw new NoSuchElementException(s"Timestamp column is empty, Please input timestamp type column name.")
+
+    if (!timestampColumnName.matches("^[a-zA-Z]{1}.*"))
+      throw new IllegalArgumentException("Your column name input error, Please checkout your column name.")
+  }
 }

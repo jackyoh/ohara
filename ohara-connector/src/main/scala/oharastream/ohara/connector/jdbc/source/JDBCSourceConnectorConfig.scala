@@ -19,8 +19,6 @@ package oharastream.ohara.connector.jdbc.source
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.kafka.connector.TaskSetting
 
-import scala.concurrent.duration.Duration
-
 /**
   * This class is getting property value
   */
@@ -34,8 +32,9 @@ case class JDBCSourceConnectorConfig(
   mode: String,
   jdbcFetchDataSize: Int,
   jdbcFlushDataSize: Int,
-  jdbcFrequenceTime: Duration,
-  timestampColumnName: String
+  timestampColumnName: String,
+  taskTotal: Int,
+  taskHash: Int
 ) {
   def toMap: Map[String, String] =
     Map(
@@ -46,8 +45,9 @@ case class JDBCSourceConnectorConfig(
       MODE                  -> mode,
       JDBC_FETCHDATA_SIZE   -> jdbcFetchDataSize.toString,
       JDBC_FLUSHDATA_SIZE   -> jdbcFlushDataSize.toString,
-      JDBC_FREQUENCE_TIME   -> toJavaDuration(jdbcFrequenceTime).toString,
-      TIMESTAMP_COLUMN_NAME -> timestampColumnName
+      TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+      TASK_TOTAL_KEY        -> taskTotal.toString,
+      TASK_HASH_KEY         -> taskHash.toString
     ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN -> s)).getOrElse(Map.empty) ++ dbSchemaPattern
       .map(s => Map(DB_SCHEMA_PATTERN                     -> s))
       .getOrElse(Map.empty)
@@ -65,9 +65,9 @@ object JDBCSourceConnectorConfig {
       mode = settings.stringOption(MODE).orElse(MODE_DEFAULT),
       jdbcFetchDataSize = settings.intOption(JDBC_FETCHDATA_SIZE).orElse(JDBC_FETCHDATA_SIZE_DEFAULT),
       jdbcFlushDataSize = settings.intOption(JDBC_FLUSHDATA_SIZE).orElse(JDBC_FLUSHDATA_SIZE_DEFAULT),
-      jdbcFrequenceTime = Option(settings.durationOption(JDBC_FREQUENCE_TIME).orElse(null))
-        .fold(JDBC_FREQUENCE_TIME_DEFAULT)(toScalaDuration),
-      timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME)
+      timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME),
+      taskTotal = settings.intValue(TASK_TOTAL_KEY),
+      taskHash = settings.intValue(TASK_HASH_KEY)
     )
   }
 }

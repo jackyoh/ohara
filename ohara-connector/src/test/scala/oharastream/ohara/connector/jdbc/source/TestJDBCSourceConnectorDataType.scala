@@ -193,7 +193,9 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
         DB_USERNAME           -> db.user,
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

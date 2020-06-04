@@ -255,10 +255,13 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
     try {
       TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
       statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello')"
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello1')"
       )
-      TimeUnit.SECONDS.sleep(3)
-      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello'")
+      TimeUnit.SECONDS.sleep(5)
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello2')"
+      )
+      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello2'")
 
       val expectedRow = tableTotalCount.intValue() + 2
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
@@ -280,7 +283,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       .connectorKey(connectorKey)
       .connectorClass(classOf[JDBCSourceConnector])
       .topicKey(topicKey)
-      .numberOfTasks(1)
+      .numberOfTasks(3)
       .settings(jdbcSourceConnectorProps.toMap)
       .create()
   }
@@ -308,7 +311,9 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         DB_USERNAME           -> db.user,
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

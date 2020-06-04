@@ -76,7 +76,7 @@ class TestJDBCSourceConnector extends With3Brokers3Workers {
     statement.executeUpdate(s"INSERT INTO $tableName(column1) VALUES('2018-09-01 00:00:05')")
 
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 MINUTE, 'a41', 'a42', 4)"
+      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
     )
     statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
@@ -94,7 +94,7 @@ class TestJDBCSourceConnector extends With3Brokers3Workers {
         .connectorKey(connectorKey)
         .connectorClass(classOf[JDBCSourceConnector])
         .topicKey(topicKey)
-        .numberOfTasks(1)
+        .numberOfTasks(3)
         .settings(props.toMap)
         .create()
     )
@@ -151,7 +151,7 @@ class TestJDBCSourceConnector extends With3Brokers3Workers {
     val jdbcSourceConnector: JDBCSourceConnector = new JDBCSourceConnector()
 
     intercept[NoSuchElementException] {
-      jdbcSourceConnector.checkTimestampColumnName("")
+      jdbcSourceConnector.checkTimestampColumnNameFormat("")
     }
   }
 
@@ -160,25 +160,25 @@ class TestJDBCSourceConnector extends With3Brokers3Workers {
     val jdbcSourceConnector: JDBCSourceConnector = new JDBCSourceConnector()
 
     intercept[NoSuchElementException] {
-      jdbcSourceConnector.checkTimestampColumnName(null)
+      jdbcSourceConnector.checkTimestampColumnNameFormat(null)
     }
   }
 
   @Test
   def testTimestampColumnName(): Unit = {
     val jdbcSourceConnector: JDBCSourceConnector = new JDBCSourceConnector()
-    jdbcSourceConnector.checkTimestampColumnName("column1")
-    jdbcSourceConnector.checkTimestampColumnName("Column1col1")
-    jdbcSourceConnector.checkTimestampColumnName("col1")
-    jdbcSourceConnector.checkTimestampColumnName("col-1")
+    jdbcSourceConnector.checkTimestampColumnNameFormat("column1")
+    jdbcSourceConnector.checkTimestampColumnNameFormat("Column1col1")
+    jdbcSourceConnector.checkTimestampColumnNameFormat("col1")
+    jdbcSourceConnector.checkTimestampColumnNameFormat("col-1")
 
     //Input error column name
     intercept[IllegalArgumentException] {
-      jdbcSourceConnector.checkTimestampColumnName("1COLUMN1")
+      jdbcSourceConnector.checkTimestampColumnNameFormat("1COLUMN1")
     }
 
     intercept[IllegalArgumentException] {
-      jdbcSourceConnector.checkTimestampColumnName("100col")
+      jdbcSourceConnector.checkTimestampColumnNameFormat("100col")
     }
   }
 
@@ -215,7 +215,9 @@ class TestJDBCSourceConnector extends With3Brokers3Workers {
         DB_USERNAME           -> db.user,
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

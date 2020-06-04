@@ -91,18 +91,6 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
     definition.reference() shouldBe Reference.NONE
     definition.valueType() shouldBe SettingDef.Type.INT
   }
-
-  @Test
-  def checkFrequenceTime(): Unit = {
-    val definition = jdbcSource.settingDefinitions().get(JDBC_FREQUENCE_TIME)
-    definition.necessary should not be Necessary.REQUIRED
-    definition.defaultDuration() shouldBe java.time.Duration.ofMillis(JDBC_FREQUENCE_TIME_DEFAULT.toMillis)
-    definition.permission() shouldBe Permission.EDITABLE
-    definition.internal() shouldBe false
-    definition.reference() shouldBe Reference.NONE
-    definition.valueType() shouldBe SettingDef.Type.DURATION
-  }
-
   @Test
   def checkTableName(): Unit = {
     val definition = jdbcSource.settingDefinitions().get(DB_TABLENAME)
@@ -182,8 +170,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
             DB_TABLENAME          -> tableName,
             TIMESTAMP_COLUMN_NAME -> timeStampColumnName,
             JDBC_FETCHDATA_SIZE   -> "1000",
-            JDBC_FLUSHDATA_SIZE   -> "1000",
-            JDBC_FREQUENCE_TIME   -> "1 second"
+            JDBC_FLUSHDATA_SIZE   -> "1000"
           )
         )
         .connectorClass(classOf[JDBCSourceConnector])
@@ -262,14 +249,6 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
       .head
       .definition()
       .necessary() shouldBe Necessary.REQUIRED
-
-    response
-      .settings()
-      .asScala
-      .filter(_.value().key() == JDBC_FREQUENCE_TIME)
-      .head
-      .definition()
-      .necessary() should not be Necessary.REQUIRED
 
     response
       .settings()
