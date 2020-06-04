@@ -32,6 +32,7 @@ export const create = (params: PipelineRequest) => {
   });
 };
 
+// For manager test
 export const update = (params: PipelineRequest) => {
   return pipelineApi.put<PipelineResponse>({
     name: params.name,
