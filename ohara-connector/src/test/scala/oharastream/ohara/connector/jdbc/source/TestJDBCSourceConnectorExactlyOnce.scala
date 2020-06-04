@@ -312,6 +312,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
         TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        JDBC_FETCHDATA_SIZE   -> "5000",
         TASK_TOTAL_KEY        -> "0",
         TASK_HASH_KEY         -> "0"
       ).asJava
