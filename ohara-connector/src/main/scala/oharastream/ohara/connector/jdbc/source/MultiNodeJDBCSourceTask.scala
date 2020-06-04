@@ -105,13 +105,14 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
 
-    val statement = client.connection.prepareStatement(sql)
+    val prepareStatement = client.connection.prepareStatement(sql)
     try {
-      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-      val resultSet = statement.executeQuery()
+      prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
+      prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+      prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      val resultSet = prepareStatement.executeQuery()
       try {
-        val timestampTablePartition                    = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+        val tableTimestampPartition                    = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
         val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
@@ -119,11 +120,12 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         val offset: JDBCOffsetInfo =
           offsetCache.readOffset(tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
 
-        val sourceRecords = results.zipWithIndex
+        results.zipWithIndex
           .filter {
             case (_, index) =>
               index >= offset.index
           }
+          .take(1000)
           .flatMap {
             case (columns, rowIndex) =>
               val newSchema =
@@ -131,12 +133,12 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
                   columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
                 else schema
               val offset = JDBCOffsetInfo(rowIndex + 1)
-              offsetCache.update(timestampTablePartition, offset)
+              offsetCache.update(tableTimestampPartition, offset)
 
               topics.map(
                 RowSourceRecord
                   .builder()
-                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> timestampTablePartition).asJava)
+                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> tableTimestampPartition).asJava)
                   //Writer Offset
                   .sourceOffset(
                     Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> offset.toString).asJava
@@ -148,14 +150,8 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
               )
           }
           .toSeq
-
-        if (sourceRecords.isEmpty) {
-          val offset = JDBCOffsetInfo(0)
-          offsetCache.update(timestampTablePartition, offset)
-        }
-        sourceRecords
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
+    } finally Releasable.close(prepareStatement)
   }
 
   private[this] def tableTimestampParationKey(
@@ -170,7 +166,6 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
 
-
     val sql =
       s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
 
@@ -183,7 +178,7 @@ class MultiNodeJDBCSourceTask extends RowSourceTask {
         val dbCount =
           if (resultSet.next()) resultSet.getInt(1)
           else 0
-        val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+        val tablePartition = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
         val offset: JDBCOffsetInfo =
           offsetCache.readOffset(tablePartition)
         val offsetIndex = offset.index

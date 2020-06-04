@@ -119,7 +119,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
 
       consumer.seekToBeginning()
       TimeUnit.MILLISECONDS.sleep(inputDataTime) // Finally to wait all data write the database table
-      val resultRecords = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      val resultRecords = consumer.poll(java.time.Duration.ofSeconds(60), tableTotalCount.intValue()).asScala
       resultRecords.size shouldBe tableTotalCount.intValue()
 
       // Check the topic data is equals the database table
