@@ -52,7 +52,7 @@ class JDBCSourceTask extends RowSourceTask {
     schema = settings.columns.asScala.toSeq
   }
 
-  override protected def pollRecords(): util.List[RowSourceRecord] = {
+  override protected[source] def pollRecords(): util.List[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     var startTimestamp      = tableFirstTimestampValue(tableName, timestampColumnName)

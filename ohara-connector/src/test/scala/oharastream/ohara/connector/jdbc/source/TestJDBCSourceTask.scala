@@ -22,18 +22,25 @@ import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Column, DataType, Row}
 import oharastream.ohara.common.rule.OharaTest
+import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.connector.jdbc.util.ColumnInfo
+import oharastream.ohara.kafka.connector.{RowSourceRecord, TaskSetting}
 import oharastream.ohara.testing.service.Database
+import org.apache.kafka.connect.source.SourceTaskContext
+import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.junit.{After, Before, Test}
+import org.mockito.Mockito
+import org.mockito.Mockito._
 import org.scalatest.matchers.should.Matchers._
+
 import scala.jdk.CollectionConverters._
 
 class TestJDBCSourceTask extends OharaTest {
-  private[this] val db        = Database.local()
-  private[this] val client    = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
-  private[this] val tableName = "TABLE1"
-  //private[this] val timestampColumnName = "COLUMN1"
+  private[this] val db                  = Database.local()
+  private[this] val client              = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
+  private[this] val tableName           = "TABLE1"
+  private[this] val timestampColumnName = "COLUMN1"
 
   @Before
   def setup(): Unit = {
@@ -61,14 +68,14 @@ class TestJDBCSourceTask extends OharaTest {
       s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:04.123456', 'a51', 'a52', 5)"
     )
     statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES(NOW() + INTERVAL 3 MINUTE, 'a41', 'a42', 4)"
+      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
     )
     statement.executeUpdate(
       s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
     )
   }
 
-  /*@Test
+  @Test
   def testPoll(): Unit = {
     val jdbcSourceTask: JDBCSourceTask           = new JDBCSourceTask()
     val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
@@ -87,7 +94,8 @@ class TestJDBCSourceTask extends OharaTest {
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
-      .thenReturn(java.util.Optional.of(java.time.Duration.ofMillis(0)))
+    when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
+    when(taskSetting.intValue(TASK_TOTAL_KEY)).thenReturn(1)
 
     val columns: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build(),
@@ -110,38 +118,47 @@ class TestJDBCSourceTask extends OharaTest {
 
     //Test row 1 offset
     rows1.head.sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe s"${new Timestamp(0).toString},1"
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "1"
     })
     //Test row 2 offset
     rows1(1).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:00.0,1"
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "2"
     })
     //Test row 4 offset
     rows1(3).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:02.0,1"
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "4"
     })
     //Test row 5 offset
     rows1(4).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:03.12,1"
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "5"
     })
     rows1.size shouldBe 5
 
     val statement: Statement = db.connection.createStatement()
     statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-02 00:00:00.0', 'a81', 'a82', 8)"
+      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 23:00:00.0', 'a81', 'a82', 8)"
     )
     jdbcSourceTask.stop()
-    val maps: Map[String, Object] = Map("db.table.offset" -> "2018-09-01 00:00:04.123456,0")
-    when(offsetStorageReader.offset(Map("db.table.name" -> tableName).asJava)).thenReturn(maps.asJava)
+
+    val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "5")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
 
     jdbcSourceTask.run(taskSetting)
     val rows2: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
     rows2.size shouldBe 1
-  }*/
+    rows2.head.sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "6"
+    })
+  }
 
   @Test
   def testRowTimestamp(): Unit = {
