@@ -286,13 +286,13 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       checkData(resultTableData, topicData)
 
       // Test update data for the table
-      updatePreparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current() - 86400000))
+      updatePreparedStatement.setTimestamp(1, queryResult._1)
       updatePreparedStatement.setString(2, queryResult._2)
       updatePreparedStatement.executeUpdate()
       TimeUnit.SECONDS.sleep(5)
       consumer.seekToBeginning()
-      val updateResult = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue() + 1).asScala
-      updateResult.size shouldBe tableTotalCount.intValue() + 1 // Because update the different timestamp
+      val updateResult = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      updateResult.size shouldBe tableTotalCount.intValue()
     } finally {
       Releasable.close(insertPreparedStatement)
       Releasable.close(updatePreparedStatement)
@@ -376,7 +376,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         .connectorKey(connectorKey)
         .connectorClass(classOf[JDBCSourceConnector])
         .topicKey(topicKey)
-        .numberOfTasks(1)
+        .numberOfTasks(3)
         .settings(props().toMap)
         .create()
     )
@@ -479,6 +479,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     JDBCSourceConnectorConfig(
       TaskSetting.of(
         Map(
+          "task.total"                   -> "0",
+          "tash.hash"                    -> "0",
           "source.db.url"                -> dbUrl,
           "source.db.username"           -> dbUserName,
           "source.db.password"           -> dbPassword,

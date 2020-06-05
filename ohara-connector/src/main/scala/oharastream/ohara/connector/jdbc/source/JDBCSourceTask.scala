@@ -126,7 +126,7 @@ class JDBCSourceTask extends RowSourceTask {
             case (_, index) =>
               index >= offset.index
           }
-          .take(1000)
+          .take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
           .flatMap {
             case (columns, rowIndex) =>
               val newSchema =
