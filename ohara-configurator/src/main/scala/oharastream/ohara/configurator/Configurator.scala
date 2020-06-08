@@ -44,10 +44,8 @@ import oharastream.ohara.configurator.Configurator.Mode
 import oharastream.ohara.configurator.route._
 import oharastream.ohara.configurator.store.{DataStore, MetricsCache}
 import spray.json.DeserializationException
-
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
-import scala.util.control.Breaks._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * A simple impl from Configurator. This impl maintains all subclass from ohara data in a single ohara store.
@@ -75,28 +73,6 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
   }
 
   private[this] val threadPool = Executors.newFixedThreadPool(threadMax)
-
-  private[this] val loopOfUpdatingNode: Releasable =
-    containerClient match {
-      case _: K8SClient =>
-        val pool = Executors.newSingleThreadExecutor()
-        pool.execute { () =>
-          while (!Thread.currentThread().isInterrupted) {
-            try {
-              TimeUnit.SECONDS.sleep(5)
-              Await.result(addK8SNodes(), Duration(5, TimeUnit.SECONDS))
-            } catch {
-              case timeoutException: TimeoutException => log.error("timeout exception", timeoutException)
-              case interruptedException: InterruptedException =>
-                log.error("interrupted exception", interruptedException)
-                break
-              case e: Throwable => throw e
-            }
-          }
-        }
-        () => pool.shutdownNow()
-      case _ => () => {}
-    }
 
   private[this] implicit val executionContext: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
@@ -226,38 +202,6 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
   }
 
   /**
-    * In k8s mode, we fetch the nodes from k8s master and then add them to store automatically.
-    * @return k8s nodes
-    */
-  private[configurator] def addK8SNodes(): Future[Seq[NodeApi.Node]] = containerClient match {
-    case c: K8SClient =>
-      val nodeApi = NodeApi.access.hostname(hostname).port(port)
-      c.nodes()
-        .flatMap { kns =>
-          nodeApi.list().flatMap { nodes =>
-            Future.sequence(
-              kns
-                .filterNot(kn => nodes.map(_.hostname).contains(kn.nodeName))
-                .map(
-                  newK8sNode =>
-                    nodeApi.request
-                      .hostname(newK8sNode.nodeName)
-                      .create()
-                      .map(Some(_))
-                      .recover {
-                        case _: Throwable =>
-                          // this loop may encounter the data conflict so we swallow the exception
-                          None
-                      }
-                )
-            )
-          }
-        }
-        .map(_.flatten)
-    case _ => Future.successful(Seq.empty)
-  }
-
-  /**
     * the version of APIs supported by Configurator.
     * We are not ready to support multiples version APIs so it is ok to make a constant string.
     */
@@ -342,7 +286,6 @@ class Configurator private[configurator] (val hostname: String, val port: Int)(
         log.error("failed to terminate all running threads!!!")
     }
 
-    Releasable.close(loopOfUpdatingNode)
     Releasable.close(serviceCollie)
     Releasable.close(store)
     Releasable.close(adminCleaner)
