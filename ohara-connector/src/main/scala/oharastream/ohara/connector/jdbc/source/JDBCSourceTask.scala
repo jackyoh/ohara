@@ -59,15 +59,14 @@ class JDBCSourceTask extends RowSourceTask {
     var stopTimestamp       = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARATION_RNAGE)
     val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
-    while (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
+
+    while (!isRunningTask(startTimestamp, stopTimestamp)
+           || partitionIsCompleted(startTimestamp, stopTimestamp)) {
       startTimestamp = stopTimestamp
       stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARATION_RNAGE)
 
-      if (overCurrentTimestamp(startTimestamp, stopTimestamp)) {
-        if (partitionIsCompleted(startTimestamp, stopTimestamp) || !isRunningTask(startTimestamp, stopTimestamp)) {
-          return Seq.empty.asJava
-        } else return queryData(startTimestamp, stopTimestamp).asJava
-      }
+      if (overCurrentTimestamp(stopTimestamp) && partitionIsCompleted(startTimestamp, stopTimestamp))
+        return Seq.empty.asJava
     }
     queryData(startTimestamp, stopTimestamp).asJava
   }
@@ -84,8 +83,7 @@ class JDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(statement)
   }
 
-  private[this] def overCurrentTimestamp(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
-    startTimestamp.getTime()
+  private[this] def overCurrentTimestamp(stopTimestamp: Timestamp): Boolean = {
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _              => "SELECT CURRENT_TIMESTAMP;"
