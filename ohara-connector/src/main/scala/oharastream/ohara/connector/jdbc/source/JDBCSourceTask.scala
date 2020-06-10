@@ -37,7 +37,7 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] var offsetCache: JDBCOffsetCache                         = _
   private[this] var topics: Seq[TopicKey]                                = _
   private[this] var schema: Seq[Column]                                  = _
-  private[this] val TIMESTAMP_PARATION_RNAGE: Int                        = 86400000 // 1 day
+  private[this] val TIMESTAMP_PARTITION_RNAGE: Int                       = 86400000 // 1 day
 
   override protected[source] def run(settings: TaskSetting): Unit = {
     jdbcSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
@@ -56,16 +56,16 @@ class JDBCSourceTask extends RowSourceTask {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     var startTimestamp      = tableFirstTimestampValue(tableName, timestampColumnName)
-    var stopTimestamp       = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARATION_RNAGE)
-    val tablePartition      = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+    var stopTimestamp       = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+    val tablePartition      = tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
-    while (!isRunningTask(startTimestamp, stopTimestamp)
-           || partitionIsCompleted(startTimestamp, stopTimestamp)) {
+    while (!needToRun(startTimestamp, stopTimestamp)
+           || isCompleted(startTimestamp, stopTimestamp)) {
       startTimestamp = stopTimestamp
-      stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARATION_RNAGE)
+      stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
 
-      if (overCurrentTimestamp(stopTimestamp) && partitionIsCompleted(startTimestamp, stopTimestamp))
+      if (overCurrentTimestamp(stopTimestamp) && isCompleted(startTimestamp, stopTimestamp))
         return Seq.empty.asJava
     }
     queryData(startTimestamp, stopTimestamp).asJava
@@ -111,13 +111,13 @@ class JDBCSourceTask extends RowSourceTask {
       prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
       val resultSet = prepareStatement.executeQuery()
       try {
-        val tableTimestampPartition                    = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
+        val tableTimestampPartition                    = tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp)
         val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
         val offset: JDBCOffsetInfo =
-          offsetCache.readOffset(tableTimestampParationKey(tableName, startTimestamp, stopTimestamp))
+          offsetCache.readOffset(tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp))
 
         results.zipWithIndex
           .filter {
@@ -153,7 +153,7 @@ class JDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(prepareStatement)
   }
 
-  private[this] def tableTimestampParationKey(
+  private[this] def tableTimestampPartitionKey(
     tableName: String,
     startTimestamp: Timestamp,
     stopTimestamp: Timestamp
@@ -161,7 +161,7 @@ class JDBCSourceTask extends RowSourceTask {
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
 
-  private[this] def partitionIsCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
+  private[this] def isCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
 
@@ -177,21 +177,17 @@ class JDBCSourceTask extends RowSourceTask {
         val dbCount =
           if (resultSet.next()) resultSet.getInt(1)
           else 0
-        val tablePartition = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp)
-        val offset: JDBCOffsetInfo =
-          offsetCache.readOffset(tablePartition)
-        val offsetIndex = offset.index
-
-        offsetIndex == dbCount
+        val tablePartition = tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp)
+        offsetCache.readOffset(tablePartition).index == dbCount
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
   }
 
-  private[this] def isRunningTask(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
+  private[this] def needToRun(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
     val tableName         = jdbcSourceConnectorConfig.dbTableName
     val taskTotal         = jdbcSourceConnectorConfig.taskTotal
     val taskHash          = jdbcSourceConnectorConfig.taskHash
-    val partitionHashCode = tableTimestampParationKey(tableName, startTimestamp, stopTimestamp).hashCode()
+    val partitionHashCode = tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp).hashCode()
     Math.abs(partitionHashCode) % taskTotal == taskHash
   }
 
