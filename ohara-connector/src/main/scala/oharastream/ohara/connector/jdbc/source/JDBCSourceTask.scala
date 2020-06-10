@@ -178,7 +178,12 @@ class JDBCSourceTask extends RowSourceTask {
           if (resultSet.next()) resultSet.getInt(1)
           else 0
         val tablePartition = tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp)
-        offsetCache.readOffset(tablePartition).index == dbCount
+        val offsetIndex    = offsetCache.readOffset(tablePartition).index
+        if (dbCount < offsetIndex) {
+          throw new IllegalArgumentException(
+            s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"
+          )
+        } else offsetIndex == dbCount
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
   }
