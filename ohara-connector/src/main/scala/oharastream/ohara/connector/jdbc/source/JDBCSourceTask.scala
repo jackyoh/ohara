@@ -56,17 +56,15 @@ class JDBCSourceTask extends RowSourceTask {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     var startTimestamp      = tableFirstTimestampValue(tableName, timestampColumnName)
-    var stopTimestamp       = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+    var stopTimestamp       = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
     val tablePartition      = tableTimestampPartitionKey(tableName, startTimestamp, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
     while (!needToRun(startTimestamp, stopTimestamp)
            || isCompleted(startTimestamp, stopTimestamp)) {
-      startTimestamp = stopTimestamp
-      stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-
-      if (overCurrentTimestamp(stopTimestamp) && isCompleted(startTimestamp, stopTimestamp))
-        return Seq.empty.asJava
+      val addTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+      startTimestamp = if (overCurrentTimestamp(addTimestamp)) startTimestamp else stopTimestamp
+      stopTimestamp = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
     }
     queryData(startTimestamp, stopTimestamp).asJava
   }
@@ -83,7 +81,7 @@ class JDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(statement)
   }
 
-  private[this] def overCurrentTimestamp(stopTimestamp: Timestamp): Boolean = {
+  private[this] def currentTimestamp(): Timestamp = {
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _              => "SELECT CURRENT_TIMESTAMP;"
@@ -92,10 +90,19 @@ class JDBCSourceTask extends RowSourceTask {
     try {
       val rs = stmt.executeQuery(query)
       try {
-        val currentTimestamp = if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
-        stopTimestamp.getTime > currentTimestamp.getTime
+        if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
       } finally Releasable.close(rs)
     } finally Releasable.close(stmt)
+  }
+
+  private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
+    val current = currentTimestamp()
+    if (timestamp.getTime() > current.getTime()) current
+    else timestamp
+  }
+
+  private[this] def overCurrentTimestamp(stopTimestamp: Timestamp): Boolean = {
+    stopTimestamp.getTime > currentTimestamp().getTime
   }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
@@ -158,6 +165,7 @@ class JDBCSourceTask extends RowSourceTask {
     startTimestamp: Timestamp,
     stopTimestamp: Timestamp
   ): String = {
+    // 計算出 offset 的 timestamp partition
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
 
