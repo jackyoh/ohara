@@ -261,7 +261,7 @@ object K8SJson {
     capacity: K8SPVCapacity,
     hostPath: K8SPVHostPath,
     volumeMode: String,
-    nodeAffinity: K8SPVNodeAffinity
+    nodeAffinity: Option[K8SPVNodeAffinity]
   )
   implicit val K8SPVSPECINFO_JSON_FORMAT: RootJsonFormat[K8SPVSpecInfo] = jsonFormat4(K8SPVSpecInfo)
 
