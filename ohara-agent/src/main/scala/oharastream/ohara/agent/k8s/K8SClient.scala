@@ -428,7 +428,6 @@ object K8SClient {
                   name = item.metadata.name,
                   driver = item.spec.volumeMode,
                   path = item.spec.hostPath.path,
-                  //nodeName = item.spec.nodeAffinity.required.nodeSelectorTerms.head.matchExpressions.head.values.head
                   nodeName = item.spec.nodeAffinity
                     .map(_.required.nodeSelectorTerms.head.matchExpressions.head.values.head)
                     .getOrElse("Unknown")
