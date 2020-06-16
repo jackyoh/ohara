@@ -27,7 +27,6 @@ import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceRecord, RowSourceTask, TaskSetting}
-
 import scala.jdk.CollectionConverters._
 
 class JDBCSourceTask extends RowSourceTask {
@@ -63,14 +62,20 @@ class JDBCSourceTask extends RowSourceTask {
     val tablePartition = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
-    while (!needToRun(stopTimestamp)
-           || isCompleted(startTimestamp, stopTimestamp)) {
-      startTimestamp = stopTimestamp
-      stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-      if (overCurrentTimestamp(stopTimestamp) && isCompleted(startTimestamp, stopTimestamp)) {
-        return Seq.empty.asJava
+    if (stopTimestamp.getTime() > currentTimestamp().getTime()) stopTimestamp = currentTimestamp()
+    else
+      while (!needToRun(stopTimestamp)
+             || isCompleted(startTimestamp, stopTimestamp)) {
+        startTimestamp = stopTimestamp
+        stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+        val current = currentTimestamp()
+        if (stopTimestamp.getTime() > current.getTime()) {
+          if (needToRun(stopTimestamp))
+            return queryData(startTimestamp, current).asJava
+          else
+            return Seq.empty.asJava
+        }
       }
-    }
     queryData(startTimestamp, stopTimestamp).asJava
   }
 
@@ -106,9 +111,9 @@ class JDBCSourceTask extends RowSourceTask {
     else timestamp
   }*/
 
-  private[this] def overCurrentTimestamp(stopTimestamp: Timestamp): Boolean = {
+  /*private[this] def overCurrentTimestamp(stopTimestamp: Timestamp): Boolean = {
     stopTimestamp.getTime > currentTimestamp().getTime
-  }
+  }*/
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
