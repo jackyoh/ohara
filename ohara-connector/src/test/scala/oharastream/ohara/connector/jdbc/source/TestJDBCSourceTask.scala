@@ -23,7 +23,7 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Column, DataType, Row}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.TopicKey
-import oharastream.ohara.common.util.Releasable
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.{RowSourceRecord, TaskSetting}
 import oharastream.ohara.testing.service.Database
@@ -205,15 +205,10 @@ class TestJDBCSourceTask extends OharaTest {
     row0.cell("COLUMN100").value shouldBe 100
   }
 
-  /*@Test
-  def testPollNewName(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask           = new JDBCSourceTask()
-    val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
-    val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
-    when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
-    jdbcSourceTask.initialize(taskContext.asInstanceOf[SourceTaskContext])
-
-    val taskSetting: TaskSetting = Mockito.mock(classOf[TaskSetting])
+  @Test
+  def testPartitionKeyError_1(): Unit = {
+    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
@@ -222,68 +217,69 @@ class TestJDBCSourceTask extends OharaTest {
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(MODE)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
-    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(500)))
-    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(500)))
-
-    val columns: Seq[Column] = Seq(
-      Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.OBJECT).order(0).build(),
-      Column.builder().name("COLUMN2").newName("COLUMN200").dataType(DataType.STRING).order(1).build(),
-      Column.builder().name("COLUMN4").newName("COLUMN400").dataType(DataType.INT).order(3).build()
-    )
-
-    when(taskSetting.columns).thenReturn(columns.asJava)
-    when(taskSetting.topicKeys()).thenReturn(Set(TopicKey.of("g", "topic1")).asJava)
-    when(taskSetting.durationOption(JDBC_FREQUENCE_TIME))
-      .thenReturn(java.util.Optional.of(java.time.Duration.ofMillis(0)))
+    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
+    when(taskSetting.intValue(TASK_TOTAL_KEY)).thenReturn(1)
     jdbcSourceTask.run(taskSetting)
 
-    val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
-    rows.head.row.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
-    rows.head.row.cell(1).value shouldBe "a11"
-    rows.head.row.cell(2).value shouldBe 1
-
-    rows.head.row.cell(0).name shouldBe "COLUMN100"
-    rows(1).row.cell(1).name shouldBe "COLUMN200"
-    rows(2).row.cell(2).name shouldBe "COLUMN400"
-  }*/
-
-  /*@Test
-  def testDbTimestampColumnValue(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
-    val dbColumnInfo: Seq[ColumnInfo[_]] = Seq(
-      ColumnInfo("column1", "string", "value1"),
-      ColumnInfo("column2", "timestamp", new Timestamp(1537510900000L)),
-      ColumnInfo("column3", "string", "value3")
-    )
-    val timestamp: String = jdbcSourceTask.dbTimestampColumnValue(dbColumnInfo, "column2")
-    timestamp shouldBe "2018-09-21 14:21:40.0"
+    // FirstTimestamp data from the rdb table. This is fake data
+    val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
+    val stopTimestamp: Timestamp  = Timestamp.valueOf("2020-06-09 15:00:00")
+    an[IllegalArgumentException] should be thrownBy
+      jdbcSourceTask.tableTimestampPartitionKey("table1", firstTimestamp, stopTimestamp)
   }
 
   @Test
-  def testIsRunningQuery(): Unit = {
+  def testPartitionKeyError_2(): Unit = {
     val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
-    val frequenceTime                  = Duration("5 second")
-    // Test first call pollRecords function
-    var currentTime: Long = System.currentTimeMillis()
-    var lastTime: Long    = -1
-    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe true
+    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
+    when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
+    when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
+    when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
+    when(taskSetting.stringValue(DB_TABLENAME)).thenReturn(tableName)
+    when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(MODE)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
+    when(taskSetting.intValue(TASK_TOTAL_KEY)).thenReturn(1)
+    jdbcSourceTask.run(taskSetting)
 
-    // Test second call pollRecords function
-    lastTime = currentTime
-    currentTime = System.currentTimeMillis()
-    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe false
+    // Partition Range timestamp is over the current timestamp
+    val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
+    val stopTimestamp: Timestamp  = new Timestamp(CommonUtils.current() + 86400000)
+    an[IllegalArgumentException] should be thrownBy
+      jdbcSourceTask.tableTimestampPartitionKey("table1", firstTimestamp, stopTimestamp)
+  }
 
-    // Test third call pollRecords function
-    Thread.sleep(6000L)
-    lastTime = currentTime
-    currentTime = System.currentTimeMillis()
-    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe true
+  @Test
+  def testPartitionKeyNormal(): Unit = {
+    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
+    when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
+    when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
+    when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
+    when(taskSetting.stringValue(DB_TABLENAME)).thenReturn(tableName)
+    when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(MODE)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
+    when(taskSetting.intValue(TASK_TOTAL_KEY)).thenReturn(1)
+    jdbcSourceTask.run(taskSetting)
 
-    lastTime = currentTime
-    currentTime = System.currentTimeMillis()
-    jdbcSourceTask.isRunningQuery(currentTime, lastTime, frequenceTime) shouldBe false
-  }*/
+    val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
 
+    // Test the current timestamp is not stop timestamp
+    val stopTimestamp: Timestamp = Timestamp.valueOf("2020-06-12 12:00:00")
+    val result                   = jdbcSourceTask.tableTimestampPartitionKey("table1", firstTimestamp, stopTimestamp)
+    result shouldBe "table1:2020-06-11 15:00:00.0~2020-06-12 15:00:00.0"
+  }
   @After
   def afterTest(): Unit = {
     Releasable.close(client)
