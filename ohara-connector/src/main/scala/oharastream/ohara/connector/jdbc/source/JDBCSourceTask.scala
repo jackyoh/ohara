@@ -24,9 +24,11 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceRecord, RowSourceTask, TaskSetting}
+
 import scala.jdk.CollectionConverters._
 
 class JDBCSourceTask extends RowSourceTask {
@@ -62,6 +64,7 @@ class JDBCSourceTask extends RowSourceTask {
     val tablePartition = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
+    // Generate the start timestap and stop timestamp to runn multi task for the query
     while (!needToRun(stopTimestamp) ||
            isCompleted(startTimestamp, stopTimestamp)) {
       val currentTimestamp = current()
@@ -91,9 +94,9 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def current(): Timestamp = {
-    val query = dbProduct.toLowerCase match {
-      case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
-      case _              => "SELECT CURRENT_TIMESTAMP;"
+    val query = dbProduct.toUpperCase match {
+      case ORACLE.name => "SELECT CURRENT_TIMESTAMP FROM dual"
+      case _           => "SELECT CURRENT_TIMESTAMP;"
     }
     val stmt = client.connection.createStatement()
     try {
@@ -187,6 +190,12 @@ class JDBCSourceTask extends RowSourceTask {
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
 
+  /**
+    * The start timestamp and stop timestamp range can't change.
+    * @param startTimestamp start timestamp
+    * @param stopTimestamp stop timestamp
+    * @return true or false
+    */
   private[this] def isCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName

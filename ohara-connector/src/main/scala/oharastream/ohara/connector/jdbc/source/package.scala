@@ -17,6 +17,7 @@
 package oharastream.ohara.connector.jdbc
 
 import scala.concurrent.duration.Duration
+import oharastream.ohara.client.Enum
 
 package object source {
   val DB_URL: String                        = "source.db.url"
@@ -35,9 +36,15 @@ package object source {
   val JDBC_FLUSHDATA_SIZE_DEFAULT: Int      = 1000
   val JDBC_FREQUENCE_TIME_DEFAULT: Duration = Duration("0 second")
   val TIMESTAMP_COLUMN_NAME: String         = "source.timestamp.column.name"
-  val ORACLE_DB_NAME                        = "oracle"
+  // val ORACLE_DB_NAME                        = "oracle"
 
   def toJavaDuration(d: Duration): java.time.Duration = java.time.Duration.ofMillis(d.toMillis)
   def toScalaDuration(d: java.time.Duration): Duration =
     Duration(d.toMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+}
+
+abstract sealed class DatabaseProductName(val name: String)
+
+object DatabaseProductName extends Enum[DatabaseProductName] {
+  case object ORACLE extends DatabaseProductName("ORACLE")
 }
