@@ -58,24 +58,23 @@ class JDBCSourceTask extends RowSourceTask {
   override protected[source] def pollRecords(): util.List[RowSourceRecord] = {
     val tableName      = jdbcSourceConnectorConfig.dbTableName
     var startTimestamp = firstTimestampValue
-    var stopTimestamp  = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+    var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
     val tablePartition = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
-    if (stopTimestamp.getTime() > currentTimestamp().getTime()) stopTimestamp = currentTimestamp()
-    else
-      while (!needToRun(stopTimestamp)
-             || isCompleted(startTimestamp, stopTimestamp)) {
+    while (!needToRun(stopTimestamp) ||
+           isCompleted(startTimestamp, stopTimestamp)) {
+      val currentTimestamp = current()
+      val addTimestamp     = new Timestamp(stopTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+
+      if (addTimestamp.getTime() > currentTimestamp.getTime()) {
+        if (needToRun(currentTimestamp)) return queryData(startTimestamp, currentTimestamp).asJava
+        else return Seq.empty.asJava
+      } else {
         startTimestamp = stopTimestamp
-        stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-        val current = currentTimestamp()
-        if (stopTimestamp.getTime() > current.getTime()) {
-          if (needToRun(stopTimestamp))
-            return queryData(startTimestamp, current).asJava
-          else
-            return Seq.empty.asJava
-        }
+        stopTimestamp = addTimestamp
       }
+    }
     queryData(startTimestamp, stopTimestamp).asJava
   }
 
@@ -91,7 +90,7 @@ class JDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(statement)
   }
 
-  private[this] def currentTimestamp(): Timestamp = {
+  private[this] def current(): Timestamp = {
     val query = dbProduct.toLowerCase match {
       case ORACLE_DB_NAME => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _              => "SELECT CURRENT_TIMESTAMP;"
@@ -105,15 +104,11 @@ class JDBCSourceTask extends RowSourceTask {
     } finally Releasable.close(stmt)
   }
 
-  /*private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
-    val current = currentTimestamp()
-    if (timestamp.getTime() > current.getTime()) current
+  private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
+    val currentTimestamp = current()
+    if (timestamp.getTime() > currentTimestamp.getTime()) current
     else timestamp
-  }*/
-
-  /*private[this] def overCurrentTimestamp(stopTimestamp: Timestamp): Boolean = {
-    stopTimestamp.getTime > currentTimestamp().getTime
-  }*/
+  }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
@@ -175,9 +170,9 @@ class JDBCSourceTask extends RowSourceTask {
     firstTimestampValue: Timestamp,
     timestamp: Timestamp
   ): String = {
-    var startTimestamp: Timestamp = firstTimestampValue
-    var stopTimestamp: Timestamp  = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-    val current: Timestamp        = currentTimestamp()
+    var startTimestamp: Timestamp   = firstTimestampValue
+    var stopTimestamp: Timestamp    = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+    val currentTimestamp: Timestamp = current()
     while (!(timestamp.getTime() >= startTimestamp.getTime() && timestamp.getTime() <= stopTimestamp.getTime())) {
       startTimestamp = stopTimestamp
       stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
@@ -185,7 +180,7 @@ class JDBCSourceTask extends RowSourceTask {
       if (timestamp.getTime() < firstTimestampValue.getTime())
         throw new IllegalArgumentException("The timestamp over the first data timestamp")
 
-      if (startTimestamp.getTime() > current.getTime() && stopTimestamp.getTime() > current.getTime()) {
+      if (startTimestamp.getTime() > currentTimestamp.getTime() && stopTimestamp.getTime() > current.getTime()) {
         throw new IllegalArgumentException("The timestamp over the current timestamp")
       }
     }
