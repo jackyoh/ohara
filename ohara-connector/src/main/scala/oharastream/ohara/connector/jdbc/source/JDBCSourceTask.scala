@@ -71,7 +71,8 @@ class JDBCSourceTask extends RowSourceTask {
       val addTimestamp     = new Timestamp(stopTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
 
       if (addTimestamp.getTime() > currentTimestamp.getTime()) {
-        if (needToRun(currentTimestamp)) return queryData(startTimestamp, currentTimestamp).asJava
+        if (needToRun(currentTimestamp))
+          return queryData(stopTimestamp, currentTimestamp).asJava
         else return Seq.empty.asJava
       } else {
         startTimestamp = stopTimestamp
