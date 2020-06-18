@@ -18,6 +18,7 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
 import java.util.concurrent.TimeUnit
+
 import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
@@ -29,16 +30,21 @@ import oharastream.ohara.kafka.Consumer
 import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.testing.With3Brokers3Workers
 import oharastream.ohara.testing.service.Database
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import org.junit.runners.Parameterized.Parameters
 import org.junit.{After, Before, Test}
 import org.scalatest.matchers.should.Matchers._
+
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
-class TestJDBCSourceConnectorTimeRnage extends With3Brokers3Workers {
-  private[this] var startTimestamp = new Timestamp(CommonUtils.current() - 432000000) // 432000000 is 5 day
-  private[this] val stopTimestamp  = new Timestamp(CommonUtils.current() + 432000000)
-  private[this] val increment: Int = 3600000 // 1 minutes
+@RunWith(value = classOf[Parameterized])
+class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends With3Brokers3Workers {
+  private[this] var startTimestamp = timestampInfo.startTimestamp
+  private[this] val stopTimestamp  = timestampInfo.stopTimestamp
+  private[this] val increment      = timestampInfo.increment
 
   private[this] val currentTimestamp: Timestamp = new Timestamp(CommonUtils.current())
   private[this] val db: Database                = Database.local()
@@ -184,4 +190,40 @@ class TestJDBCSourceConnectorTimeRnage extends With3Brokers3Workers {
       ).asJava
     )
   )
+}
+
+object TestJDBCSourceConnectorTimeRnage {
+  @Parameters(name = "{index} test, test case is {0}")
+  def parameters(): java.util.Collection[TimestampInfo] = {
+    val ltCurrentTimestamp = TimestampInfo(
+      new Timestamp(CommonUtils.current() - 432000000),
+      new Timestamp(CommonUtils.current() - 86400000),
+      3600000,
+      "Less current timestamp"
+    )
+
+    val eqCurrentTimestamp = TimestampInfo(
+      new Timestamp(CommonUtils.current() - 432000000),
+      new Timestamp(CommonUtils.current()),
+      3600000,
+      "Equals current timestamp"
+    )
+
+    val gtCurrentTimestamp = TimestampInfo(
+      new Timestamp(CommonUtils.current() - 432000000),
+      new Timestamp(CommonUtils.current() + 432000000),
+      3600000,
+      "more than the current timestamp"
+    )
+    Seq(ltCurrentTimestamp, eqCurrentTimestamp, gtCurrentTimestamp).asJava
+  }
+}
+
+case class TimestampInfo(
+  startTimestamp: Timestamp,
+  stopTimestamp: Timestamp,
+  increment: Int,
+  describe: String
+) {
+  override def toString(): String = describe
 }
