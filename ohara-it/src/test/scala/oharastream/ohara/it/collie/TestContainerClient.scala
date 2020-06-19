@@ -252,6 +252,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     finally c.close()
   }
 
+  @Test
   def testVolumeMount(): Unit = {
     val zkNodePath      = s"/tmp/zk-${CommonUtils.randomString(5)}"
     val bkNodePath      = s"/tmp/bk-${CommonUtils.randomString(5)}"
@@ -265,8 +266,8 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
     val bkNodeName      = s"${platform.nodeNames.head}"
 
     try {
-      remoteFolder.create(zkNodeName, zkNodePath)
-      remoteFolder.create(bkNodeName, bkNodePath)
+      result(remoteFolder.create(zkNodeName, zkNodePath))
+      result(remoteFolder.create(bkNodeName, bkNodePath))
       val zkVolume = Volume(
         group = CommonUtils.randomString(5),
         name = zkVolumeName,
@@ -355,8 +356,8 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
         result(containerClient.forceRemove(zkContainerName))
         result(containerClient.removeVolumes(bkVolumeName))
         result(containerClient.removeVolumes(zkVolumeName))
-        remoteFolder.delete(bkNodeName, bkNodePath)
-        remoteFolder.delete(zkNodeName, zkNodePath)
+        result(remoteFolder.delete(bkNodeName, bkNodePath))
+        result(remoteFolder.delete(zkNodeName, zkNodePath))
       }
     }
   }
