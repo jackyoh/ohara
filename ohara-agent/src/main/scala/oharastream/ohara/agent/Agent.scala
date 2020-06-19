@@ -113,7 +113,7 @@ object Agent {
 
     /**
       * set remote's ssh connection timeout
-      * @param password ssh password
+      * @param timeout ssh timeout duration
       * @return this builder
       */
     def timeout(timeout: Duration): Builder = {

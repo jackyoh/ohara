@@ -85,7 +85,8 @@ object RemoteFolderHandler {
       private[this] def exist(agent: Agent, path: String): Boolean =
         // it returns the "path" if the "path" is a file
         try !agent
-          .execute(s"ls $path")
+        // export LANG=en_US.UTF-8: The return message is always english.
+          .execute(s"export LANG=en_US.UTF-8;ls $path")
           .map(_.trim)
           .contains(path)
         catch {
