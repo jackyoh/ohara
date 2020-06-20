@@ -422,7 +422,7 @@ class TestContainerClient(platform: ContainerPlatform) extends IntegrationTest {
       .append(s"advertised.listeners=PLAINTEXT://${platform.nodeNames.head}:${bkClientPort}")
       .done
       .build
-    
+
     val nodeName = platform.nodeNames.head
     result(
       containerClient.containerCreator
