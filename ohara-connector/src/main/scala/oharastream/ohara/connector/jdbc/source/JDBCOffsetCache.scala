@@ -41,7 +41,7 @@ class JDBCOffsetCache {
   }
 
   private[this] def offsetValue(offset: Map[String, _]): JDBCOffsetInfo = {
-    val index = offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().toInt
+    val index = offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().toLong
     JDBCOffsetInfo(index)
   }
 }
@@ -51,6 +51,6 @@ object JDBCOffsetCache {
   private[source] val TABLE_OFFSET_KEY: String    = "jdbc.table.info"
 }
 
-case class JDBCOffsetInfo(index: Int) {
+case class JDBCOffsetInfo(index: Long) {
   override def toString(): String = s"$index"
 }

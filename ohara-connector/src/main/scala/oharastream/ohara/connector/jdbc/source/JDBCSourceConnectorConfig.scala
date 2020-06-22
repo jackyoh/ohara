@@ -33,6 +33,7 @@ case class JDBCSourceConnectorConfig(
   jdbcFetchDataSize: Int,
   jdbcFlushDataSize: Int,
   timestampColumnName: String,
+  incrementColumnName: String,
   taskTotal: Int,
   taskHash: Int
 ) {
@@ -46,6 +47,7 @@ case class JDBCSourceConnectorConfig(
       JDBC_FETCHDATA_SIZE   -> jdbcFetchDataSize.toString,
       JDBC_FLUSHDATA_SIZE   -> jdbcFlushDataSize.toString,
       TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+      INCREMENT_COLUMN_NAME -> incrementColumnName,
       TASK_TOTAL_KEY        -> taskTotal.toString,
       TASK_HASH_KEY         -> taskHash.toString
     ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN -> s)).getOrElse(Map.empty) ++ dbSchemaPattern
@@ -66,6 +68,7 @@ object JDBCSourceConnectorConfig {
       jdbcFetchDataSize = settings.intOption(JDBC_FETCHDATA_SIZE).orElse(JDBC_FETCHDATA_SIZE_DEFAULT),
       jdbcFlushDataSize = settings.intOption(JDBC_FLUSHDATA_SIZE).orElse(JDBC_FLUSHDATA_SIZE_DEFAULT),
       timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME),
+      incrementColumnName = settings.stringValue(INCREMENT_COLUMN_NAME),
       taskTotal = settings.intValue(TASK_TOTAL_KEY),
       taskHash = settings.intValue(TASK_HASH_KEY)
     )

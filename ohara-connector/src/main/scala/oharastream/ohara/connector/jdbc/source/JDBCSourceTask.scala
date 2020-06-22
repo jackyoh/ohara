@@ -19,7 +19,7 @@ package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
 import java.util
 
-import oharastream.ohara.client.configurator.v0.InspectApi.{RdbColumn, RdbTable}
+import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.setting.TopicKey

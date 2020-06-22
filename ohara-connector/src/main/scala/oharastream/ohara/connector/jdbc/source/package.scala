@@ -36,7 +36,7 @@ package object source {
   val JDBC_FLUSHDATA_SIZE_DEFAULT: Int      = 1000
   val JDBC_FREQUENCE_TIME_DEFAULT: Duration = Duration("0 second")
   val TIMESTAMP_COLUMN_NAME: String         = "source.timestamp.column.name"
-  // val ORACLE_DB_NAME                        = "oracle"
+  val INCREMENT_COLUMN_NAME: String         = "source.increment.column.name"
 
   def toJavaDuration(d: Duration): java.time.Duration = java.time.Duration.ofMillis(d.toMillis)
   def toScalaDuration(d: java.time.Duration): Duration =

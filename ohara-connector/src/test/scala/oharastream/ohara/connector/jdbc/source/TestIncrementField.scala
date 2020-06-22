@@ -2,7 +2,7 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 
-import oharastream.ohara.client.configurator.v0.InspectApi.RdbColumn
+import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -35,7 +35,7 @@ class TestIncrementField extends OharaTest {
 
   @Test
   def test(): Unit = {
-    val preparedStatement = client.connection.prepareStatement(s"SELECT * FROM $tableName")
+    val preparedStatement = client.connection.prepareStatement(s"SELECT * FROM $tableName ORDER BY c1, c0")
     try {
       val resultSet = preparedStatement.executeQuery()
       while (resultSet.next()) {

@@ -98,6 +98,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
       timestampColumnName = "123",
+      incrementColumnName = "456",
       taskTotal = 0,
       taskHash = 0
     )
