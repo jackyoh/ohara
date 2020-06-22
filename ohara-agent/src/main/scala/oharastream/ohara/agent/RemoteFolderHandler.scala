@@ -86,11 +86,11 @@ object RemoteFolderHandler {
         // it returns the "path" if the "path" is a file
         try !agent
         // export LANG=en_US.UTF-8: The return message is always english.
-          .execute(s"export LANG=en_US.UTF-8;ls $path")
+          .execute(s"ls $path")
           .map(_.trim)
           .contains(path)
         catch {
-          case e: Throwable if e.getMessage.contains("No such file or directory") => false
+          case e: Throwable if e.getMessage.contains(path) => false
         }
 
       override def exist(hostname: String, path: String)(
