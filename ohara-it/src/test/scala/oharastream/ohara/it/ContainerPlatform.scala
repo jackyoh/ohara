@@ -73,8 +73,9 @@ object ContainerPlatform {
     * form: user:password@hostname:port.
     * NOTED: this key need to be matched with another key value in ohara-it/build.gradle
     */
-  val DOCKER_NODES_KEY = "ohara.it.docker"
+  val DOCKER_NODES_KEY                                  = "ohara.it.docker"
   private[this] def _k8sMode: Option[ContainerPlatform] =
+    // Test QA for the remove docs setting
     Seq(
       sys.env.get(ContainerPlatform.K8S_COORDINATOR_URL_KEY),
       // k8s mode needs user and password passed by docker arguments
