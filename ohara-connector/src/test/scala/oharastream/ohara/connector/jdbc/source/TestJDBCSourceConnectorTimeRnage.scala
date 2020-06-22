@@ -42,9 +42,9 @@ import scala.jdk.CollectionConverters._
 
 @RunWith(value = classOf[Parameterized])
 class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends With3Brokers3Workers {
-  private[this] var startTimestamp = timestampInfo.startTimestamp
-  private[this] val stopTimestamp  = timestampInfo.stopTimestamp
-  private[this] val increment      = timestampInfo.increment
+  private[this] var startTimestamp     = timestampInfo.startTimestamp
+  private[this] val stopTimestamp      = timestampInfo.stopTimestamp
+  private[this] val incrementTimestamp = timestampInfo.increment
 
   private[this] val currentTimestamp: Timestamp = new Timestamp(CommonUtils.current())
   private[this] val db: Database                = Database.local()
@@ -64,7 +64,7 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
   def setup(): Unit = {
     client.createTable(tableName, columns)
     while (startTimestamp.getTime() < stopTimestamp.getTime()) {
-      startTimestamp = new Timestamp(startTimestamp.getTime() + increment)
+      startTimestamp = new Timestamp(startTimestamp.getTime() + incrementTimestamp)
       val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
       val preparedStatement = client.connection.prepareStatement(sql)
       preparedStatement.setTimestamp(1, startTimestamp)

@@ -60,7 +60,11 @@ class JDBCSourceConnector extends RowSourceConnector {
     *
     * @return a JDBCSourceTask class
     */
-  override def taskClass(): Class[_ <: RowSourceTask] = classOf[JDBCSourceTask]
+  override def taskClass(): Class[_ <: RowSourceTask] = {
+    // TODO Change the timestamp or timestamp+increment mode
+    // classOf[JDBCSourceTask]
+    classOf[JDBCSourceIncrementTimestampTask]
+  }
 
   /**
     * Return the settings for the jdbc source task.
