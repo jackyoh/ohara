@@ -107,8 +107,9 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName
     val sql =
-      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
+      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName, $incrementColumnName"
 
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
@@ -122,24 +123,24 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
-        val offset: JDBCOffsetInfo =
-          offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
-
-        results.zipWithIndex
-          .filter {
-            case (_, index) =>
-              index >= offset.index
-          }
+        results
           .take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
-          .flatMap {
-            case (columns, rowIndex) =>
-              val newSchema =
-                if (schema.isEmpty)
-                  columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-                else schema
-              val offset = JDBCOffsetInfo(rowIndex + 1)
-              offsetCache.update(tableTimestampPartition, offset)
+          .flatMap { columns =>
+            val newSchema =
+              if (schema.isEmpty)
+                columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+              else schema
+            val idValue = columns
+              .find(_.columnName == incrementColumnName)
+              .map(_.value.toString)
+              .getOrElse(throw new IllegalArgumentException(s"The $incrementColumnName column is not found"))
+              .toLong
+            val offset: JDBCOffsetInfo =
+              offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
 
+            if (idValue > offset.index) {
+              val offset = JDBCOffsetInfo(idValue)
+              offsetCache.update(tableTimestampPartition, offset)
               topics.map(
                 RowSourceRecord
                   .builder()
@@ -153,6 +154,7 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
                   .topicKey(_)
                   .build()
               )
+            } else Seq.empty
           }
           .toSeq
       } finally Releasable.close(resultSet)

@@ -63,19 +63,21 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
   @Before
   def setup(): Unit = {
     client.createTable(tableName, columns)
-    while (startTimestamp.getTime() < stopTimestamp.getTime()) {
-      startTimestamp = new Timestamp(startTimestamp.getTime() + incrementTimestamp)
-      val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
-      val preparedStatement = client.connection.prepareStatement(sql)
-      preparedStatement.setTimestamp(1, startTimestamp)
+    val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
+    val preparedStatement = client.connection.prepareStatement(sql)
+    try {
+      while (startTimestamp.getTime() < stopTimestamp.getTime()) {
+        startTimestamp = new Timestamp(startTimestamp.getTime() + incrementTimestamp)
+        preparedStatement.setTimestamp(1, startTimestamp)
 
-      rowData().asScala.zipWithIndex.foreach {
-        case (result, index) => {
-          preparedStatement.setString(index + 2, result.value().toString)
+        rowData().asScala.zipWithIndex.foreach {
+          case (result, index) => {
+            preparedStatement.setString(index + 2, result.value().toString)
+          }
         }
+        preparedStatement.execute()
       }
-      preparedStatement.execute()
-    }
+    } finally Releasable.close(preparedStatement)
   }
 
   @Test
@@ -185,6 +187,7 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
         TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        INCREMENT_COLUMN_NAME -> "increment",
         TASK_TOTAL_KEY        -> "0",
         TASK_HASH_KEY         -> "0"
       ).asJava
