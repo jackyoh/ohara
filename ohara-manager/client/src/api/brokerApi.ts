@@ -16,6 +16,7 @@
 
 // Note: Do not change the usage of absolute path
 // unless you have a solution to resolve TypeScript + Coverage
+// For the coverage test
 import { omit } from 'lodash';
 import { RESOURCE, API, COMMAND } from '../api/utils/apiUtils';
 import { ObjectKey, BasicResponse } from './apiInterface/basicInterface';
