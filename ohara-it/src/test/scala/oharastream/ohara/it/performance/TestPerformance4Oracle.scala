@@ -41,14 +41,14 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
         connectorKey = ConnectorKey.of(groupName, CommonUtils.randomString(5)),
         className = classOf[JDBCSourceConnector].getName(),
         settings = Map(
-          oharastream.ohara.connector.jdbc.source.DB_URL                -> JsString(url),
-          oharastream.ohara.connector.jdbc.source.DB_USERNAME           -> JsString(user),
-          oharastream.ohara.connector.jdbc.source.DB_PASSWORD           -> JsString(password),
-          oharastream.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
-          oharastream.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
-          oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
-          oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
-          oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
+          oharastream.ohara.connector.jdbc.source.DB_URL                          -> JsString(url),
+          oharastream.ohara.connector.jdbc.source.DB_USERNAME                     -> JsString(user),
+          oharastream.ohara.connector.jdbc.source.DB_PASSWORD                     -> JsString(password),
+          oharastream.ohara.connector.jdbc.source.DB_TABLENAME                    -> JsString(tableName),
+          oharastream.ohara.connector.jdbc.source.INCREMENT_TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
+          oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN               -> JsString(user),
+          oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE             -> JsNumber(10000),
+          oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE             -> JsNumber(10000)
         )
       )
       sleepUntilEnd()

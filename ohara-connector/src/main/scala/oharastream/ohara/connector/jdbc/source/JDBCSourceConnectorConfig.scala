@@ -32,24 +32,22 @@ case class JDBCSourceConnectorConfig(
   mode: String,
   jdbcFetchDataSize: Int,
   jdbcFlushDataSize: Int,
-  timestampColumnName: String,
-  incrementColumnName: String,
+  incrementTimestampColumnName: String,
   taskTotal: Int,
   taskHash: Int
 ) {
   def toMap: Map[String, String] =
     Map(
-      DB_URL                -> dbURL,
-      DB_USERNAME           -> dbUserName,
-      DB_PASSWORD           -> dbPassword,
-      DB_TABLENAME          -> dbTableName,
-      MODE                  -> mode,
-      JDBC_FETCHDATA_SIZE   -> jdbcFetchDataSize.toString,
-      JDBC_FLUSHDATA_SIZE   -> jdbcFlushDataSize.toString,
-      TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-      INCREMENT_COLUMN_NAME -> incrementColumnName,
-      TASK_TOTAL_KEY        -> taskTotal.toString,
-      TASK_HASH_KEY         -> taskHash.toString
+      DB_URL                          -> dbURL,
+      DB_USERNAME                     -> dbUserName,
+      DB_PASSWORD                     -> dbPassword,
+      DB_TABLENAME                    -> dbTableName,
+      MODE                            -> mode,
+      JDBC_FETCHDATA_SIZE             -> jdbcFetchDataSize.toString,
+      JDBC_FLUSHDATA_SIZE             -> jdbcFlushDataSize.toString,
+      INCREMENT_TIMESTAMP_COLUMN_NAME -> incrementTimestampColumnName,
+      TASK_TOTAL_KEY                  -> taskTotal.toString,
+      TASK_HASH_KEY                   -> taskHash.toString
     ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN -> s)).getOrElse(Map.empty) ++ dbSchemaPattern
       .map(s => Map(DB_SCHEMA_PATTERN                     -> s))
       .getOrElse(Map.empty)
@@ -67,8 +65,7 @@ object JDBCSourceConnectorConfig {
       mode = settings.stringOption(MODE).orElse(MODE_DEFAULT),
       jdbcFetchDataSize = settings.intOption(JDBC_FETCHDATA_SIZE).orElse(JDBC_FETCHDATA_SIZE_DEFAULT),
       jdbcFlushDataSize = settings.intOption(JDBC_FLUSHDATA_SIZE).orElse(JDBC_FLUSHDATA_SIZE_DEFAULT),
-      timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME),
-      incrementColumnName = settings.stringValue(INCREMENT_COLUMN_NAME),
+      incrementTimestampColumnName = settings.stringValue(INCREMENT_TIMESTAMP_COLUMN_NAME),
       taskTotal = settings.intValue(TASK_TOTAL_KEY),
       taskHash = settings.intValue(TASK_HASH_KEY)
     )

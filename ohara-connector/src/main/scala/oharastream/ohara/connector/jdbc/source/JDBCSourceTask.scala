@@ -39,6 +39,7 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] var topics: Seq[TopicKey]                                = _
   private[this] var schema: Seq[Column]                                  = _
   private[this] val TIMESTAMP_PARTITION_RNAGE: Int                       = 86400000 // 1 day
+  private[this] var timestampColumnName: String                          = _
   private[this] var firstTimestampValue: Timestamp                       = _
 
   override protected[source] def run(settings: TaskSetting): Unit = {
@@ -52,8 +53,9 @@ class JDBCSourceTask extends RowSourceTask {
     offsetCache = new JDBCOffsetCache()
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val tableName = jdbcSourceConnectorConfig.dbTableName
+    timestampColumnName =
+      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA).last
     firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName)
   }
 
@@ -115,8 +117,7 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val tableName = jdbcSourceConnectorConfig.dbTableName
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
 
@@ -198,9 +199,7 @@ class JDBCSourceTask extends RowSourceTask {
     * @return true or false
     */
   private[this] def isCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-
+    val tableName = jdbcSourceConnectorConfig.dbTableName
     val sql =
       s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
 

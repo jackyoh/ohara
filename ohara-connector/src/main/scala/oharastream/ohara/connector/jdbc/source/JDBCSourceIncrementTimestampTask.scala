@@ -23,6 +23,8 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
   private[this] var schema: Seq[Column]                                  = _
   private[this] val TIMESTAMP_PARTITION_RNAGE: Int                       = 86400000 // 1 day
   private[this] var firstTimestampValue: Timestamp                       = _
+  private[this] var incrementColumnName: String                          = _
+  private[this] var timestampColumnName: String                          = _
 
   override protected[source] def run(settings: TaskSetting): Unit = {
     jdbcSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
@@ -35,9 +37,11 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
     offsetCache = new JDBCOffsetCache()
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName
+    val tableName = jdbcSourceConnectorConfig.dbTableName
+    val incrementTimestampColumnNames =
+      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA)
+    val incrementColumnName = incrementTimestampColumnNames.head
+    val timestampColumnName = incrementTimestampColumnNames.last
     firstTimestampValue = tableFirstTimestampValue(tableName, timestampColumnName, incrementColumnName)
   }
 
@@ -105,15 +109,12 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
   }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName
+    val tableName = jdbcSourceConnectorConfig.dbTableName
     val topicOffset: JDBCOffsetInfo =
       offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
 
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? and $incrementColumnName > ? ORDER BY $timestampColumnName, $incrementColumnName"
-    // println(s"==========[offset]===========: ${topicOffset.index}|${startTimestamp}~${stopTimestamp}")
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
       prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
@@ -129,8 +130,7 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
         results
-        //.take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
-          .take(100)
+          .take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
           .flatMap { columns =>
             val newSchema =
               if (schema.isEmpty)
@@ -141,7 +141,6 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
               .map(_.value.toString)
               .getOrElse(throw new IllegalArgumentException(s"The $incrementColumnName column is not found"))
               .toLong
-            // println(s"$idValue")
             val topicOffset: JDBCOffsetInfo =
               offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
 
@@ -198,9 +197,7 @@ class JDBCSourceIncrementTimestampTask extends RowSourceTask {
     * @return true or false
     */
   private[this] def isCompleted(startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName
+    val tableName = jdbcSourceConnectorConfig.dbTableName
     val sql =
       s"SELECT $incrementColumnName FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $incrementColumnName DESC"
     val statement = client.connection.prepareStatement(sql)

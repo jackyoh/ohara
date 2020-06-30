@@ -1,24 +1,8 @@
-/*
- * Copyright 2019 is-land
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
-import java.util.concurrent.atomic.LongAdder
 import java.util.concurrent.{Executors, TimeUnit}
+import java.util.concurrent.atomic.LongAdder
 
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
@@ -28,30 +12,32 @@ import oharastream.ohara.common.data.{Cell, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.Consumer
-import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.testing.With3Brokers3Workers
 import oharastream.ohara.testing.service.Database
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.runners.Parameterized.Parameters
 import org.junit.{After, Test}
-import org.scalatest.matchers.should.Matchers._
+import org.junit.runners.Parameterized.Parameters
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
+import org.scalatest.matchers.should.Matchers._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @RunWith(value = classOf[Parameterized])
-class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Brokers3Workers {
-  private[this] val db: Database = Database.local()
+abstract class BasicTestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Brokers3Workers {
+  protected[this] val db: Database        = Database.local()
+  protected[this] val tableName           = "table1"
+  protected[this] val timestampColumnName = "timestamp"
+  protected[this] val incrementColumnName = "increment"
+  protected[this] def jdbcSourceConnectorProps: JDBCSourceConnectorConfig;
+
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
-  private[this] val tableName           = "table1"
-  private[this] val timestampColumnName = "c0"
-  private[this] val queryColumn         = "c1"
-  private[this] val increment           = "increment"
-  private[this] val columnSize          = 3
+
+  private[this] val queryColumn = "c1"
+  private[this] val columnSize  = 3
   private[this] val columns = Seq(RdbColumn(timestampColumnName, "TIMESTAMP(6)", false)) ++
     (1 to columnSize).map { index =>
       if (index == 1) RdbColumn(s"c${index}", "VARCHAR(45)", false)
@@ -61,7 +47,10 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   private[this] val connectorAdmin             = ConnectorAdmin(testUtil.workersConnProps)
 
   private[this] def createTable(): Unit = {
-    client.createTable(tableName, Seq(RdbColumn(increment, "MEDIUMINT NOT NULL AUTO_INCREMENT", true)) ++ columns)
+    client.createTable(
+      tableName,
+      Seq(RdbColumn(incrementColumnName, "MEDIUMINT NOT NULL AUTO_INCREMENT", true)) ++ columns
+    )
   }
 
   private[this] val inputDataThread: Releasable = {
@@ -70,7 +59,8 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
     pool.execute(() => {
       if (client.tables().map(_.name).find(_ == tableName).isEmpty) createTable()
 
-      val sql               = s"INSERT INTO $tableName(c0, c1, c2, c3) VALUES (${columns.map(_ => "?").mkString(",")})"
+      val sql =
+        s"INSERT INTO $tableName($timestampColumnName, c1, c2, c3) VALUES (${columns.map(_ => "?").mkString(",")})"
       val preparedStatement = client.connection.prepareStatement(sql)
       try {
         while ((CommonUtils.current() - startTime) <= inputDataTime) {
@@ -92,7 +82,6 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       pool.awaitTermination(inputDataTime, TimeUnit.SECONDS)
     }
   }
-
   @Test
   def testConnectorStartPauseResume(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
@@ -202,39 +191,35 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
         .keySerializer(Serializer.ROW)
         .valueSerializer(Serializer.BYTES)
         .build()
-    //val statement = client.connection.createStatement()
+    val statement = client.connection.createStatement()
     try {
-      //val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-      /*val queryResult: (String, String) = Iterator
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val queryResult: String = Iterator
         .continually(resultSet)
         .takeWhile(_.next())
-        .map { x =>
-          (x.getString(2), x.getString(3))
-        }
+        .map(_.getString(queryColumn))
         .toSeq
-        .head*/
-
-      /*statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
-      statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
-      )*/
-
+        .head
       TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
-      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
-      tableTotalCount.intValue() shouldBe result.size
+      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult}'")
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), '${queryResult}')"
+      )
+      TimeUnit.MILLISECONDS.sleep(10)
+      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue() + 1).asScala
+      tableTotalCount.intValue() + 1 shouldBe result.size
 
-      /*val topicData: Seq[String] = result
+      val topicData: Seq[String] = result
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
-        .toSeq*/
-      // val updateResultSet = statement.executeQuery(s"select * from $tableName order by c0")
-      //val resultTableData: Seq[String] =
-      //  Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
-
-      //checkData(resultTableData, topicData)
+        .toSeq
+      val updateResultSet = statement.executeQuery(s"select * from $tableName order by $timestampColumnName")
+      val resultTableData: Seq[String] =
+        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
+      checkData(resultTableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
-      // Releasable.close(statement)
+      Releasable.close(statement)
       Releasable.close(consumer)
     }
   }
@@ -264,7 +249,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello2')"
       )
-      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName=NOW() WHERE $queryColumn='hello2'")
+      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName = NOW() WHERE $queryColumn = 'hello2'")
 
       val expectedRow = tableTotalCount.intValue() + 2
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
@@ -292,11 +277,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   }
 
   private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
-    tableData.zipWithIndex.foreach {
-      case (record, index) => {
-        record shouldBe topicData(index)
-      }
-    }
+    tableData.foreach(topicData.contains(_) shouldBe true)
   }
 
   private[this] def rowData(): Row = {
@@ -306,21 +287,6 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
       }): _*
     )
   }
-
-  private[this] val jdbcSourceConnectorProps = JDBCSourceConnectorConfig(
-    TaskSetting.of(
-      Map(
-        DB_URL                -> db.url,
-        DB_USERNAME           -> db.user,
-        DB_PASSWORD           -> db.password,
-        DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-        INCREMENT_COLUMN_NAME -> increment,
-        TASK_TOTAL_KEY        -> "0",
-        TASK_HASH_KEY         -> "0"
-      ).asJava
-    )
-  )
 
   private[this] def result[T](future: Future[T]): T = Await.result(future, Duration(20, TimeUnit.SECONDS))
 
@@ -336,7 +302,7 @@ class TestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) extends With3Broke
   }
 }
 
-object TestJDBCSourceConnectorExactlyOnce {
+object BasicTestJDBCSourceConnectorExactlyOnce {
   @Parameters(name = "{index} test input data time is {0} MILLISECONDS")
   def parameters(): java.util.Collection[Long] = {
     Seq(3000L, 30000L).asJava

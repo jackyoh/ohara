@@ -20,23 +20,23 @@ import scala.concurrent.duration.Duration
 import oharastream.ohara.client.Enum
 
 package object source {
-  val DB_URL: String                        = "source.db.url"
-  val DB_USERNAME: String                   = "source.db.username"
-  val DB_PASSWORD: String                   = "source.db.password"
-  val DB_TABLENAME: String                  = "source.table.name"
-  val DB_CATALOG_PATTERN: String            = "source.schema.catalog"
-  val DB_SCHEMA_PATTERN: String             = "source.schema.pattern"
-  val JDBC_FETCHDATA_SIZE: String           = "source.jdbc.fetch.size"
-  val JDBC_FLUSHDATA_SIZE: String           = "source.jdbc.flush.size"
-  val TASK_TOTAL_KEY                        = "task.total"
-  val TASK_HASH_KEY                         = "tash.hash"
-  val MODE: String                          = "mode"
-  val MODE_DEFAULT                          = "timestamp"
-  val JDBC_FETCHDATA_SIZE_DEFAULT: Int      = 1000
-  val JDBC_FLUSHDATA_SIZE_DEFAULT: Int      = 1000
-  val JDBC_FREQUENCE_TIME_DEFAULT: Duration = Duration("0 second")
-  val TIMESTAMP_COLUMN_NAME: String         = "source.timestamp.column.name"
-  val INCREMENT_COLUMN_NAME: String         = "source.increment.column.name"
+  val DB_URL: String                                 = "source.db.url"
+  val DB_USERNAME: String                            = "source.db.username"
+  val DB_PASSWORD: String                            = "source.db.password"
+  val DB_TABLENAME: String                           = "source.table.name"
+  val DB_CATALOG_PATTERN: String                     = "source.schema.catalog"
+  val DB_SCHEMA_PATTERN: String                      = "source.schema.pattern"
+  val JDBC_FETCHDATA_SIZE: String                    = "source.jdbc.fetch.size"
+  val JDBC_FLUSHDATA_SIZE: String                    = "source.jdbc.flush.size"
+  val TASK_TOTAL_KEY                                 = "task.total"
+  val TASK_HASH_KEY                                  = "tash.hash"
+  val MODE: String                                   = "mode"
+  val MODE_DEFAULT                                   = "timestamp"
+  val JDBC_FETCHDATA_SIZE_DEFAULT: Int               = 1000
+  val JDBC_FLUSHDATA_SIZE_DEFAULT: Int               = 1000
+  val JDBC_FREQUENCE_TIME_DEFAULT: Duration          = Duration("0 second")
+  val INCREMENT_TIMESTAMP_COLUMN_NAME: String        = "source.increment-timestamp.column.name"
+  val SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA: String = ","
 
   def toJavaDuration(d: Duration): java.time.Duration = java.time.Duration.ofMillis(d.toMillis)
   def toScalaDuration(d: java.time.Duration): Duration =
