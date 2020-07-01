@@ -86,7 +86,7 @@ abstract class BasicJDBCSourceTask extends RowSourceTask {
     val statement = client.connection.createStatement()
     try {
       val resultSet =
-        statement.executeQuery(tableFirstTimestampValueSQL)
+        statement.executeQuery(tableFirstTimestampValueSQL())
       try {
         if (!resultSet.next()) new Timestamp(CommonUtils.current())
         else resultSet.getTimestamp(timestampColumnName)
