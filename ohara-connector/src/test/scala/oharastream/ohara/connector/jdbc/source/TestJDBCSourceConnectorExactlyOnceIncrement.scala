@@ -3,7 +3,7 @@ package oharastream.ohara.connector.jdbc.source
 import oharastream.ohara.kafka.connector.TaskSetting
 import scala.jdk.CollectionConverters._
 
-class TestJDBCSourceConnectorIncrement(inputDataTime: Long)
+class TestJDBCSourceConnectorExactlyOnceIncrement(inputDataTime: Long)
     extends BasicTestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) {
   override protected[this] val jdbcSourceConnectorProps: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(
     TaskSetting.of(

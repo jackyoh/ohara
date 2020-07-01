@@ -66,7 +66,7 @@ class JDBCSourceConnector extends RowSourceConnector {
     val jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
     if (jdbcSourceConnectorConfig.incrementTimestampColumnName.contains(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA))
       classOf[JDBCSourceIncrementTimestampTask]
-    else classOf[JDBCSourceTask]
+    else classOf[JDBCSourceTimestampTask]
   }
 
   /**

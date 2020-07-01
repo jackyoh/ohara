@@ -36,7 +36,7 @@ import org.scalatest.matchers.should.Matchers._
 
 import scala.jdk.CollectionConverters._
 
-class TestJDBCSourceTask extends OharaTest {
+class TestJDBCSourceTimestampTask extends OharaTest {
   private[this] val db                  = Database.local()
   private[this] val client              = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName           = "TABLE1"
@@ -77,7 +77,7 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testPoll(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask           = new JDBCSourceTask()
+    val jdbcSourceTask: JDBCSourceTimestampTask  = new JDBCSourceTimestampTask()
     val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
     val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
     when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
@@ -162,25 +162,25 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testRowTimestamp(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask         = new JDBCSourceTask()
-    val schema: Seq[Column]                    = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
-    val columnInfo: Seq[ColumnInfo[Timestamp]] = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
-    val row0: Row                              = jdbcSourceTask.row(schema, columnInfo)
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val schema: Seq[Column]                     = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
+    val columnInfo: Seq[ColumnInfo[Timestamp]]  = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
+    val row0: Row                               = jdbcSourceTask.row(schema, columnInfo)
     row0.cell("COLUMN1").value.toString shouldBe "1970-01-01 08:00:00.0"
   }
 
   @Test
   def testRowInt(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask   = new JDBCSourceTask()
-    val schema: Seq[Column]              = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
-    val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = jdbcSourceTask.row(schema, columnInfo)
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val schema: Seq[Column]                     = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
+    val columnInfo: Seq[ColumnInfo[Int]]        = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
+    val row0: Row                               = jdbcSourceTask.row(schema, columnInfo)
     row0.cell("COLUMN1").value shouldBe 100
   }
 
   @Test
   def testCellOrder(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
     val schema: Seq[Column] = Seq(
       Column.builder().name("c1").dataType(DataType.INT).order(1).build(),
       Column.builder().name("c0").dataType(DataType.INT).order(0).build()
@@ -196,7 +196,7 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testRowNewName(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
     val schema: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.INT).order(0).build()
     )
@@ -207,8 +207,8 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testPartitionKeyError_1(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
-    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val taskSetting: TaskSetting                = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
@@ -232,8 +232,8 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testPartitionKeyError_2(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
-    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val taskSetting: TaskSetting                = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
@@ -257,8 +257,8 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testPartitionKeyNormal(): Unit = {
-    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
-    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
+    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val taskSetting: TaskSetting                = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)

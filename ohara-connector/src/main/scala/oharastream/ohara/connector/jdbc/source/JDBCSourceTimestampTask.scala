@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 is-land
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
@@ -12,12 +28,11 @@ import oharastream.ohara.kafka.connector.RowSourceRecord
 
 import scala.jdk.CollectionConverters._
 
-class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
+class JDBCSourceTimestampTask extends BasicJDBCSourceTask {
   private[this] var topics: Seq[TopicKey]                                = _
   private[this] var schema: Seq[Column]                                  = _
   private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
   private[this] var timestampColumnName: String                          = _
-  private[this] var incrementColumnName: String                          = _
   private[this] var offsetCache: JDBCOffsetCache                         = _
 
   override protected[this] def runJDBCSourceTask(
@@ -25,14 +40,12 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
     topics: Seq[TopicKey],
     schema: Seq[Column]
   ): Unit = {
-    val incrementTimestampColumnNames =
-      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA)
     this.jdbcSourceConnectorConfig = jdbcSourceConnectorConfig
-    this.incrementColumnName = incrementTimestampColumnNames.head
-    this.timestampColumnName = incrementTimestampColumnNames.last
+    timestampColumnName =
+      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA).last
+    this.offsetCache = new JDBCOffsetCache()
     this.topics = topics
     this.schema = schema
-    this.offsetCache = new JDBCOffsetCache()
   }
 
   protected[this] def queryData(
@@ -44,18 +57,14 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
     val tablePartition = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
-    val topicOffset: JDBCOffsetInfo =
-      offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
-
     val sql =
-      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? and $incrementColumnName > ? ORDER BY $timestampColumnName, $incrementColumnName"
+      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
+
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
       prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
       prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
       prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-      prepareStatement.setLong(3, topicOffset.index)
-
       val resultSet = prepareStatement.executeQuery()
       try {
         val tableTimestampPartition                    = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
@@ -63,25 +72,24 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
 
-        results
+        val offset: JDBCOffsetInfo =
+          offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
+
+        results.zipWithIndex
+          .filter {
+            case (_, index) =>
+              index >= offset.index
+          }
           .take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
-          .flatMap { columns =>
-            val newSchema =
-              if (schema.isEmpty)
-                columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
-              else schema
-            val idValue = columns
-              .find(_.columnName == incrementColumnName)
-              .map(_.value.toString())
-              .getOrElse(throw new IllegalArgumentException(s"The $incrementColumnName column is not found"))
-              .toLong
-            val topicOffset: JDBCOffsetInfo =
-              offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
-
-            if (idValue > topicOffset.index) {
-              val offset = JDBCOffsetInfo(idValue)
-
+          .flatMap {
+            case (columns, rowIndex) =>
+              val newSchema =
+                if (schema.isEmpty)
+                  columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+                else schema
+              val offset = JDBCOffsetInfo(rowIndex + 1)
               offsetCache.update(tableTimestampPartition, offset)
+
               topics.map(
                 RowSourceRecord
                   .builder()
@@ -95,7 +103,6 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
                   .topicKey(_)
                   .build()
               )
-            } else Seq.empty
           }
           .toSeq
       } finally Releasable.close(resultSet)
@@ -115,27 +122,28 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
   ): Boolean = {
     val tableName = jdbcSourceConnectorConfig.dbTableName
     val sql =
-      s"SELECT $incrementColumnName FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $incrementColumnName DESC"
+      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
+
     val statement = client.connection.prepareStatement(sql)
     try {
       statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
       statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
       val resultSet = statement.executeQuery()
       try {
-        val id =
-          if (resultSet.next()) resultSet.getLong(1)
+        val dbCount =
+          if (resultSet.next()) resultSet.getInt(1)
           else 0
         val tablePartition = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
         val offsetIndex    = offsetCache.readOffset(tablePartition).index
-        if (offsetIndex > id)
+        if (dbCount < offsetIndex) {
           throw new IllegalArgumentException(
-            s"The $startTimestamp~$stopTimestamp data offset index error ($offsetIndex > $id). Please confirm your data"
+            s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"
           )
-        else offsetIndex == id
+        } else offsetIndex == dbCount
       } finally Releasable.close(resultSet)
     } finally Releasable.close(statement)
   }
 
   override protected def tableFirstTimestampValueSQL(): String =
-    s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName, $incrementColumnName"
+    s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName"
 }
