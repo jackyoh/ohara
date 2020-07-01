@@ -31,7 +31,7 @@ abstract class BasicTestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) exte
   protected[this] val tableName           = "table1"
   protected[this] val timestampColumnName = "timestamp"
   protected[this] val incrementColumnName = "increment"
-  protected[this] def jdbcSourceConnectorProps: JDBCSourceConnectorConfig;
+  protected[this] def jdbcSourceConnectorProps: JDBCSourceConnectorConfig
 
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build

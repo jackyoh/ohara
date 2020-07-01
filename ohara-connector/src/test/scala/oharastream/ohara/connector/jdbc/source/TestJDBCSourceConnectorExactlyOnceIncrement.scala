@@ -12,7 +12,7 @@ class TestJDBCSourceConnectorExactlyOnceIncrement(inputDataTime: Long)
         DB_USERNAME                     -> db.user,
         DB_PASSWORD                     -> db.password,
         DB_TABLENAME                    -> tableName,
-        INCREMENT_TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        INCREMENT_TIMESTAMP_COLUMN_NAME -> s"${incrementColumnName},${timestampColumnName}",
         TASK_TOTAL_KEY                  -> "0",
         TASK_HASH_KEY                   -> "0"
       ).asJava

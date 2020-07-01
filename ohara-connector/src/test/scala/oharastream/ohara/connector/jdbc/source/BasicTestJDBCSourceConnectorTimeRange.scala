@@ -1,19 +1,3 @@
-/*
- * Copyright 2019 is-land
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
@@ -27,35 +11,40 @@ import oharastream.ohara.common.data.{Cell, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.Consumer
-import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.testing.With3Brokers3Workers
 import oharastream.ohara.testing.service.Database
+import org.junit.{After, Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-import org.junit.{After, Before, Test}
 import org.scalatest.matchers.should.Matchers._
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 @RunWith(value = classOf[Parameterized])
-class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends With3Brokers3Workers {
-  private[this] var startTimestamp     = timestampInfo.startTimestamp
-  private[this] val stopTimestamp      = timestampInfo.stopTimestamp
-  private[this] val incrementTimestamp = timestampInfo.increment
-
+abstract class BasicTestJDBCSourceConnectorTimeRange(timestampInfo: TimestampInfo) extends With3Brokers3Workers {
+  private[this] var startTimestamp              = timestampInfo.startTimestamp
+  private[this] val stopTimestamp               = timestampInfo.stopTimestamp
+  private[this] val incrementTimestamp          = timestampInfo.increment
   private[this] val currentTimestamp: Timestamp = new Timestamp(CommonUtils.current())
-  private[this] val db: Database                = Database.local()
+
+  protected[this] val db: Database        = Database.local()
+  protected[this] val tableName           = "table1"
+  protected[this] val incrementColumnName = "c0"
+  protected[this] val timestampColumnName = "c1"
+
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
-  private[this] val tableName           = "table1"
-  private[this] val timestampColumnName = "c0"
-  private[this] val columnSize          = 3
-  private[this] val columns = Seq(RdbColumn(timestampColumnName, "TIMESTAMP(6)", false)) ++
-    (1 to columnSize).map { index =>
-      if (index == 1) RdbColumn(s"c${index}", "VARCHAR(45)", true)
+  private[this] val beginIndex      = 2
+  private[this] val totalColumnSize = 4
+  private[this] val columns = Seq(
+    RdbColumn(incrementColumnName, "MEDIUMINT NOT NULL AUTO_INCREMENT", true),
+    RdbColumn(timestampColumnName, "TIMESTAMP(6)", false)
+  ) ++
+    (beginIndex to totalColumnSize).map { index =>
+      if (index == 1) RdbColumn(s"c${index}", "VARCHAR(45)", false)
       else RdbColumn(s"c${index}", "VARCHAR(45)", false)
     }
   private[this] val connectorAdmin = ConnectorAdmin(testUtil.workersConnProps)
@@ -63,7 +52,7 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
   @Before
   def setup(): Unit = {
     client.createTable(tableName, columns)
-    val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
+    val sql               = s"INSERT INTO $tableName($timestampColumnName, c2, c3, c4) VALUES (?, ?, ?, ?)"
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
       while (startTimestamp.getTime() < stopTimestamp.getTime()) {
@@ -102,7 +91,7 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
       checkData(
         records
           .map { record =>
-            record.key().get().cell("c0").value().toString()
+            record.key().get().cell(timestampColumnName).value().toString()
           }
           .sorted[String]
           .toSeq
@@ -156,7 +145,7 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
 
   private[this] def rowData(): Row = {
     Row.of(
-      (1 to columnSize).map(index => {
+      (beginIndex to totalColumnSize).map(index => {
         Cell.of(s"c$index", CommonUtils.randomString())
       }): _*
     )
@@ -179,22 +168,10 @@ class TestJDBCSourceConnectorTimeRnage(timestampInfo: TimestampInfo) extends Wit
       .create()
   }
 
-  private[this] val jdbcSourceConnectorProps = JDBCSourceConnectorConfig(
-    TaskSetting.of(
-      Map(
-        DB_URL                          -> db.url,
-        DB_USERNAME                     -> db.user,
-        DB_PASSWORD                     -> db.password,
-        DB_TABLENAME                    -> tableName,
-        INCREMENT_TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-        TASK_TOTAL_KEY                  -> "0",
-        TASK_HASH_KEY                   -> "0"
-      ).asJava
-    )
-  )
+  protected[this] def jdbcSourceConnectorProps: JDBCSourceConnectorConfig
 }
 
-object TestJDBCSourceConnectorTimeRnage {
+object BasicTestJDBCSourceConnectorTimeRange {
   @Parameters(name = "{index} test, test case is {0}")
   def parameters(): java.util.Collection[TimestampInfo] = {
     val ltCurrentTimestamp = TimestampInfo(
