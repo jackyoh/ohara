@@ -146,14 +146,6 @@ class JDBCSourceConnector extends RowSourceConnector {
         .key(DB_SCHEMA_PATTERN)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      MODE -> SettingDef
-        .builder()
-        .displayName("mode")
-        .documentation("Only support timestamp column")
-        .key(MODE)
-        .optional(MODE_DEFAULT)
-        .orderInGroup(counter.getAndIncrement())
-        .build(),
       INCREMENT_TIMESTAMP_COLUMN_NAME -> SettingDef
         .builder()
         .displayName("Increment and timestamp column name")

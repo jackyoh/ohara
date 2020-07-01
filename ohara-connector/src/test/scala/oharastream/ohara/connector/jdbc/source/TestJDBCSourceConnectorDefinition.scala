@@ -125,17 +125,6 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
   }
 
   @Test
-  def checkMode(): Unit = {
-    val definition = jdbcSource.settingDefinitions().get(MODE)
-    definition.necessary() should not be Necessary.REQUIRED
-    definition.defaultString() shouldBe MODE_DEFAULT
-    definition.permission() shouldBe Permission.EDITABLE
-    definition.internal() shouldBe false
-    definition.reference() shouldBe Reference.NONE
-    definition.valueType() shouldBe SettingDef.Type.STRING
-  }
-
-  @Test
   def checkTimeStampColumnName(): Unit = {
     val definition = jdbcSource.settingDefinitions().get(INCREMENT_TIMESTAMP_COLUMN_NAME)
     definition.necessary() shouldBe Necessary.REQUIRED

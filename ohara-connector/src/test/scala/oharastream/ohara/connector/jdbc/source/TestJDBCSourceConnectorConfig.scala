@@ -45,7 +45,6 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     jdbcSourceConnectorConfig.dbUserName shouldBe "root"
     jdbcSourceConnectorConfig.dbPassword shouldBe "123456"
     jdbcSourceConnectorConfig.dbTableName shouldBe "TABLE1"
-    jdbcSourceConnectorConfig.mode shouldBe "timestamp"
     jdbcSourceConnectorConfig.dbSchemaPattern.get shouldBe "schema1"
     jdbcSourceConnectorConfig.incrementTimestampColumnName shouldBe "CDC_TIMESTAMP"
     jdbcSourceConnectorConfig.jdbcFetchDataSize shouldBe JDBC_FETCHDATA_SIZE_DEFAULT
@@ -94,7 +93,6 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       dbTableName = "123",
       dbCatalogPattern = None,
       dbSchemaPattern = None,
-      mode = "123",
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
       incrementTimestampColumnName = "123",
@@ -112,7 +110,6 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       DB_TABLENAME                    -> "aa",
       DB_CATALOG_PATTERN              -> "aa",
       DB_SCHEMA_PATTERN               -> "aa",
-      MODE                            -> "aa",
       INCREMENT_TIMESTAMP_COLUMN_NAME -> "aa",
       TASK_HASH_KEY                   -> "0",
       TASK_TOTAL_KEY                  -> "0"
@@ -126,7 +123,6 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       DB_USERNAME                     -> "aa",
       DB_PASSWORD                     -> "aa",
       DB_TABLENAME                    -> "aa",
-      MODE                            -> "aa",
       INCREMENT_TIMESTAMP_COLUMN_NAME -> "aa",
       TASK_HASH_KEY                   -> "0",
       TASK_TOTAL_KEY                  -> "0"

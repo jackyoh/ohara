@@ -30,8 +30,6 @@ package object source {
   val JDBC_FLUSHDATA_SIZE: String                    = "source.jdbc.flush.size"
   val TASK_TOTAL_KEY                                 = "task.total"
   val TASK_HASH_KEY                                  = "tash.hash"
-  val MODE: String                                   = "mode"
-  val MODE_DEFAULT                                   = "timestamp"
   val JDBC_FETCHDATA_SIZE_DEFAULT: Int               = 1000
   val JDBC_FLUSHDATA_SIZE_DEFAULT: Int               = 1000
   val JDBC_FREQUENCE_TIME_DEFAULT: Duration          = Duration("0 second")
