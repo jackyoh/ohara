@@ -62,7 +62,7 @@ class JDBCSourceConnector extends RowSourceConnector {
     *
     * @return a JDBCSourceTask class
     */
-  override def taskClass(): Class[_ <: RowSourceTask] = classOf[JDBCSourceTimestampTask]
+  override def taskClass(): Class[_ <: RowSourceTask] = classOf[JDBCSourceTask]
 
   /**
     * Return the settings for the jdbc source task.

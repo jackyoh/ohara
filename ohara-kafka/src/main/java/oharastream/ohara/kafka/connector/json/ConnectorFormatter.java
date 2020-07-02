@@ -100,8 +100,9 @@ public final class ConnectorFormatter {
 
   public ConnectorFormatter setting(String key, String value) {
     CommonUtils.requireNonEmpty(key, () -> "key can't be either empty or null");
-    CommonUtils.requireNonEmpty(
+    /*CommonUtils.requireNonEmpty(
         value, () -> "it is illegal to assign empty/null value to key:" + key);
+    */
     // Kafka has specific list format so we need to convert the string list ...
     try {
       List<String> ss = StringList.ofJson(value);
