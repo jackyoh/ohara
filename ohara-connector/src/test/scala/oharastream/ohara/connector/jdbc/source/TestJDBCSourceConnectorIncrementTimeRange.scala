@@ -25,13 +25,14 @@ class TestJDBCSourceConnectorIncrementTimeRange(timestampInfo: TimestampInfo)
     JDBCSourceConnectorConfig(
       TaskSetting.of(
         Map(
-          DB_URL                          -> db.url,
-          DB_USERNAME                     -> db.user,
-          DB_PASSWORD                     -> db.password,
-          DB_TABLENAME                    -> tableName,
-          INCREMENT_TIMESTAMP_COLUMN_NAME -> s"$incrementColumnName,$timestampColumnName",
-          TASK_TOTAL_KEY                  -> "0",
-          TASK_HASH_KEY                   -> "0"
+          DB_URL                -> db.url,
+          DB_USERNAME           -> db.user,
+          DB_PASSWORD           -> db.password,
+          DB_TABLENAME          -> tableName,
+          TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+          INCREMENT_COLUMN_NAME -> incrementColumnName,
+          TASK_TOTAL_KEY        -> "0",
+          TASK_HASH_KEY         -> "0"
         ).asJava
       )
     )

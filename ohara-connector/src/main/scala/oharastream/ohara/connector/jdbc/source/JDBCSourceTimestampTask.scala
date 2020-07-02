@@ -41,8 +41,7 @@ class JDBCSourceTimestampTask extends BasicJDBCSourceTask {
     schema: Seq[Column]
   ): Unit = {
     this.jdbcSourceConnectorConfig = jdbcSourceConnectorConfig
-    timestampColumnName =
-      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA).last
+    timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     this.offsetCache = new JDBCOffsetCache()
     this.topics = topics
     this.schema = schema

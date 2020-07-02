@@ -41,11 +41,9 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
     topics: Seq[TopicKey],
     schema: Seq[Column]
   ): Unit = {
-    val incrementTimestampColumnNames =
-      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA)
     this.jdbcSourceConnectorConfig = jdbcSourceConnectorConfig
-    this.incrementColumnName = incrementTimestampColumnNames.head
-    this.timestampColumnName = incrementTimestampColumnNames.last
+    this.incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName
+    this.timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     this.topics = topics
     this.schema = schema
     this.offsetCache = new JDBCOffsetCache()

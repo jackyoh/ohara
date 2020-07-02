@@ -126,7 +126,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
 
   @Test
   def checkTimeStampColumnName(): Unit = {
-    val definition = jdbcSource.settingDefinitions().get(INCREMENT_TIMESTAMP_COLUMN_NAME)
+    val definition = jdbcSource.settingDefinitions().get(TIMESTAMP_COLUMN_NAME)
     definition.necessary() shouldBe Necessary.REQUIRED
     definition.hasDefault shouldBe false
     definition.permission() shouldBe Permission.EDITABLE
@@ -153,13 +153,13 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
         .topicKey(topicKey)
         .settings(
           Map(
-            DB_URL                          -> url,
-            DB_USERNAME                     -> userName,
-            DB_PASSWORD                     -> password,
-            DB_TABLENAME                    -> tableName,
-            INCREMENT_TIMESTAMP_COLUMN_NAME -> timeStampColumnName,
-            JDBC_FETCHDATA_SIZE             -> "1000",
-            JDBC_FLUSHDATA_SIZE             -> "1000"
+            DB_URL                -> url,
+            DB_USERNAME           -> userName,
+            DB_PASSWORD           -> password,
+            DB_TABLENAME          -> tableName,
+            TIMESTAMP_COLUMN_NAME -> timeStampColumnName,
+            JDBC_FETCHDATA_SIZE   -> "1000",
+            JDBC_FLUSHDATA_SIZE   -> "1000"
           )
         )
         .connectorClass(classOf[JDBCSourceConnector])
@@ -242,7 +242,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
     response
       .settings()
       .asScala
-      .filter(_.value().key() == INCREMENT_TIMESTAMP_COLUMN_NAME)
+      .filter(_.value().key() == TIMESTAMP_COLUMN_NAME)
       .head
       .definition()
       .necessary() shouldBe Necessary.REQUIRED

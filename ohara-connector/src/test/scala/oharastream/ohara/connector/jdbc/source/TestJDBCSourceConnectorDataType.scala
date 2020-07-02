@@ -189,13 +189,13 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
   private[this] val props = JDBCSourceConnectorConfig(
     TaskSetting.of(
       Map(
-        DB_URL                          -> db.url,
-        DB_USERNAME                     -> db.user,
-        DB_PASSWORD                     -> db.password,
-        DB_TABLENAME                    -> tableName,
-        INCREMENT_TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-        TASK_TOTAL_KEY                  -> "0",
-        TASK_HASH_KEY                   -> "0"
+        DB_URL                -> db.url,
+        DB_USERNAME           -> db.user,
+        DB_PASSWORD           -> db.password,
+        DB_TABLENAME          -> tableName,
+        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
+        TASK_TOTAL_KEY        -> "0",
+        TASK_HASH_KEY         -> "0"
       ).asJava
     )
   )

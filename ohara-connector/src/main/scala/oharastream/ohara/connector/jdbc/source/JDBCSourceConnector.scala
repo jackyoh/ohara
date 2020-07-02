@@ -42,7 +42,7 @@ class JDBCSourceConnector extends RowSourceConnector {
     val tableName: String                                    = jdbcSourceConnectorConfig.dbTableName
 
     val timestampColumnName: String =
-      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA).last
+      jdbcSourceConnectorConfig.timestampColumnName
 
     val client = DatabaseClient.builder
       .url(jdbcSourceConnectorConfig.dbURL)
@@ -62,12 +62,7 @@ class JDBCSourceConnector extends RowSourceConnector {
     *
     * @return a JDBCSourceTask class
     */
-  override def taskClass(): Class[_ <: RowSourceTask] = {
-    val jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
-    if (jdbcSourceConnectorConfig.incrementTimestampColumnName.contains(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA))
-      classOf[JDBCSourceIncrementTimestampTask]
-    else classOf[JDBCSourceTimestampTask]
-  }
+  override def taskClass(): Class[_ <: RowSourceTask] = classOf[JDBCSourceTimestampTask]
 
   /**
     * Return the settings for the jdbc source task.
@@ -146,14 +141,22 @@ class JDBCSourceConnector extends RowSourceConnector {
         .key(DB_SCHEMA_PATTERN)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      INCREMENT_TIMESTAMP_COLUMN_NAME -> SettingDef
+      TIMESTAMP_COLUMN_NAME -> SettingDef
         .builder()
-        .displayName("Increment and timestamp column name")
+        .displayName("Timestamp column name")
         .documentation(
-          "Setting increment and timestamp column name. example: increment,timestamp, if you not have the increment colume, you can only setting the timestamp column name."
+          "Use a timestamp column to detect new and modified rows"
         )
         .required(SettingDef.Type.STRING)
-        .key(INCREMENT_TIMESTAMP_COLUMN_NAME)
+        .key(TIMESTAMP_COLUMN_NAME)
+        .orderInGroup(counter.getAndIncrement())
+        .build(),
+      INCREMENT_COLUMN_NAME -> SettingDef
+        .builder()
+        .displayName("Increment column name")
+        .documentation("For the extractly once column")
+        .optional(SettingDef.Type.STRING)
+        .key(INCREMENT_COLUMN_NAME)
         .orderInGroup(counter.getAndIncrement())
         .build(),
       JDBC_FETCHDATA_SIZE -> SettingDef

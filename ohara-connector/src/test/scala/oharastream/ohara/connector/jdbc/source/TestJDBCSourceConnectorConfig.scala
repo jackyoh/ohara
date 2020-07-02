@@ -30,14 +30,14 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
   def testSettingProperty(): Unit = {
     val map1: Map[String, String] =
       Map(
-        DB_URL                          -> "jdbc:mysql://localhost/test",
-        DB_USERNAME                     -> "root",
-        DB_PASSWORD                     -> "123456",
-        DB_TABLENAME                    -> "TABLE1",
-        DB_SCHEMA_PATTERN               -> "schema1",
-        INCREMENT_TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP",
-        TASK_HASH_KEY                   -> "0",
-        TASK_TOTAL_KEY                  -> "0"
+        DB_URL                -> "jdbc:mysql://localhost/test",
+        DB_USERNAME           -> "root",
+        DB_PASSWORD           -> "123456",
+        DB_TABLENAME          -> "TABLE1",
+        DB_SCHEMA_PATTERN     -> "schema1",
+        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP",
+        TASK_HASH_KEY         -> "0",
+        TASK_TOTAL_KEY        -> "0"
       )
 
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
@@ -46,7 +46,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     jdbcSourceConnectorConfig.dbPassword shouldBe "123456"
     jdbcSourceConnectorConfig.dbTableName shouldBe "TABLE1"
     jdbcSourceConnectorConfig.dbSchemaPattern.get shouldBe "schema1"
-    jdbcSourceConnectorConfig.incrementTimestampColumnName shouldBe "CDC_TIMESTAMP"
+    jdbcSourceConnectorConfig.timestampColumnName shouldBe "CDC_TIMESTAMP"
     jdbcSourceConnectorConfig.jdbcFetchDataSize shouldBe JDBC_FETCHDATA_SIZE_DEFAULT
   }
 
@@ -54,15 +54,15 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
   def testFetchDataSize(): Unit = {
     val map1: Map[String, String] =
       Map(
-        DB_URL                          -> "jdbc:mysql://localhost/test",
-        DB_USERNAME                     -> "root",
-        DB_PASSWORD                     -> "123456",
-        DB_TABLENAME                    -> "TABLE1",
-        DB_SCHEMA_PATTERN               -> "schema1",
-        JDBC_FETCHDATA_SIZE             -> "500",
-        INCREMENT_TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP",
-        TASK_HASH_KEY                   -> "0",
-        TASK_TOTAL_KEY                  -> "0"
+        DB_URL                -> "jdbc:mysql://localhost/test",
+        DB_USERNAME           -> "root",
+        DB_PASSWORD           -> "123456",
+        DB_TABLENAME          -> "TABLE1",
+        DB_SCHEMA_PATTERN     -> "schema1",
+        JDBC_FETCHDATA_SIZE   -> "500",
+        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP",
+        TASK_HASH_KEY         -> "0",
+        TASK_TOTAL_KEY        -> "0"
       )
 
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
@@ -95,7 +95,8 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       dbSchemaPattern = None,
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
-      incrementTimestampColumnName = "123",
+      timestampColumnName = "123",
+      incrementColumnName = "123",
       taskTotal = 0,
       taskHash = 0
     )
@@ -104,28 +105,28 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     config.toMap.contains(DB_SCHEMA_PATTERN) shouldBe false
 
     val configMap = Map[String, String](
-      DB_URL                          -> "aa",
-      DB_USERNAME                     -> "aa",
-      DB_PASSWORD                     -> "aa",
-      DB_TABLENAME                    -> "aa",
-      DB_CATALOG_PATTERN              -> "aa",
-      DB_SCHEMA_PATTERN               -> "aa",
-      INCREMENT_TIMESTAMP_COLUMN_NAME -> "aa",
-      TASK_HASH_KEY                   -> "0",
-      TASK_TOTAL_KEY                  -> "0"
+      DB_URL                -> "aa",
+      DB_USERNAME           -> "aa",
+      DB_PASSWORD           -> "aa",
+      DB_TABLENAME          -> "aa",
+      DB_CATALOG_PATTERN    -> "aa",
+      DB_SCHEMA_PATTERN     -> "aa",
+      TIMESTAMP_COLUMN_NAME -> "aa",
+      TASK_HASH_KEY         -> "0",
+      TASK_TOTAL_KEY        -> "0"
     )
 
     jdbcConfig(configMap).dbSchemaPattern.isEmpty shouldBe false
     jdbcConfig(configMap).dbCatalogPattern.isEmpty shouldBe false
 
     val configMap2 = Map[String, String](
-      DB_URL                          -> "aa",
-      DB_USERNAME                     -> "aa",
-      DB_PASSWORD                     -> "aa",
-      DB_TABLENAME                    -> "aa",
-      INCREMENT_TIMESTAMP_COLUMN_NAME -> "aa",
-      TASK_HASH_KEY                   -> "0",
-      TASK_TOTAL_KEY                  -> "0"
+      DB_URL                -> "aa",
+      DB_USERNAME           -> "aa",
+      DB_PASSWORD           -> "aa",
+      DB_TABLENAME          -> "aa",
+      TIMESTAMP_COLUMN_NAME -> "aa",
+      TASK_HASH_KEY         -> "0",
+      TASK_TOTAL_KEY        -> "0"
     )
 
     jdbcConfig(configMap2).dbSchemaPattern.isEmpty shouldBe true

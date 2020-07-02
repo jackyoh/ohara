@@ -49,7 +49,7 @@ abstract class BasicJDBCSourceTask extends RowSourceTask {
     val topics = settings.topicKeys().asScala.toSeq
     val schema = settings.columns.asScala.toSeq
     val timestampColumnName =
-      jdbcSourceConnectorConfig.incrementTimestampColumnName.split(SPLIT_INCREMENT_TIMESTAMP_COLUMN_COMMA).last
+      jdbcSourceConnectorConfig.timestampColumnName
 
     runJDBCSourceTask(jdbcSourceConnectorConfig, topics, schema)
     firstTimestampValue = tableFirstTimestampValue(timestampColumnName)
