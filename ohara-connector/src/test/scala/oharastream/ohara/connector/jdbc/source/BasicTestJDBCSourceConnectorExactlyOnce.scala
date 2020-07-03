@@ -221,7 +221,7 @@ abstract class BasicTestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) exte
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), '${queryResult}')"
       )
-      TimeUnit.MILLISECONDS.sleep(10)
+      TimeUnit.MILLISECONDS.sleep(15)
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue() + 1).asScala
       tableTotalCount.intValue() + 1 shouldBe result.size
 

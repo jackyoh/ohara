@@ -247,8 +247,10 @@ object DBTableReader {
         startTimestamp: Timestamp,
         stopTimestamp: Timestamp
       ): Long = {
-        val tableName           = jdbcSourceConnectorConfig.dbTableName
-        val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName
+        val tableName = jdbcSourceConnectorConfig.dbTableName
+        val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName.getOrElse(
+          throw new IllegalArgumentException("The incrument field can't empty")
+        )
         val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
         val sql =
           s"SELECT $incrementColumnName FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $incrementColumnName DESC"
@@ -270,9 +272,11 @@ object DBTableReader {
         stopTimestamp: Timestamp,
         tablePartition: String
       ): Seq[RowSourceRecord] = {
-        val tableName                   = jdbcSourceConnectorConfig.dbTableName
-        val timestampColumnName         = jdbcSourceConnectorConfig.timestampColumnName
-        val incrementColumnName         = jdbcSourceConnectorConfig.incrementColumnName
+        val tableName           = jdbcSourceConnectorConfig.dbTableName
+        val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+        val incrementColumnName = jdbcSourceConnectorConfig.incrementColumnName.getOrElse(
+          throw new IllegalArgumentException("The incrument field can't empty")
+        )
         val topicOffset: JDBCOffsetInfo = offsetCache.readOffset(tablePartition)
 
         val sql =
