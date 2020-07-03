@@ -31,7 +31,11 @@ import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 
 import scala.jdk.CollectionConverters._
 
-trait DataModeHandler {
+/**
+  * For the read data from the RDB.
+  * Currently implement the timestamp and timestamp+increment mode
+  */
+trait DBTableReader {
   protected[source] def queryTableCount(
     client: DatabaseClient,
     startTimestamp: Timestamp,
@@ -84,9 +88,9 @@ trait DataModeHandler {
   }
 }
 
-object DataModeHandler {
+object DBTableReader {
   def timestampMode: TimestampDataModeHandler = new TimestampDataModeHandler
-  class TimestampDataModeHandler private[DataModeHandler] extends Builder[DataModeHandler] {
+  class TimestampDataModeHandler private[DBTableReader] extends Builder[DBTableReader] {
     private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
     private[this] var schema: Seq[Column]                                  = _
     private[this] var topics: Seq[TopicKey]                                = _
@@ -118,7 +122,7 @@ object DataModeHandler {
       this
     }
 
-    override def build(): DataModeHandler = new DataModeHandler() {
+    override def build(): DBTableReader = new DBTableReader() {
       override protected[source] def queryTableCount(
         client: DatabaseClient,
         startTimestamp: Timestamp,
@@ -203,7 +207,7 @@ object DataModeHandler {
   }
 
   def incrementTimestampMode: IncrementTimestampDataModeHandler = new IncrementTimestampDataModeHandler
-  class IncrementTimestampDataModeHandler private[DataModeHandler] extends Builder[DataModeHandler] {
+  class IncrementTimestampDataModeHandler private[DBTableReader] extends Builder[DBTableReader] {
     private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
     private[this] var schema: Seq[Column]                                  = _
     private[this] var topics: Seq[TopicKey]                                = _
@@ -237,7 +241,7 @@ object DataModeHandler {
       this
     }
 
-    override def build(): DataModeHandler = new DataModeHandler {
+    override def build(): DBTableReader = new DBTableReader {
       override protected[source] def queryTableCount(
         client: DatabaseClient,
         startTimestamp: Timestamp,

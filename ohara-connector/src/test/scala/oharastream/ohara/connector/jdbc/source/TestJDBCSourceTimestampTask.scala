@@ -163,7 +163,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testRowTimestamp(): Unit = {
-    val timestampMode                          = DataModeHandler.timestampMode.build()
+    val timestampMode                          = DBTableReader.timestampMode.build()
     val schema: Seq[Column]                    = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Timestamp]] = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
     val row0: Row                              = timestampMode.row(schema, columnInfo)
@@ -172,7 +172,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testRowInt(): Unit = {
-    val timestampMode                    = DataModeHandler.timestampMode.build()
+    val timestampMode                    = DBTableReader.timestampMode.build()
     val schema: Seq[Column]              = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
     val row0: Row                        = timestampMode.row(schema, columnInfo)
@@ -181,7 +181,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testCellOrder(): Unit = {
-    val timestampMode = DataModeHandler.timestampMode.build()
+    val timestampMode = DBTableReader.timestampMode.build()
     val schema: Seq[Column] = Seq(
       Column.builder().name("c1").dataType(DataType.INT).order(1).build(),
       Column.builder().name("c0").dataType(DataType.INT).order(0).build()
@@ -197,7 +197,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testRowNewName(): Unit = {
-    val timestampMode = DataModeHandler.timestampMode.build()
+    val timestampMode = DBTableReader.timestampMode.build()
     val schema: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.INT).order(0).build()
     )

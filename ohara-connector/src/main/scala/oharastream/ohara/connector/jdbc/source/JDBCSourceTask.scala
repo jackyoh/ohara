@@ -31,7 +31,7 @@ class JDBCSourceTask extends RowSourceTask {
 
   private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
   private[this] var client: DatabaseClient                               = _
-  private[this] var dataModeHandler: DataModeHandler                     = _
+  private[this] var dataModeHandler: DBTableReader                       = _
   private[this] val TIMESTAMP_PARTITION_RNAGE: Int                       = 86400000 // 1 day
   private[this] var offsetCache: JDBCOffsetCache                         = _
 
@@ -52,7 +52,7 @@ class JDBCSourceTask extends RowSourceTask {
 
     dataModeHandler =
       if (jdbcSourceConnectorConfig.incrementColumnName.isEmpty)
-        DataModeHandler.timestampMode
+        DBTableReader.timestampMode
           .jdbcSourceConnectorConfig(jdbcSourceConnectorConfig)
           .dbProduct(dbProduct)
           .schema(schema)
@@ -60,7 +60,7 @@ class JDBCSourceTask extends RowSourceTask {
           .offsetCache(offsetCache)
           .build()
       else
-        DataModeHandler.incrementTimestampMode
+        DBTableReader.incrementTimestampMode
           .jdbcSourceConnectorConfig(jdbcSourceConnectorConfig)
           .dbProduct(dbProduct)
           .schema(schema)
@@ -157,11 +157,9 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def needToRun(stopTimestamp: Timestamp): Boolean = {
-    val tableName         = jdbcSourceConnectorConfig.dbTableName
-    val taskTotal         = jdbcSourceConnectorConfig.taskTotal
-    val taskHash          = jdbcSourceConnectorConfig.taskHash
-    val partitionHashCode = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp).hashCode()
-    Math.abs(partitionHashCode) % taskTotal == taskHash
+    val partitionHashCode =
+      tableTimestampPartitionKey(jdbcSourceConnectorConfig.dbTableName, firstTimestampValue, stopTimestamp).hashCode()
+    Math.abs(partitionHashCode) % jdbcSourceConnectorConfig.taskTotal == jdbcSourceConnectorConfig.taskHash
   }
 
   /**
