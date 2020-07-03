@@ -112,6 +112,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       DB_CATALOG_PATTERN    -> "aa",
       DB_SCHEMA_PATTERN     -> "aa",
       TIMESTAMP_COLUMN_NAME -> "aa",
+      INCREMENT_COLUMN_NAME -> "aa",
       TASK_HASH_KEY         -> "0",
       TASK_TOTAL_KEY        -> "0"
     )
@@ -125,6 +126,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       DB_PASSWORD           -> "aa",
       DB_TABLENAME          -> "aa",
       TIMESTAMP_COLUMN_NAME -> "aa",
+      INCREMENT_COLUMN_NAME -> "aa",
       TASK_HASH_KEY         -> "0",
       TASK_TOTAL_KEY        -> "0"
     )

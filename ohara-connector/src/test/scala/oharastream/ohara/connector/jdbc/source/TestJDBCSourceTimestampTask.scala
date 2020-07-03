@@ -17,6 +17,7 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
+import java.util.Optional
 
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
@@ -77,7 +78,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testPoll(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask  = new JDBCSourceTimestampTask()
+    val jdbcSourceTask: JDBCSourceTask           = new JDBCSourceTask()
     val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
     val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
     when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
@@ -91,6 +92,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.stringOption(INCREMENT_COLUMN_NAME)).thenReturn(Optional.of(""))
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
@@ -161,32 +163,32 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testRowTimestamp(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
-    val schema: Seq[Column]                     = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
-    val columnInfo: Seq[ColumnInfo[Timestamp]]  = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
-    val row0: Row                               = jdbcSourceTask.row(schema, columnInfo)
+    val timestampMode                          = DataModeHandler.timestampMode.build()
+    val schema: Seq[Column]                    = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
+    val columnInfo: Seq[ColumnInfo[Timestamp]] = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
+    val row0: Row                              = timestampMode.row(schema, columnInfo)
     row0.cell("COLUMN1").value.toString shouldBe "1970-01-01 08:00:00.0"
   }
 
   @Test
   def testRowInt(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
-    val schema: Seq[Column]                     = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
-    val columnInfo: Seq[ColumnInfo[Int]]        = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                               = jdbcSourceTask.row(schema, columnInfo)
+    val timestampMode                    = DataModeHandler.timestampMode.build()
+    val schema: Seq[Column]              = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
+    val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
+    val row0: Row                        = timestampMode.row(schema, columnInfo)
     row0.cell("COLUMN1").value shouldBe 100
   }
 
   @Test
   def testCellOrder(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val timestampMode = DataModeHandler.timestampMode.build()
     val schema: Seq[Column] = Seq(
       Column.builder().name("c1").dataType(DataType.INT).order(1).build(),
       Column.builder().name("c0").dataType(DataType.INT).order(0).build()
     )
     val columnInfo: Seq[ColumnInfo[Int]] =
       Seq(ColumnInfo("c1", "int", Integer.valueOf(100)), ColumnInfo("c0", "int", Integer.valueOf(50)))
-    val cells = jdbcSourceTask.row(schema, columnInfo).cells().asScala
+    val cells = timestampMode.row(schema, columnInfo).cells().asScala
     cells.head.name shouldBe "c0"
     cells.head.value shouldBe 50
     cells(1).name shouldBe "c1"
@@ -195,19 +197,19 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testRowNewName(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
+    val timestampMode = DataModeHandler.timestampMode.build()
     val schema: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.INT).order(0).build()
     )
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = jdbcSourceTask.row(schema, columnInfo)
+    val row0: Row                        = timestampMode.row(schema, columnInfo)
     row0.cell("COLUMN100").value shouldBe 100
   }
 
   @Test
   def testPartitionKeyError_1(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
-    val taskSetting: TaskSetting                = Mockito.mock(classOf[TaskSetting])
+    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
@@ -215,6 +217,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.stringOption(INCREMENT_COLUMN_NAME)).thenReturn(Optional.of(""))
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
@@ -230,8 +233,8 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testPartitionKeyError_2(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
-    val taskSetting: TaskSetting                = Mockito.mock(classOf[TaskSetting])
+    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
@@ -239,6 +242,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.stringOption(INCREMENT_COLUMN_NAME)).thenReturn(Optional.of(""))
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)
@@ -254,8 +258,8 @@ class TestJDBCSourceTimestampTask extends OharaTest {
 
   @Test
   def testPartitionKeyNormal(): Unit = {
-    val jdbcSourceTask: JDBCSourceTimestampTask = new JDBCSourceTimestampTask()
-    val taskSetting: TaskSetting                = Mockito.mock(classOf[TaskSetting])
+    val jdbcSourceTask: JDBCSourceTask = new JDBCSourceTask()
+    val taskSetting: TaskSetting       = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
     when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
     when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
@@ -263,6 +267,7 @@ class TestJDBCSourceTimestampTask extends OharaTest {
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.stringOption(INCREMENT_COLUMN_NAME)).thenReturn(Optional.of(""))
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)

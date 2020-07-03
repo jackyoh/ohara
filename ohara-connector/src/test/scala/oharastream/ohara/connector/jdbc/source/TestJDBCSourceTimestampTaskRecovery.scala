@@ -17,6 +17,7 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Statement
+import java.util.Optional
 
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
@@ -40,7 +41,7 @@ class TestJDBCSourceTimestampTaskRecovery extends OharaTest {
   private[this] val client                                   = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName                                = "TABLE1"
   private[this] val timestampColumnName                      = "COLUMN1"
-  private[this] val jdbcSourceTask: JDBCSourceTimestampTask  = new JDBCSourceTimestampTask()
+  private[this] val jdbcSourceTask: JDBCSourceTask           = new JDBCSourceTask()
   private[this] val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
   private[this] val taskSetting: TaskSetting                 = Mockito.mock(classOf[TaskSetting])
   private[this] val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
@@ -88,6 +89,7 @@ class TestJDBCSourceTimestampTaskRecovery extends OharaTest {
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.stringOption(INCREMENT_COLUMN_NAME)).thenReturn(Optional.of(""))
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intValue(TASK_HASH_KEY)).thenReturn(0)

@@ -82,7 +82,6 @@ trait DataModeHandler {
       .map(_.value)
       .getOrElse(throw new RuntimeException(s"Database Table not have the $schemaColumnName column"))
   }
-
 }
 
 object DataModeHandler {
