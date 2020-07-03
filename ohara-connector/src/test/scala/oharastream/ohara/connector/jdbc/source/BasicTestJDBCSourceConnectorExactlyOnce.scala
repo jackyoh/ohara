@@ -321,6 +321,6 @@ abstract class BasicTestJDBCSourceConnectorExactlyOnce(inputDataTime: Long) exte
 object BasicTestJDBCSourceConnectorExactlyOnce {
   @Parameters(name = "{index} test input data time is {0} MILLISECONDS")
   def parameters(): java.util.Collection[Long] = {
-    Seq(3000L, 30000L).asJava
+    Seq(30000L).asJava
   }
 }

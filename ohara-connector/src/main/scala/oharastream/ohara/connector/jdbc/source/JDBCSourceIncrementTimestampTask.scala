@@ -58,8 +58,7 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
     val tablePartition = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, tablePartition)
 
-    val topicOffset: JDBCOffsetInfo =
-      offsetCache.readOffset(tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp))
+    val topicOffset: JDBCOffsetInfo = offsetCache.readOffset(tablePartition)
 
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? and $incrementColumnName > ? ORDER BY $timestampColumnName, $incrementColumnName"
@@ -72,7 +71,6 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
 
       val resultSet = prepareStatement.executeQuery()
       try {
-        val tableTimestampPartition                    = tableTimestampPartitionKey(tableName, firstTimestampValue, stopTimestamp)
         val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
         val rdbColumnInfo                              = columns(jdbcSourceConnectorConfig.dbTableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
@@ -95,11 +93,11 @@ class JDBCSourceIncrementTimestampTask extends BasicJDBCSourceTask {
             if (idValue > topicOffset.index) {
               val offset = JDBCOffsetInfo(idValue)
 
-              offsetCache.update(tableTimestampPartition, offset)
+              offsetCache.update(tablePartition, offset)
               topics.map(
                 RowSourceRecord
                   .builder()
-                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> tableTimestampPartition).asJava)
+                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> tablePartition).asJava)
                   //Writer Offset
                   .sourceOffset(
                     Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> offset.toString).asJava
