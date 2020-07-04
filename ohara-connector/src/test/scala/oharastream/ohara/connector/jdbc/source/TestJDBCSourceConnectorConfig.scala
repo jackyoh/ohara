@@ -21,7 +21,6 @@ import org.junit.Test
 import org.scalatest.matchers.should.Matchers._
 
 import scala.jdk.CollectionConverters._
-import scala.concurrent.duration.Duration
 class TestJDBCSourceConnectorConfig extends OharaTest {
   private[this] def jdbcConfig(settings: Map[String, String]): JDBCSourceConnectorConfig =
     JDBCSourceConnectorConfig(TaskSetting.of(settings.asJava))
@@ -43,7 +42,6 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     jdbcSourceConnectorConfig.dbUserName shouldBe "root"
     jdbcSourceConnectorConfig.dbPassword shouldBe "123456"
     jdbcSourceConnectorConfig.dbTableName shouldBe "TABLE1"
-    jdbcSourceConnectorConfig.mode shouldBe "timestamp"
     jdbcSourceConnectorConfig.dbSchemaPattern.get shouldBe "schema1"
     jdbcSourceConnectorConfig.timestampColumnName shouldBe "CDC_TIMESTAMP"
     jdbcSourceConnectorConfig.jdbcFetchDataSize shouldBe JDBC_FETCHDATA_SIZE_DEFAULT
@@ -65,38 +63,6 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
     jdbcSourceConnectorConfig.jdbcFetchDataSize shouldBe 500
   }
-
-  @Test
-  def testFrequenceTimeDefault(): Unit = {
-    val map1: Map[String, String] =
-      Map(
-        DB_URL                -> "jdbc:mysql://localhost/test",
-        DB_USERNAME           -> "root",
-        DB_PASSWORD           -> "123456",
-        DB_TABLENAME          -> "TABLE1",
-        DB_SCHEMA_PATTERN     -> "schema1",
-        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
-      )
-    val jdbcSourceConnectorConfig = jdbcConfig(map1)
-    jdbcSourceConnectorConfig.jdbcFrequenceTime.toMillis shouldBe 0
-  }
-
-  @Test
-  def testFrequenceTime(): Unit = {
-    val map1: Map[String, String] =
-      Map(
-        DB_URL                -> "jdbc:mysql://localhost/test",
-        DB_USERNAME           -> "root",
-        DB_PASSWORD           -> "123456",
-        DB_TABLENAME          -> "TABLE1",
-        DB_SCHEMA_PATTERN     -> "schema1",
-        JDBC_FREQUENCE_TIME   -> "10 second",
-        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
-      )
-    val jdbcSourceConnectorConfig = jdbcConfig(map1)
-    jdbcSourceConnectorConfig.jdbcFrequenceTime.toMillis shouldBe 10000
-  }
-
   @Test
   def testException(): Unit = {
     intercept[NoSuchElementException] {
@@ -121,11 +87,11 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       dbTableName = "123",
       dbCatalogPattern = None,
       dbSchemaPattern = None,
-      mode = "123",
       jdbcFetchDataSize = 1000,
       jdbcFlushDataSize = 1000,
-      jdbcFrequenceTime = Duration("0 second"),
-      timestampColumnName = "123"
+      timestampColumnName = "123",
+      taskTotal = 0,
+      taskHash = 0
     )
 
     config.toMap.contains(DB_CATALOG_PATTERN) shouldBe false
