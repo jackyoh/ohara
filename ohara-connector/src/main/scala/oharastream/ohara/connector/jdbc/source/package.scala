@@ -16,6 +16,8 @@
 
 package oharastream.ohara.connector.jdbc
 
+import oharastream.ohara.client.Enum
+
 import scala.concurrent.duration.Duration
 
 package object source {
@@ -25,6 +27,8 @@ package object source {
   val DB_TABLENAME: String                  = "source.table.name"
   val DB_CATALOG_PATTERN: String            = "source.schema.catalog"
   val DB_SCHEMA_PATTERN: String             = "source.schema.pattern"
+  val TASK_TOTAL_KEY                        = "task.total"
+  val TASK_HASH_KEY                         = "tash.hash"
   val JDBC_FETCHDATA_SIZE: String           = "source.jdbc.fetch.size"
   val JDBC_FLUSHDATA_SIZE: String           = "source.jdbc.flush.size"
   val JDBC_FREQUENCE_TIME: String           = "source.jdbc.frequence.time"
@@ -39,4 +43,9 @@ package object source {
   def toJavaDuration(d: Duration): java.time.Duration = java.time.Duration.ofMillis(d.toMillis)
   def toScalaDuration(d: java.time.Duration): Duration =
     Duration(d.toMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+}
+
+abstract sealed class DatabaseProductName(val name: String)
+object DatabaseProductName extends Enum[DatabaseProductName] {
+  case object ORACLE extends DatabaseProductName("ORACLE")
 }

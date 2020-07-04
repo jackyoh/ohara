@@ -18,7 +18,9 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.setting.SettingDef
+import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.kafka.connector._
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -43,13 +45,17 @@ class JDBCSourceConnector extends RowSourceConnector {
     val tableName                                            = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName                                  = jdbcSourceConnectorConfig.timestampColumnName
 
-    val dbTableDataProvider: DBTableDataProvider = new DBTableDataProvider(jdbcSourceConnectorConfig)
+    val client = DatabaseClient.builder
+      .url(jdbcSourceConnectorConfig.dbURL)
+      .user(jdbcSourceConnectorConfig.dbUserName)
+      .password(jdbcSourceConnectorConfig.dbPassword)
+      .build
     try {
       checkTimestampColumnName(timestampColumnName)
 
-      if (!dbTableDataProvider.isTableExists(tableName))
+      if (client.tableQuery.tableName(tableName).execute().isEmpty)
         throw new NoSuchElementException(s"$tableName table is not found.")
-    } finally dbTableDataProvider.close()
+    } finally Releasable.close(client)
   }
 
   /**
@@ -57,25 +63,28 @@ class JDBCSourceConnector extends RowSourceConnector {
     *
     * @return a JDBCSourceTask class
     */
-  override protected def taskClass(): Class[_ <: RowSourceTask] = {
-    classOf[JDBCSourceTask]
-  }
+  override protected def taskClass(): Class[_ <: RowSourceTask] = classOf[JDBCSourceTask]
 
   /**
     * Return the settings for source task.
     *
     * @return a seq from settings
     */
-  override protected def taskSettings(maxTasks: Int): java.util.List[TaskSetting] = {
-    //TODO
-    Seq(settings).asJava
-  }
+  override protected def taskSettings(maxTasks: Int): java.util.List[TaskSetting] =
+    Seq
+      .fill(maxTasks)(settings)
+      .zipWithIndex
+      .map {
+        case (setting, index) =>
+          setting.append(Map(TASK_TOTAL_KEY -> maxTasks.toString, TASK_HASH_KEY -> index.toString).asJava)
+      }
+      .asJava
 
   /**
     * stop this connector
     */
   override protected def terminate(): Unit = {
-    //TODO
+    // Nothing
   }
 
   protected[jdbc] def checkTimestampColumnName(timestampColumnName: String): Unit = {
