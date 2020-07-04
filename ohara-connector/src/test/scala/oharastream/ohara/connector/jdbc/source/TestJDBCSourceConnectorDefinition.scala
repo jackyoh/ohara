@@ -172,7 +172,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
       connectorAdmin
         .connectorValidator()
         .connectorKey(connectorKey)
-        .numberOfTasks(1)
+        .numberOfTasks(3)
         .topicKey(topicKey)
         .settings(
           Map(

@@ -16,8 +16,7 @@
 
 package oharastream.ohara.connector.jdbc.source
 
-import java.sql.{Statement, Timestamp}
-
+import java.sql.Statement
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Column, DataType}
@@ -87,12 +86,11 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
     when(taskSetting.stringValue(DB_TABLENAME)).thenReturn(tableName)
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
-    when(taskSetting.stringOption(MODE)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
     when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
-    when(taskSetting.durationOption(JDBC_FREQUENCE_TIME))
-      .thenReturn(java.util.Optional.of(java.time.Duration.ofMillis(0)))
+    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
+    when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
 
     val columns: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build(),
@@ -107,56 +105,67 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
   @Test
   def testNormal(): Unit = {
     jdbcSourceTask.run(taskSetting)
-    val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
+    val partition1Rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
 
-    rows.head.row.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
-    rows.head.row.cell(1).value shouldBe "a11"
-    rows.head.row.cell(2).value shouldBe 1
+    partition1Rows.head.row.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
+    partition1Rows.head.row.cell(1).value shouldBe "a11"
+    partition1Rows.head.row.cell(2).value shouldBe 1
 
-    rows(1).row.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
-    rows(1).row.cell(1).value shouldBe "a21"
-    rows(1).row.cell(2).value shouldBe 2
+    partition1Rows(1).row.cell(0).value.toString shouldBe "2018-09-01 00:00:00.0"
+    partition1Rows(1).row.cell(1).value shouldBe "a21"
+    partition1Rows(1).row.cell(2).value shouldBe 2
 
-    rows.last.row.cell(0).value.toString shouldBe "2018-09-02 00:00:04.0"
-    rows.last.row.cell(1).value shouldBe "a71"
-    rows.last.row.cell(2).value shouldBe 7
+    val partition2Rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
+    partition2Rows.last.row.cell(0).value.toString shouldBe "2018-09-02 00:00:04.0"
+    partition2Rows.last.row.cell(1).value shouldBe "a71"
+    partition2Rows.last.row.cell(2).value shouldBe 7
 
     //Test offset value for JDBC Source Connector
-    rows.head.sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe s"${new Timestamp(0).toString},1"
+    partition1Rows.head.sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe s"1"
     })
 
-    rows(1).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe s"${new Timestamp(0).toString},2"
+    partition1Rows(1).sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe s"2"
     })
 
-    rows(2).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe s"${new Timestamp(0).toString},3"
+    partition1Rows(2).sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe s"3"
     })
 
-    rows(3).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe s"${new Timestamp(0).toString},4"
+    partition1Rows(3).sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe s"4"
     })
 
-    rows(4).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:00.0,1"
+    partition1Rows(4).sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "5"
     })
 
-    rows(5).sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:02.0,1"
+    partition1Rows(5).sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "6"
+    })
+
+    partition2Rows.head.sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "1"
     })
   }
 
   @Test
   def testRestartJDBCSourceConnector_1(): Unit = {
-    val maps: Map[String, Object] = Map("db.table.offset" -> s"${new Timestamp(0).toString},1")
-    when(offsetStorageReader.offset(Map("db.table.name" -> tableName).asJava)).thenReturn(maps.asJava)
+    val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "0")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
+
     jdbcSourceTask.run(taskSetting)
     val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
     rows.size shouldBe 6
@@ -164,8 +173,13 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
 
   @Test
   def testRestartJDBCSourceConnector_2(): Unit = {
-    val maps: Map[String, Object] = Map("db.table.offset" -> s"${new Timestamp(0).toString},2")
-    when(offsetStorageReader.offset(Map("db.table.name" -> tableName).asJava)).thenReturn(maps.asJava)
+    val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "1")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
+
     jdbcSourceTask.run(taskSetting)
     val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
     rows.size shouldBe 5
@@ -173,8 +187,13 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
 
   @Test
   def testRestartJDBCSourceConnector_3(): Unit = {
-    val maps: Map[String, Object] = Map("db.table.offset" -> s"${new Timestamp(0).toString},4")
-    when(offsetStorageReader.offset(Map("db.table.name" -> tableName).asJava)).thenReturn(maps.asJava)
+    val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "3")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
+
     jdbcSourceTask.run(taskSetting)
     val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
     rows.size shouldBe 3
@@ -182,14 +201,19 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
 
   @Test
   def testRestartJDBCSourceConnector_4(): Unit = {
-    val maps: Map[String, Object] = Map("db.table.offset" -> "2018-09-01 00:00:02.0,1")
-    when(offsetStorageReader.offset(Map("db.table.name" -> tableName).asJava)).thenReturn(maps.asJava)
+    val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "5")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
+
     jdbcSourceTask.run(taskSetting)
     val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
     rows.size shouldBe 1
     rows.head.sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:03.12,1"
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "6"
     })
   }
 
@@ -200,28 +224,43 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
       s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-03 00:00:04', 'a81', 'a82', 8)"
     )
 
-    val maps: Map[String, Object] = Map("db.table.offset" -> "2018-09-01 00:00:02.0,1")
-    when(offsetStorageReader.offset(Map("db.table.name" -> tableName).asJava)).thenReturn(maps.asJava)
+    val partition1: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "5")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(partition1.asJava)
+
     jdbcSourceTask.run(taskSetting)
-    val rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
+    val partition1Rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
 
-    rows.size shouldBe 2
-    rows.head.sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-01 00:00:03.12,1"
+    partition1Rows.size shouldBe 1
+    partition1Rows.last.sourceOffset.asScala.foreach(x => {
+      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+      x._2 shouldBe "6"
     })
 
-    rows.last.sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCSourceTask.DB_TABLE_OFFSET_KEY
-      x._2 shouldBe "2018-09-02 00:00:04.0,1"
-    })
+    val partition2: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "0")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-02 00:00:00.0~2018-09-03 00:00:00.0").asJava
+      )
+    ).thenReturn(partition2.asJava)
+    val partition2Rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
 
-    rows.head.row.cell(0).value.toString shouldBe "2018-09-02 00:00:04.0"
-    rows.head.row.cell(2).name shouldBe "COLUMN4"
-    rows.head.row.cell(2).value shouldBe 7
+    partition2Rows.head.row.cell(0).value.toString shouldBe "2018-09-02 00:00:04.0"
+    partition2Rows.head.row.cell(2).name shouldBe "COLUMN4"
+    partition2Rows.head.row.cell(2).value shouldBe 7
 
-    rows.last.row.cell(1).name shouldBe "COLUMN2"
-    rows.last.row.cell(1).value shouldBe "a81"
+    val partition3: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "0")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-03 00:00:00.0~2018-09-04 00:00:00.0").asJava
+      )
+    ).thenReturn(partition3.asJava)
+    val partition3Rows: Seq[RowSourceRecord] = jdbcSourceTask.pollRecords().asScala.toSeq
+    partition3Rows.last.row.cell(1).name shouldBe "COLUMN2"
+    partition3Rows.last.row.cell(1).value shouldBe "a81"
   }
 
   @After
