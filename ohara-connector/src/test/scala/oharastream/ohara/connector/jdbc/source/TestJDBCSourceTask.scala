@@ -339,7 +339,8 @@ class TestJDBCSourceTask extends OharaTest {
 
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
-    val isCompleted               = jdbcSourceTask.isCompleted(startTimestamp, stopTimestamp)
+    jdbcSourceTask.pollRecords()
+    val isCompleted = jdbcSourceTask.isCompleted(startTimestamp, stopTimestamp)
     isCompleted shouldBe true
   }
 
