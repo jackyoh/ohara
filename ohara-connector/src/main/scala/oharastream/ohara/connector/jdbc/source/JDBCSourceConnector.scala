@@ -23,7 +23,6 @@ import oharastream.ohara.common.setting.SettingDef
 import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.kafka.connector._
 import org.slf4j.{Logger, LoggerFactory}
-
 import scala.jdk.CollectionConverters._
 
 /**
@@ -55,6 +54,8 @@ class JDBCSourceConnector extends RowSourceConnector {
 
       if (client.tableQuery.tableName(tableName).execute().isEmpty)
         throw new NoSuchElementException(s"$tableName table is not found.")
+    } catch {
+      case e: Exception => throw new RuntimeException(e)
     } finally Releasable.close(client)
   }
 
@@ -76,7 +77,7 @@ class JDBCSourceConnector extends RowSourceConnector {
       .zipWithIndex
       .map {
         case (setting, index) =>
-          setting.append(Map(TASK_TOTAL_KEY -> maxTasks.toString, TASK_HASH_KEY -> index.toString).asJava)
+          setting.append(java.util.Map.of(TASK_TOTAL_KEY, maxTasks.toString, TASK_HASH_KEY, index.toString))
       }
       .asJava
 
