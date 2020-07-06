@@ -107,7 +107,7 @@ class JDBCSourceTask extends RowSourceTask {
     else timestamp
   }
 
-  private[this] def needToRun(stopTimestamp: Timestamp): Boolean = {
+  private[source] def needToRun(stopTimestamp: Timestamp): Boolean = {
     val partitionHashCode =
       partitionKey(jdbcSourceConnectorConfig.dbTableName, firstTimestampValue, stopTimestamp).hashCode()
     Math.abs(partitionHashCode) % jdbcSourceConnectorConfig.taskTotal == jdbcSourceConnectorConfig.taskHash
@@ -121,6 +121,8 @@ class JDBCSourceTask extends RowSourceTask {
     var startTimestamp: Timestamp   = firstTimestampValue
     var stopTimestamp: Timestamp    = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
     val currentTimestamp: Timestamp = current()
+
+    // TODO Refactor this function to remove while loop to calc partition key
     while (!(timestamp.getTime() >= startTimestamp.getTime() && timestamp.getTime() <= stopTimestamp.getTime())) {
       startTimestamp = stopTimestamp
       stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
@@ -174,10 +176,10 @@ class JDBCSourceTask extends RowSourceTask {
               topics.map(
                 RowSourceRecord
                   .builder()
-                  .sourcePartition(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> key).asJava)
+                  .sourcePartition(java.util.Map.of(JDBCOffsetCache.TABLE_PARTITION_KEY, key))
                   //Writer Offset
                   .sourceOffset(
-                    Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> offset.toString).asJava
+                    java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, offset.toString)
                   )
                   //Create Ohara Row
                   .row(row(newSchema, columns))
@@ -196,14 +198,16 @@ class JDBCSourceTask extends RowSourceTask {
     * @param stopTimestamp stop timestamp
     * @return true or false
     */
-  private[this] def isCompleted(
+  private[source] def isCompleted(
     startTimestamp: Timestamp,
     stopTimestamp: Timestamp
   ): Boolean = {
-    val tableName      = jdbcSourceConnectorConfig.dbTableName
-    val dbCount        = count(startTimestamp, stopTimestamp)
-    val tablePartition = partitionKey(tableName, firstTimestampValue, stopTimestamp)
-    val offsetIndex    = offsetCache.readOffset(tablePartition).index
+    val tableName = jdbcSourceConnectorConfig.dbTableName
+    val dbCount   = count(startTimestamp, stopTimestamp)
+    val key       = partitionKey(tableName, firstTimestampValue, stopTimestamp)
+    offsetCache.loadIfNeed(rowContext, key)
+
+    val offsetIndex = offsetCache.readOffset(key).index
     if (dbCount < offsetIndex) {
       throw new IllegalArgumentException(
         s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"

@@ -41,10 +41,10 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 @RunWith(value = classOf[Parameterized])
-class TestJDBCSourceConnectorTimeRange(timestampInfo: TimestampInfo) extends With3Brokers3Workers {
-  private[this] var startTimestamp              = timestampInfo.startTimestamp
-  private[this] val stopTimestamp               = timestampInfo.stopTimestamp
-  private[this] val incrementTimestamp          = timestampInfo.increment
+class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends With3Brokers3Workers {
+  private[this] var startTimestamp              = parameter.startTimestamp
+  private[this] val stopTimestamp               = parameter.stopTimestamp
+  private[this] val incrementTimestamp          = parameter.increment
   private[this] val currentTimestamp: Timestamp = new Timestamp(CommonUtils.current())
 
   protected[this] val db: Database        = Database.local()
@@ -178,7 +178,7 @@ class TestJDBCSourceConnectorTimeRange(timestampInfo: TimestampInfo) extends Wit
       .connectorKey(connectorKey)
       .connectorClass(classOf[JDBCSourceConnector])
       .topicKey(topicKey)
-      .numberOfTasks(3)
+      .numberOfTasks(parameter.taskNumber)
       .settings(jdbcSourceConnectorProps.toMap)
       .create()
   }
@@ -202,36 +202,44 @@ class TestJDBCSourceConnectorTimeRange(timestampInfo: TimestampInfo) extends Wit
 
 object TestJDBCSourceConnectorTimeRange {
   @Parameters(name = "{index} test, test case is {0}")
-  def parameters(): java.util.Collection[TimestampInfo] = {
-    val ltCurrentTimestamp = TimestampInfo(
-      new Timestamp(CommonUtils.current() - 432000000),
-      new Timestamp(CommonUtils.current() - 86400000),
-      3600000,
-      "Less current timestamp"
-    )
-
-    val eqCurrentTimestamp = TimestampInfo(
-      new Timestamp(CommonUtils.current() - 432000000),
-      new Timestamp(CommonUtils.current()),
-      3600000,
-      "Equals current timestamp"
-    )
-
-    val gtCurrentTimestamp = TimestampInfo(
-      new Timestamp(CommonUtils.current() - 432000000),
-      new Timestamp(CommonUtils.current() + 432000000),
-      3600000,
-      "more than the current timestamp"
-    )
-    Seq(ltCurrentTimestamp, eqCurrentTimestamp, gtCurrentTimestamp).asJava
+  def parameters(): java.util.Collection[TimeRangeParameter] = {
+    (1 to 3)
+      .map { taskNumber =>
+        Seq(
+          TimeRangeParameter(
+            new Timestamp(CommonUtils.current() - 432000000),
+            new Timestamp(CommonUtils.current() - 86400000),
+            3600000,
+            s"task $taskNumber: Less current timestamp",
+            taskNumber
+          ),
+          TimeRangeParameter(
+            new Timestamp(CommonUtils.current() - 432000000),
+            new Timestamp(CommonUtils.current()),
+            3600000,
+            s"task $taskNumber: Equals current timestamp",
+            taskNumber
+          ),
+          TimeRangeParameter(
+            new Timestamp(CommonUtils.current() - 432000000),
+            new Timestamp(CommonUtils.current() + 432000000),
+            3600000,
+            s"task $taskNumber: more than the current timestamp",
+            taskNumber
+          )
+        )
+      }
+      .flatten
+      .asJava
   }
 }
 
-case class TimestampInfo(
+case class TimeRangeParameter(
   startTimestamp: Timestamp,
   stopTimestamp: Timestamp,
   increment: Int,
-  describe: String
+  describe: String,
+  taskNumber: Int
 ) {
   override def toString(): String = describe
 }
