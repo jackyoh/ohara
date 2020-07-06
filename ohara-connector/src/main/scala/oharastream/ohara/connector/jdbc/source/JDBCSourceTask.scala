@@ -59,7 +59,6 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
-    val tableName      = jdbcSourceConnectorConfig.dbTableName
     var startTimestamp = firstTimestampValue
     var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
 
@@ -78,8 +77,6 @@ class JDBCSourceTask extends RowSourceTask {
         stopTimestamp = addTimestamp
       }
     }
-    val tablePartition = partitionKey(tableName, firstTimestampValue, stopTimestamp)
-    offsetCache.loadIfNeed(rowContext, tablePartition)
     queryData(startTimestamp, stopTimestamp).asJava
   }
 
@@ -141,6 +138,8 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val key                 = partitionKey(tableName, firstTimestampValue, stopTimestamp)
+    offsetCache.loadIfNeed(rowContext, key)
 
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
@@ -155,13 +154,13 @@ class JDBCSourceTask extends RowSourceTask {
         val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
         val rdbColumnInfo                              = columns(client, tableName)
         val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
-        val key                                        = partitionKey(tableName, firstTimestampValue, stopTimestamp)
-        val offset: JDBCOffsetInfo                     = offsetCache.readOffset(key)
+
+        val offset = offsetCache.readOffset(key)
 
         results.zipWithIndex
           .filter {
             case (_, index) =>
-              index >= offset.index
+              index >= offset
           }
           .take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
           .flatMap {
@@ -170,7 +169,7 @@ class JDBCSourceTask extends RowSourceTask {
                 if (schema.isEmpty)
                   columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
                 else schema
-              val offset = JDBCOffsetInfo(rowIndex + 1)
+              val offset = rowIndex + 1
               offsetCache.update(key, offset)
 
               topics.map(
@@ -205,9 +204,8 @@ class JDBCSourceTask extends RowSourceTask {
     val tableName = jdbcSourceConnectorConfig.dbTableName
     val dbCount   = count(startTimestamp, stopTimestamp)
     val key       = partitionKey(tableName, firstTimestampValue, stopTimestamp)
-    offsetCache.loadIfNeed(rowContext, key)
 
-    val offsetIndex = offsetCache.readOffset(key).index
+    val offsetIndex = offsetCache.readOffset(key)
     if (dbCount < offsetIndex) {
       throw new IllegalArgumentException(
         s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"
