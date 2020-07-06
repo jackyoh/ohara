@@ -276,6 +276,94 @@ class TestJDBCSourceTask extends OharaTest {
     val result                   = jdbcSourceTask.partitionKey("table1", firstTimestamp, stopTimestamp)
     result shouldBe "table1:2020-06-11 15:00:00.0~2020-06-12 15:00:00.0"
   }
+
+  @Test
+  def testIsCompletedFalse(): Unit = {
+    val jdbcSourceTask                           = new JDBCSourceTask()
+    val taskSetting: TaskSetting                 = Mockito.mock(classOf[TaskSetting])
+    val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
+    val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
+    val maps: Map[String, Object]                = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "2")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
+    when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
+    jdbcSourceTask.initialize(taskContext.asInstanceOf[SourceTaskContext])
+    when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
+    when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
+    when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
+    when(taskSetting.stringValue(DB_TABLENAME)).thenReturn(tableName)
+    when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
+    when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
+    jdbcSourceTask.run(taskSetting)
+
+    val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
+    val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
+    val isCompleted               = jdbcSourceTask.isCompleted(startTimestamp, stopTimestamp)
+    isCompleted shouldBe false
+  }
+
+  @Test
+  def testIsCompletedTrue(): Unit = {
+    val jdbcSourceTask                           = new JDBCSourceTask()
+    val taskSetting: TaskSetting                 = Mockito.mock(classOf[TaskSetting])
+    val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
+    val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
+    val maps: Map[String, Object]                = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "5")
+    when(
+      offsetStorageReader.offset(
+        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+      )
+    ).thenReturn(maps.asJava)
+    when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
+    jdbcSourceTask.initialize(taskContext.asInstanceOf[SourceTaskContext])
+    when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
+    when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
+    when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
+    when(taskSetting.stringValue(DB_TABLENAME)).thenReturn(tableName)
+    when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
+    when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
+    jdbcSourceTask.run(taskSetting)
+
+    val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
+    val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
+    val isCompleted               = jdbcSourceTask.isCompleted(startTimestamp, stopTimestamp)
+    isCompleted shouldBe true
+  }
+
+  @Test
+  def testNeedToRun(): Unit = {
+    val jdbcSourceTask           = new JDBCSourceTask()
+    val taskSetting: TaskSetting = Mockito.mock(classOf[TaskSetting])
+    when(taskSetting.stringValue(DB_URL)).thenReturn(db.url)
+    when(taskSetting.stringValue(DB_USERNAME)).thenReturn(db.user)
+    when(taskSetting.stringValue(DB_PASSWORD)).thenReturn(db.password)
+    when(taskSetting.stringValue(DB_TABLENAME)).thenReturn(tableName)
+    when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
+    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(2))
+    when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(3))
+    jdbcSourceTask.run(taskSetting)
+
+    val needToRun = jdbcSourceTask.needToRun(Timestamp.valueOf("2018-09-02 00:00:00"))
+    needToRun shouldBe true
+  }
+
   @After
   def afterTest(): Unit = {
     Releasable.close(client)
