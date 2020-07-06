@@ -23,30 +23,26 @@ import scala.jdk.CollectionConverters._
 
 class JDBCOffsetCache {
   // TODO Support the setting for the partition key
-  private[this] val cache = mutable.Map[String, JDBCOffsetInfo]()
+  private[this] val cache = mutable.Map[String, Long]()
 
   def loadIfNeed(context: RowSourceContext, tableTimestampPartition: String): Unit =
     if (cache.get(tableTimestampPartition).isEmpty) {
       val offset: Map[String, _] =
-        context.offset(Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> tableTimestampPartition).asJava).asScala.toMap
+        context.offset(java.util.Map.of(JDBCOffsetCache.TABLE_PARTITION_KEY, tableTimestampPartition)).asScala.toMap
       if (offset.nonEmpty) update(tableTimestampPartition, offsetValue(offset))
     }
 
-  def update(tableTimestampPartition: String, value: JDBCOffsetInfo): Unit =
+  def update(tableTimestampPartition: String, value: Long): Unit =
     this.cache.put(tableTimestampPartition, value)
 
-  def readOffset(tableTimestampPartition: String): JDBCOffsetInfo =
-    this.cache.get(tableTimestampPartition).getOrElse(JDBCOffsetInfo(0))
+  def readOffset(tableTimestampPartition: String): Long =
+    this.cache.get(tableTimestampPartition).getOrElse(0)
 
-  private[this] def offsetValue(offset: Map[String, _]): JDBCOffsetInfo =
-    JDBCOffsetInfo(offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().toLong)
+  private[this] def offsetValue(offset: Map[String, _]): Long =
+    offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().toLong
 }
 
 object JDBCOffsetCache {
   private[source] val TABLE_PARTITION_KEY: String = "jdbc.table.timestamp"
   private[source] val TABLE_OFFSET_KEY: String    = "jdbc.table.info"
-}
-
-case class JDBCOffsetInfo(index: Long) {
-  override def toString(): String = s"$index"
 }
