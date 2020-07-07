@@ -59,6 +59,7 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
+    println("Running poll Records for multi task test")
     var startTimestamp = firstTimestampValue
     var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
 
