@@ -87,12 +87,11 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def tableFirstTimestampValue(
     timestampColumnName: String
   ): Timestamp = {
-    val statement = client.connection.createStatement()
+    val tableName = jdbcSourceConnectorConfig.dbTableName
+    val sql       = s"SELECT $timestampColumnName FROM $tableName ORDER BY $timestampColumnName"
+    val statement = client.connection.prepareStatement(sql)
     try {
-      val tableName = jdbcSourceConnectorConfig.dbTableName
-      val sql       = s"SELECT $timestampColumnName FROM $tableName ORDER BY $timestampColumnName"
-      println(s"TABLE FIRST VALUE SQL $sql")
-      val resultSet = statement.executeQuery(sql)
+      val resultSet = statement.executeQuery()
       try {
         if (!resultSet.next()) {
           println("aaaaaaaaaaaaa")
