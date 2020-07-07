@@ -62,7 +62,7 @@ class JDBCSourceTask extends RowSourceTask {
     var startTimestamp = firstTimestampValue
     var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
 
-    // Generate the start timestap and stop timestamp to runn multi task for the query
+    // Generate the start timestap and stop timestamp to run multi task for the query
     while (!needToRun(stopTimestamp) ||
            isCompleted(startTimestamp, stopTimestamp)) {
       val currentTimestamp = current()
