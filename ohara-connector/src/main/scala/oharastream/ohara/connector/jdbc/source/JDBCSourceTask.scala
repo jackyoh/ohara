@@ -53,15 +53,16 @@ class JDBCSourceTask extends RowSourceTask {
     schema = settings.columns.asScala.toSeq
     val timestampColumnName =
       jdbcSourceConnectorConfig.timestampColumnName
-
+    println(s"TimestampColumnName: ${timestampColumnName}")
     this.offsetCache = new JDBCOffsetCache()
     firstTimestampValue = tableFirstTimestampValue(timestampColumnName)
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
-    println("Running poll Records for multi task test")
+    println(s"Running poll Records for multi task test FIRSTTIMESTAMP: ${firstTimestampValue}")
     var startTimestamp = firstTimestampValue
     var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
+    println(s"StartTimestamp: $startTimestamp   StopTimestamp: $stopTimestamp")
 
     // Generate the start timestap and stop timestamp to runn multi task for the query
     while (!needToRun(stopTimestamp) ||
@@ -242,6 +243,7 @@ class JDBCSourceTask extends RowSourceTask {
       case ORACLE.name => "SELECT CURRENT_TIMESTAMP FROM dual"
       case _           => "SELECT CURRENT_TIMESTAMP;"
     }
+    println(s"DBPRODUCT: ${dbProduct.toUpperCase}  Query: ${query}")
     val stmt = client.connection.createStatement()
     try {
       val rs = stmt.executeQuery(query)
