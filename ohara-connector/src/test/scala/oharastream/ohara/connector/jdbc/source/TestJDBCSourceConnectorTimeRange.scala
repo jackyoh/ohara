@@ -42,10 +42,9 @@ import scala.concurrent.duration.Duration
 
 @RunWith(value = classOf[Parameterized])
 class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends With3Brokers3Workers {
-  private[this] var startTimestamp              = parameter.startTimestamp
-  private[this] val stopTimestamp               = parameter.stopTimestamp
-  private[this] val incrementTimestamp          = parameter.increment
-  private[this] val currentTimestamp: Timestamp = new Timestamp(CommonUtils.current())
+  private[this] var startTimestamp     = parameter.startTimestamp
+  private[this] val stopTimestamp      = parameter.stopTimestamp
+  private[this] val incrementTimestamp = parameter.increment
 
   protected[this] val db: Database        = Database.local()
   protected[this] val tableName           = "table1"
@@ -63,11 +62,12 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
       else RdbColumn(s"c${index}", "VARCHAR(45)", false)
     }
   private[this] val connectorAdmin = ConnectorAdmin(testUtil.workersConnProps)
+  private[this] val sql            = s"INSERT INTO $tableName($timestampColumnName, c1, c2, c3) VALUES (?, ?, ?, ?)"
 
   @Before
   def setup(): Unit = {
     client.createTable(tableName, columns)
-    val sql               = s"INSERT INTO $tableName($timestampColumnName, c1, c2, c3) VALUES (?, ?, ?, ?)"
+
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
       while (startTimestamp.getTime() < stopTimestamp.getTime()) {
@@ -100,24 +100,53 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
         .valueSerializer(Serializer.BYTES)
         .build()
     try {
-      val tableCurrentTimestampCount = tableCurrentTimeResultCount()
-      val records                    = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimestampCount).asScala
-      records.size shouldBe tableCurrentTimestampCount
-      checkData(
-        records
-          .map { record =>
-            record.key().get().cell(timestampColumnName).value().toString()
+      val records1 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+      records1.size shouldBe tableCurrentTimeResultCount()
+
+      TimeUnit.SECONDS.sleep(10)
+      val preparedStatement = client.connection.prepareStatement(sql)
+      try {
+        (1 to 100).foreach { _ =>
+          preparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current()))
+          rowData().asScala.zipWithIndex.foreach {
+            case (result, index) => {
+              preparedStatement.setString(index + 2, result.value().toString)
+            }
           }
-          .sorted[String]
-          .toSeq
-      )
+          preparedStatement.executeUpdate()
+        }
+        consumer.seekToBeginning()
+        val records2 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+        records2.size shouldBe tableCurrentTimeResultCount()
+
+        TimeUnit.SECONDS.sleep(10)
+        preparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current()))
+        rowData().asScala.zipWithIndex.foreach {
+          case (result, index) => {
+            preparedStatement.setString(index + 2, result.value().toString)
+          }
+        }
+        preparedStatement.executeUpdate()
+        consumer.seekToBeginning()
+        val records3 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+
+        tableData(
+          records3
+            .map { record =>
+              record.key().get().cell(timestampColumnName).value().toString()
+            }
+            .sorted[String]
+            .toSeq
+        )
+      } finally Releasable.close(preparedStatement)
     } finally Releasable.close(consumer)
   }
 
   private[this] def tableCurrentTimeResultCount(): Int = {
     val preparedStatement =
       client.connection.prepareStatement(s"SELECT count(*) FROM $tableName WHERE $timestampColumnName <= ?")
-    preparedStatement.setTimestamp(1, currentTimestamp)
+    preparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current()))
+
     try {
       val resultSet = preparedStatement.executeQuery()
       try {
@@ -127,11 +156,11 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
     } finally Releasable.close(preparedStatement)
   }
 
-  private[this] def checkData(topicRecords: Seq[String]): Unit = {
+  private[this] def tableData(topicRecords: Seq[String]): Unit = {
     val preparedStatement = client.connection.prepareStatement(
       s"SELECT * FROM $tableName WHERE $timestampColumnName <= ? ORDER BY $timestampColumnName"
     )
-    preparedStatement.setTimestamp(1, currentTimestamp)
+    preparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current()))
 
     try {
       val resultSet = preparedStatement.executeQuery()
@@ -201,30 +230,37 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
 }
 
 object TestJDBCSourceConnectorTimeRange {
-  @Parameters(name = "{index} test, test case is {0}")
+  @Parameters(name = "{index} test, injected_args: {0}")
   def parameters(): java.util.Collection[TimeRangeParameter] = {
+    val FIVE_DAY_TIMESTAMP = 432000000 // 5 * 24 * 60 * 60 * 1000 => 5 day
+    val ONE_DAY_TIMESTAMP  = 86400000  // 1 * 24 * 60 * 60 * 1000 => 1 day
+    val ONE_HOUR_TIMESTAMP = 3600000   // 60 * 60 * 1000 => 1 hour
+
     (1 to 3)
       .map { taskNumber =>
         Seq(
+          // For test the from 5 day ago to 1 day ago data
           TimeRangeParameter(
-            new Timestamp(CommonUtils.current() - 432000000),
-            new Timestamp(CommonUtils.current() - 86400000),
-            3600000,
-            s"task $taskNumber: Less current timestamp",
+            new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
+            new Timestamp(CommonUtils.current() - ONE_DAY_TIMESTAMP),
+            ONE_HOUR_TIMESTAMP,
+            s"Number of tasks: $taskNumber, Less current timestamp",
             taskNumber
           ),
+          // For test the from 5 day ago to current time
           TimeRangeParameter(
-            new Timestamp(CommonUtils.current() - 432000000),
+            new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
             new Timestamp(CommonUtils.current()),
-            3600000,
-            s"task $taskNumber: Equals current timestamp",
+            ONE_HOUR_TIMESTAMP,
+            s"Number of tasks: $taskNumber, Equals current timestamp",
             taskNumber
           ),
+          // For the the from 5 day ago to 5 day later
           TimeRangeParameter(
-            new Timestamp(CommonUtils.current() - 432000000),
-            new Timestamp(CommonUtils.current() + 432000000),
-            3600000,
-            s"task $taskNumber: more than the current timestamp",
+            new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
+            new Timestamp(CommonUtils.current() + FIVE_DAY_TIMESTAMP),
+            ONE_HOUR_TIMESTAMP,
+            s"Number of tasks: $taskNumber, more than the current timestamp",
             taskNumber
           )
         )
