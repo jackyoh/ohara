@@ -148,7 +148,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         .keySerializer(Serializer.ROW)
         .valueSerializer(Serializer.BYTES)
         .build()
-    await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime)
+    await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue())
 
     val statement = client.connection.createStatement()
     try {
@@ -175,7 +175,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   @Test
   def testConnectorStartPauseResumeDelete(): Unit = {
     val startTestTimestamp = CommonUtils.current()
-    val inputDataTime      = 60000L
+    val inputDataTime      = 30000L
     setup(inputDataTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
     val bkCluster: BrokerClusterInfo                    = cluster._1
@@ -212,7 +212,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       createConnector(connectorAdmin, connectorKey, topicKey)
 
       // Check the table and topic data size
-      await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime)
+      await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue())
 
       consumer.seekToBeginning() //Reset consumer
       val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
@@ -277,7 +277,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       insertPreparedStatement.setString(2, queryResult._2)
       insertPreparedStatement.executeUpdate()
 
-      await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime)
+      await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue())
 
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
@@ -304,6 +304,17 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       Releasable.close(statement)
       Releasable.close(consumer)
     }
+  }
+
+  private[this] def count(): Int = {
+    val prepareStatement = client.connection.prepareStatement(s"SELECT count(*) from $tableName")
+    try {
+      val resultSet = prepareStatement.executeQuery()
+      try {
+        if (resultSet.next()) resultSet.getInt(1)
+        else 0
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(prepareStatement)
   }
 
   private[this] def startCluster(): (BrokerClusterInfo, WorkerClusterInfo) = {
@@ -495,11 +506,10 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     )
 
   private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
-    tableData.zipWithIndex.foreach {
-      case (record, index) => record shouldBe topicData(index)
+    tableData.foreach { data =>
+      topicData.contains(data) shouldBe true
     }
   }
-
   @After
   def afterTest(): Unit = {
     Releasable.close(inputDataThread)
