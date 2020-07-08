@@ -324,12 +324,23 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
   private[this] def awaitInsertDataCompleted(startTestTimestamp: Long): Unit = {
     CommonUtils.await(
       () =>
-        try CommonUtils.current() - startTestTimestamp >= inputDataTime
+        try CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue()
         catch {
           case _: Throwable => false
         },
       java.time.Duration.ofMinutes(2)
     )
+  }
+
+  private[this] def count(): Int = {
+    val prepareStatement = client.connection.prepareStatement(s"SELECT count(*) from $tableName")
+    try {
+      val resultSet = prepareStatement.executeQuery()
+      try {
+        if (resultSet.next()) resultSet.getInt(1)
+        else 0
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(prepareStatement)
   }
 
   @After

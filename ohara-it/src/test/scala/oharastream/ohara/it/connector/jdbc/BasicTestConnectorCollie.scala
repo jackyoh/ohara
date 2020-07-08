@@ -83,7 +83,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
   private[this] var inputDataThread: Releasable = _
   private[this] var tableTotalCount: LongAdder  = _
 
-  private[this] def setup(durationTime: Long): Unit = {
+  private[this] def setup(inputDataTime: Long): Unit = {
     uploadJDBCJarToConfigurator() //For upload JDBC jar
 
     // Create database client
@@ -107,7 +107,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
         val preparedStatement = client.connection.prepareStatement(sql)
         try {
-          while ((CommonUtils.current() - startTime) <= durationTime) {
+          while ((CommonUtils.current() - startTime) <= inputDataTime) {
             // 432000000 is 5 days ago
             val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
             preparedStatement.setTimestamp(1, timestampData)
@@ -121,15 +121,16 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       }
       () => {
         pool.shutdown()
-        pool.awaitTermination(durationTime, TimeUnit.SECONDS)
+        pool.awaitTermination(inputDataTime, TimeUnit.SECONDS)
       }
     }
   }
 
   @Test
   def testNormal(): Unit = {
-    val durationTime = 3000L
-    setup(durationTime)
+    val startTestTimestamp = CommonUtils.current()
+    val inputDataTime      = 3000L
+    setup(inputDataTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
     val bkCluster: BrokerClusterInfo                    = cluster._1
     val wkCluster: WorkerClusterInfo                    = cluster._2
@@ -147,7 +148,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
         .keySerializer(Serializer.ROW)
         .valueSerializer(Serializer.BYTES)
         .build()
-    TimeUnit.MILLISECONDS.sleep(durationTime)
+    await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime)
 
     val statement = client.connection.createStatement()
     try {
@@ -173,8 +174,9 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   @Test
   def testConnectorStartPauseResumeDelete(): Unit = {
-    val durationTime = 60000L
-    setup(durationTime)
+    val startTestTimestamp = CommonUtils.current()
+    val inputDataTime      = 60000L
+    setup(inputDataTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
     val bkCluster: BrokerClusterInfo                    = cluster._1
     val wkCluster: WorkerClusterInfo                    = cluster._2
@@ -210,7 +212,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       createConnector(connectorAdmin, connectorKey, topicKey)
 
       // Check the table and topic data size
-      TimeUnit.MILLISECONDS.sleep(durationTime)
+      await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime)
+
       consumer.seekToBeginning() //Reset consumer
       val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result3.size
@@ -232,8 +235,9 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
   @Test
   def testTableInsertUpdateDelete(): Unit = {
-    val durationTime = 10000L
-    setup(durationTime)
+    val startTestTimestamp = CommonUtils.current()
+    val inputDataTime      = 10000L
+    setup(inputDataTime)
     val cluster: (BrokerClusterInfo, WorkerClusterInfo) = startCluster()
     val bkCluster: BrokerClusterInfo                    = cluster._1
     val wkCluster: WorkerClusterInfo                    = cluster._2
@@ -273,7 +277,8 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       insertPreparedStatement.setString(2, queryResult._2)
       insertPreparedStatement.executeUpdate()
 
-      TimeUnit.MILLISECONDS.sleep(durationTime)
+      await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime)
+
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
       val topicData: Seq[String] = result
