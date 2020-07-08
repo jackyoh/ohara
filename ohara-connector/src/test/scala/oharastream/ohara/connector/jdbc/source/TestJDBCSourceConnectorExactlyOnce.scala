@@ -91,8 +91,9 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
   @Test
   def testConnectorStartPauseResume(): Unit = {
-    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val startTestTimestamp = CommonUtils.current()
+    val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
 
     val consumer =
@@ -113,8 +114,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       result(connectorAdmin.pause(connectorKey))
       result(connectorAdmin.resume(connectorKey))
 
+      awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
       consumer.seekToBeginning()
-      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Finally to wait all data write the database table
       val resultRecords = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       resultRecords.size shouldBe tableTotalCount.intValue()
 
@@ -135,8 +136,9 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
   @Test
   def testConnectorStartDelete(): Unit = {
-    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val startTestTimestamp = CommonUtils.current()
+    val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
 
     val consumer =
@@ -162,8 +164,9 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       result(connectorAdmin.delete(connectorKey))
       result(createConnector(connectorAdmin, connectorKey, topicKey))
 
+      awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
+
       consumer.seekToBeginning()
-      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Finally to wait all data write the database table
       val resultRecords = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       resultRecords.size shouldBe tableTotalCount.intValue()
 
@@ -185,8 +188,9 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
   @Test
   def testTableInsertDelete(): Unit = {
-    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val startTestTimestamp = CommonUtils.current()
+    val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
 
     val consumer =
@@ -215,7 +219,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
       )
 
-      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
+      awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
       val topicData: Seq[String] = result
@@ -235,8 +239,9 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
   @Test
   def testTableUpdate(): Unit = {
-    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val startTestTimestamp = CommonUtils.current()
+    val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(createConnector(connectorAdmin, connectorKey, topicKey))
 
     val consumer =
@@ -250,7 +255,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         .build()
     val statement = client.connection.createStatement()
     try {
-      TimeUnit.MILLISECONDS.sleep(inputDataTime) // Wait thread all data write to the table
+      awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
+
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello1')"
       )
@@ -314,6 +320,17 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
   )
 
   private[this] def result[T](future: Future[T]): T = Await.result(future, Duration(20, TimeUnit.SECONDS))
+
+  private[this] def awaitInsertDataCompleted(startTestTimestamp: Long): Unit = {
+    CommonUtils.await(
+      () =>
+        try CommonUtils.current() - startTestTimestamp >= inputDataTime
+        catch {
+          case _: Throwable => false
+        },
+      java.time.Duration.ofMinutes(2)
+    )
+  }
 
   @After
   def after(): Unit = {

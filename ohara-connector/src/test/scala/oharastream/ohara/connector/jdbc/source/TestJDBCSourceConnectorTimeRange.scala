@@ -62,26 +62,13 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
       else RdbColumn(s"c${index}", "VARCHAR(45)", false)
     }
   private[this] val connectorAdmin = ConnectorAdmin(testUtil.workersConnProps)
-  private[this] val sql            = s"INSERT INTO $tableName($timestampColumnName, c1, c2, c3) VALUES (?, ?, ?, ?)"
 
   @Before
   def setup(): Unit = {
     client.createTable(tableName, columns)
-
-    val preparedStatement = client.connection.prepareStatement(sql)
-    try {
-      while (startTimestamp.getTime() < stopTimestamp.getTime()) {
-        startTimestamp = new Timestamp(startTimestamp.getTime() + incrementTimestamp)
-        preparedStatement.setTimestamp(1, startTimestamp)
-
-        rowData().asScala.zipWithIndex.foreach {
-          case (result, index) => {
-            preparedStatement.setString(index + 2, result.value().toString)
-          }
-        }
-        preparedStatement.execute()
-      }
-    } finally Releasable.close(preparedStatement)
+    insertData(startTimestamp.getTime().to(stopTimestamp.getTime()).by(incrementTimestamp).map { value =>
+      new Timestamp(value)
+    })
   }
 
   @Test
@@ -104,41 +91,28 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
       records1.size shouldBe tableCurrentTimeResultCount()
 
       TimeUnit.SECONDS.sleep(10)
-      val preparedStatement = client.connection.prepareStatement(sql)
-      try {
-        (1 to 100).foreach { _ =>
-          preparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current()))
-          rowData().asScala.zipWithIndex.foreach {
-            case (result, index) => {
-              preparedStatement.setString(index + 2, result.value().toString)
-            }
-          }
-          preparedStatement.executeUpdate()
-        }
-        consumer.seekToBeginning()
-        val records2 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
-        records2.size shouldBe tableCurrentTimeResultCount()
 
-        TimeUnit.SECONDS.sleep(10)
-        preparedStatement.setTimestamp(1, new Timestamp(CommonUtils.current()))
-        rowData().asScala.zipWithIndex.foreach {
-          case (result, index) => {
-            preparedStatement.setString(index + 2, result.value().toString)
-          }
-        }
-        preparedStatement.executeUpdate()
-        consumer.seekToBeginning()
-        val records3 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+      insertData((1 to 100).map { _ =>
+        new Timestamp(CommonUtils.current())
+      })
 
-        tableData(
-          records3
-            .map { record =>
-              record.key().get().cell(timestampColumnName).value().toString()
-            }
-            .sorted[String]
-            .toSeq
-        )
-      } finally Releasable.close(preparedStatement)
+      consumer.seekToBeginning()
+      val records2 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+      records2.size shouldBe tableCurrentTimeResultCount()
+
+      TimeUnit.SECONDS.sleep(10)
+      insertData(Seq(new Timestamp(CommonUtils.current())))
+      consumer.seekToBeginning()
+      val records3 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+
+      tableData(
+        records3
+          .map { record =>
+            record.key().get().cell(timestampColumnName).value().toString()
+          }
+          .sorted[String]
+          .toSeq
+      )
     } finally Releasable.close(consumer)
   }
 
@@ -174,6 +148,22 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
               result.getTimestamp(timestampColumnName).toString() shouldBe topicRecords(index)
           }
       } finally Releasable.close(resultSet)
+    } finally Releasable.close(preparedStatement)
+  }
+
+  private[this] def insertData(timestamps: Seq[Timestamp]): Unit = {
+    val sql               = s"INSERT INTO $tableName($timestampColumnName, c1, c2, c3) VALUES (?, ?, ?, ?)"
+    val preparedStatement = client.connection.prepareStatement(sql)
+    try {
+      timestamps.foreach { timestamp =>
+        preparedStatement.setTimestamp(1, timestamp)
+        rowData().asScala.zipWithIndex.foreach {
+          case (result, index) => {
+            preparedStatement.setString(index + 2, result.value().toString)
+          }
+        }
+        preparedStatement.execute()
+      }
     } finally Releasable.close(preparedStatement)
   }
 
