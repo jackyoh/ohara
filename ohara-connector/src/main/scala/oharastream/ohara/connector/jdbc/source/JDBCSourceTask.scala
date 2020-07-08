@@ -85,17 +85,15 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def tableFirstTimestampValue(
     timestampColumnName: String
   ): Timestamp = {
-    val statement = client.connection.createStatement()
+    val sql               = s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName"
+    val preparedStatement = client.connection.prepareStatement(sql)
     try {
-      val tableName = jdbcSourceConnectorConfig.dbTableName
-      val sql       = s"SELECT $timestampColumnName FROM $tableName ORDER BY $timestampColumnName"
-      val resultSet =
-        statement.executeQuery(sql)
+      val resultSet = preparedStatement.executeQuery()
       try {
-        if (!resultSet.next()) new Timestamp(CommonUtils.current())
-        else resultSet.getTimestamp(timestampColumnName)
+        if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
+        else new Timestamp(CommonUtils.current())
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
+    } finally Releasable.close(preparedStatement)
   }
 
   private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
