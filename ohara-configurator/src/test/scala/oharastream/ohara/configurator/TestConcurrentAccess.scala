@@ -40,6 +40,7 @@ class TestConcurrentAccess extends OharaTest {
     */
   @Test
   def deletedObjectShouldDisappearFromGet(): Unit = {
+    // For QA Test
     val threadCount                                         = 10
     val threadsPool                                         = Executors.newFixedThreadPool(threadCount)
     val unmatchedCount                                      = new AtomicInteger()

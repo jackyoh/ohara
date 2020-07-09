@@ -37,6 +37,7 @@ class JDBCSourceConnector extends RowSourceConnector {
     * @param settings configuration settings
     */
   override protected def run(settings: TaskSetting): Unit = {
+    // For QA Test
     this.settings = settings
 
     val jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
