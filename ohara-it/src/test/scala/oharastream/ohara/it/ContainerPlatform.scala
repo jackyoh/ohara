@@ -77,6 +77,7 @@ object ContainerPlatform {
   private[this] def _k8sMode: Option[ContainerPlatform] =
     Seq(
       sys.env.get(ContainerPlatform.K8S_COORDINATOR_URL_KEY),
+      // For QA Test
       // k8s mode needs user and password passed by docker arguments
       sys.env.get(ContainerPlatform.DOCKER_NODES_KEY)
     ).flatten match {
