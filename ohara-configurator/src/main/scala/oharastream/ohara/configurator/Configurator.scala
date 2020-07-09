@@ -369,6 +369,7 @@ object Configurator {
 
       GLOBAL_CONFIGURATOR = configurator(args)
       LOG.info(s"Running Configurator Version is ${VersionUtils.VERSION}")
+      LOG.info(s"Running Zookeeper Version is ${ZookeeperApi.IMAGE_NAME_DEFAULT}")
       LOG.info(
         s"start a configurator built on hostname:${GLOBAL_CONFIGURATOR.hostname} and port:${GLOBAL_CONFIGURATOR.port}"
       )
