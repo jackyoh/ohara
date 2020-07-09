@@ -368,7 +368,7 @@ object Configurator {
       if (GLOBAL_CONFIGURATOR != null) throw new RuntimeException("configurator is running!!!")
 
       GLOBAL_CONFIGURATOR = configurator(args)
-
+      LOG.info(s"Running Configurator Version is ${VersionUtils.VERSION}")
       LOG.info(
         s"start a configurator built on hostname:${GLOBAL_CONFIGURATOR.hostname} and port:${GLOBAL_CONFIGURATOR.port}"
       )
