@@ -113,23 +113,12 @@ class JDBCSourceTask extends RowSourceTask {
     firstTimestampValue: Timestamp,
     timestamp: Timestamp
   ): String = {
-    var startTimestamp: Timestamp   = firstTimestampValue
-    var stopTimestamp: Timestamp    = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-    val currentTimestamp: Timestamp = current()
+    val page = if (timestamp.getTime() == current().getTime()) {
+      (timestamp.getTime() - firstTimestampValue.getTime()) / TIMESTAMP_PARTITION_RNAGE
+    } else (timestamp.getTime() - firstTimestampValue.getTime() - TIMESTAMP_PARTITION_RNAGE) / TIMESTAMP_PARTITION_RNAGE
 
-    // TODO Refactor this function to remove while loop to calc partition key
-    while (!(timestamp.getTime() >= startTimestamp.getTime() && timestamp.getTime() <= stopTimestamp.getTime())) {
-      startTimestamp = stopTimestamp
-      stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-
-      if (timestamp.getTime() < firstTimestampValue.getTime())
-        throw new IllegalArgumentException("The timestamp over the first data timestamp")
-
-      if (startTimestamp.getTime() > currentTimestamp.getTime() && stopTimestamp.getTime() > current()
-            .getTime()) {
-        throw new IllegalArgumentException("The timestamp over the current timestamp")
-      }
-    }
+    val startTimestamp = new Timestamp((page * TIMESTAMP_PARTITION_RNAGE) + firstTimestampValue.getTime())
+    val stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
 
