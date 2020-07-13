@@ -87,7 +87,7 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
         .valueSerializer(Serializer.BYTES)
         .build()
     try {
-      val records1 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+      val records1 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
       records1.size shouldBe tableCurrentTimeResultCount()
 
       TimeUnit.SECONDS.sleep(10)
@@ -97,13 +97,13 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
       })
 
       consumer.seekToBeginning()
-      val records2 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+      val records2 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
       records2.size shouldBe tableCurrentTimeResultCount()
 
       TimeUnit.SECONDS.sleep(10)
       insertData(Seq(new Timestamp(CommonUtils.current())))
       consumer.seekToBeginning()
-      val records3 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+      val records3 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
 
       tableData(
         records3
@@ -139,14 +139,35 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
     try {
       val resultSet = preparedStatement.executeQuery()
       try {
-        Iterator
+        /*Iterator
           .continually(resultSet)
           .takeWhile(_.next())
           .zipWithIndex
           .foreach {
             case (result, index) =>
               result.getTimestamp(timestampColumnName).toString() shouldBe topicRecords(index)
+          }*/
+
+        /*Iterator
+          .continually(resultSet)
+          .takeWhile(_.next())
+          .foreach { result =>
+            topicRecords.contains(result.getTimestamp(timestampColumnName).toString) shouldBe true
+          }*/
+        println("=============[table]==============")
+        Iterator
+          .continually(resultSet)
+          .takeWhile(_.next())
+          .foreach { result =>
+            println(s"${result.getTimestamp(timestampColumnName).toString}")
           }
+        println("==================================")
+
+        println("=============[topic]==============")
+        topicRecords.foreach { record =>
+          println(record)
+        }
+        println("==================================")
       } finally Releasable.close(resultSet)
     } finally Releasable.close(preparedStatement)
   }

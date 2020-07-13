@@ -113,12 +113,9 @@ class JDBCSourceTask extends RowSourceTask {
     firstTimestampValue: Timestamp,
     timestamp: Timestamp
   ): String = {
-    val page = if (timestamp.getTime() == current().getTime()) {
-      (timestamp.getTime() - firstTimestampValue.getTime()) / TIMESTAMP_PARTITION_RNAGE
-    } else (timestamp.getTime() - firstTimestampValue.getTime() - TIMESTAMP_PARTITION_RNAGE) / TIMESTAMP_PARTITION_RNAGE
-
+    val page           = (timestamp.getTime() - firstTimestampValue.getTime() - 1) / TIMESTAMP_PARTITION_RNAGE
     val startTimestamp = new Timestamp((page * TIMESTAMP_PARTITION_RNAGE) + firstTimestampValue.getTime())
-    val stopTimestamp = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+    val stopTimestamp  = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
 
