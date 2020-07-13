@@ -24,7 +24,7 @@ import org.junit.Test
 import org.scalatest.matchers.should.Matchers._
 
 class TestPartitionKey extends OharaTest {
-  private[this] val TIMESTAMP_PARTITION_RNAGE: Int = 86400000
+  private[this] val TIMESTAMP_PARTITION_RNAGE: Int = 86400000 / 2
 
   @Test
   def test(): Unit = {
@@ -51,15 +51,10 @@ class TestPartitionKey extends OharaTest {
   }
 
   private[this] def newPartitionKey(tableName: String, firstTimestampValue: Timestamp, timestamp: Timestamp): String = {
-    /*val page = if (timestamp.getTime() < CommonUtils.current()) {
-      (timestamp.getTime() - firstTimestampValue.getTime()) / TIMESTAMP_PARTITION_RNAGE
-    } else (timestamp.getTime() - firstTimestampValue.getTime() - TIMESTAMP_PARTITION_RNAGE) / TIMESTAMP_PARTITION_RNAGE
-     */
-    val page           = (timestamp.getTime() - firstTimestampValue.getTime() - 1) / TIMESTAMP_PARTITION_RNAGE
+    val page =
+      (timestamp.getTime() - firstTimestampValue.getTime() - 1) / TIMESTAMP_PARTITION_RNAGE
     val startTimestamp = new Timestamp((page * TIMESTAMP_PARTITION_RNAGE) + firstTimestampValue.getTime())
     val stopTimestamp  = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
-    println(s"Page: $page  ${(timestamp.getTime() - firstTimestampValue.getTime()) % TIMESTAMP_PARTITION_RNAGE}")
-
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
 

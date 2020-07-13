@@ -113,12 +113,17 @@ class JDBCSourceTask extends RowSourceTask {
     firstTimestampValue: Timestamp,
     timestamp: Timestamp
   ): String = {
+    if (timestamp.getTime() < firstTimestampValue.getTime())
+      throw new IllegalArgumentException("The timestamp over the first data timestamp")
     val page           = (timestamp.getTime() - firstTimestampValue.getTime() - 1) / TIMESTAMP_PARTITION_RNAGE
     val startTimestamp = new Timestamp((page * TIMESTAMP_PARTITION_RNAGE) + firstTimestampValue.getTime())
     val stopTimestamp  = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
+    if (startTimestamp.getTime() > current().getTime() && stopTimestamp.getTime() > current()
+          .getTime())
+      throw new IllegalArgumentException("The timestamp over the current timestamp")
     s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
   }
-
+  
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
