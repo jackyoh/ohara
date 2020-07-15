@@ -32,7 +32,5 @@ public class TestVersionUtils extends OharaTest {
     Assert.assertFalse(VersionUtils.USER.isEmpty());
     Assert.assertNotNull(VersionUtils.VERSION);
     Assert.assertFalse(VersionUtils.VERSION.isEmpty());
-    Assert.assertNotNull(VersionUtils.BRANCH);
-    Assert.assertFalse(VersionUtils.BRANCH.isEmpty());
   }
 }

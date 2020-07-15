@@ -30,7 +30,7 @@ import oharastream.ohara.client.configurator.{ClusterCreation, ClusterInfo, Clus
 import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.common.setting.SettingDef.Permission
 import oharastream.ohara.common.setting.{ObjectKey, SettingDef}
-import oharastream.ohara.common.util.{CommonUtils, Releasable, VersionUtils}
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.configurator.route.hook._
 import oharastream.ohara.configurator.store.{DataStore, MetricsCache}
 import oharastream.ohara.kafka.TopicAdmin
@@ -200,7 +200,7 @@ package object route {
     * the url to official APIs documentation.
     * @return url string
     */
-  def apiUrl: String = s"https://oharastream.github.io/en/docs/${VersionUtils.BRANCH}/rest-api/"
+  def apiUrl: String = s"https://oharastream.github.io/en/docs/master/"
 
   private[this] def errorWithOfficialApis(inputPath: String): ErrorApi.Error = ErrorApi.Error(
     code = s"Unsupported API: $inputPath",

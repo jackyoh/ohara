@@ -209,7 +209,6 @@ class TestInspectRoute extends OharaTest {
     // only test the configurator based on mini cluster
     val clusterInformation = result(inspectApi.configuratorInfo())
     clusterInformation.versionInfo.version shouldBe VersionUtils.VERSION
-    clusterInformation.versionInfo.branch shouldBe VersionUtils.BRANCH
     clusterInformation.versionInfo.user shouldBe VersionUtils.USER
     clusterInformation.versionInfo.revision shouldBe VersionUtils.REVISION
     clusterInformation.versionInfo.date shouldBe VersionUtils.DATE

@@ -29,7 +29,6 @@ class TestInspectApi extends OharaTest {
   def testJsonStringFromVersionUtils(): Unit = {
     val fields = VersionUtils.jsonString().parseJson.asJsObject.fields
     fields("version").convertTo[String] shouldBe VersionUtils.VERSION
-    fields("branch").convertTo[String] shouldBe VersionUtils.BRANCH
     fields("revision").convertTo[String] shouldBe VersionUtils.REVISION
     fields("user").convertTo[String] shouldBe VersionUtils.USER
     fields("date").convertTo[String] shouldBe VersionUtils.DATE

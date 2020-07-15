@@ -253,7 +253,6 @@ private[configurator] object InspectRoute {
         ConfiguratorInfo(
           versionInfo = ConfiguratorVersion(
             version = VersionUtils.VERSION,
-            branch = VersionUtils.BRANCH,
             user = VersionUtils.USER,
             revision = VersionUtils.REVISION,
             date = VersionUtils.DATE

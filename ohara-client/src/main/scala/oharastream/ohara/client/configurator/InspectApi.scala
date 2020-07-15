@@ -57,8 +57,8 @@ object InspectApi {
   val REQUEST_ID = "requestId"
 
   //-------------[FILE]-------------//
-  final case class ConfiguratorVersion(version: String, branch: String, user: String, revision: String, date: String)
-  implicit val CONFIGURATOR_VERSION_FORMAT: RootJsonFormat[ConfiguratorVersion] = jsonFormat5(ConfiguratorVersion)
+  final case class ConfiguratorVersion(version: String, user: String, revision: String, date: String)
+  implicit val CONFIGURATOR_VERSION_FORMAT: RootJsonFormat[ConfiguratorVersion] = jsonFormat4(ConfiguratorVersion)
 
   final case class K8sUrls(coordinatorUrl: String, metricsUrl: Option[String])
   implicit val K8S_URL_FORMAT: RootJsonFormat[K8sUrls] = jsonFormat2(K8sUrls)

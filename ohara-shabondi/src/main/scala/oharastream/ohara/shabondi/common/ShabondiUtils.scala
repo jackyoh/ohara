@@ -17,7 +17,7 @@
 package oharastream.ohara.shabondi.common
 
 import com.typesafe.scalalogging.Logger
-import oharastream.ohara.common.util.{CommonUtils, VersionUtils}
+import oharastream.ohara.common.util.CommonUtils
 
 import scala.jdk.CollectionConverters._
 object ShabondiUtils {
@@ -56,5 +56,5 @@ object ShabondiUtils {
     args.foreach { case (k, v) => log.info(s"    $k=$v") }
   }
 
-  def apiUrl: String = s"https://oharastream.github.io/en/docs/${VersionUtils.BRANCH}/shabondi/"
+  def apiUrl: String = s"https://oharastream.github.io/en/docs/master/shabondi/"
 }

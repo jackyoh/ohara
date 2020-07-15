@@ -75,8 +75,8 @@ private static String date() {
   return new Date().format('yyyy-MM-dd HH:mm:ss')
 }
 
-private static String versionInJson(String version, String revision, String branch, String user, String date) {
-  return """{\"version\":\"$version\",\"revision\":\"$revision\",\"branch\":\"$branch\",\"user\":\"$user\",\"date\":\"$date\"}"""
+private static String versionInJson(String version, String revision, String user, String date) {
+  return """{\"version\":\"$version\",\"revision\":\"$revision\",\"user\":\"$user\",\"date\":\"$date\"}"""
 }
 
 private String version() {
@@ -99,7 +99,6 @@ task versionFile {
     String versionJson = versionInJson(
             version(),
             revision(),
-            project.branch.toString(),
             user(),
             date()
     )
@@ -123,7 +122,6 @@ task initializer {
     String versionJson = versionInJson(
       customVersion,
       revision(),
-      project.branch.toString(),
       user(),
       dateString
     )
@@ -131,7 +129,6 @@ task initializer {
 // DON'T touch this file!!! It is generated dynamically. see ohara-common/build.gradle
 public final class VersionUtils {
   public static final String VERSION = \"$customVersion\";
-  public static final String BRANCH = \"${project.branch}\";
   public static final String USER = \"${user()}\";
   public static final String REVISION = \"${revision()}\";
   public static final String DATE = \"${dateString}\";
