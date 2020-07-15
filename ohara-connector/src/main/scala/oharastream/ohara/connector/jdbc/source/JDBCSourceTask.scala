@@ -70,14 +70,14 @@ class JDBCSourceTask extends RowSourceTask {
 
       if (addTimestamp.getTime() > currentTimestamp.getTime()) {
         if (needToRun(currentTimestamp)) {
-          return queryData(stopTimestamp, currentTimestamp).asJava
+          return queryData(currentTimestamp).asJava
         } else return Seq.empty.asJava
       } else {
         startTimestamp = stopTimestamp
         stopTimestamp = addTimestamp
       }
     }
-    queryData(startTimestamp, stopTimestamp).asJava
+    queryData(stopTimestamp).asJava
   }
 
   override protected[source] def terminate(): Unit = Releasable.close(client)
@@ -113,21 +113,27 @@ class JDBCSourceTask extends RowSourceTask {
     firstTimestampValue: Timestamp,
     timestamp: Timestamp
   ): String = {
+    val result = calcQueryTimestamp(firstTimestampValue, timestamp)
+    s"$tableName:${result._1.toString}~${result._2.toString}"
+  }
+
+  private[this] def calcQueryTimestamp(firstTimestampValue: Timestamp, timestamp: Timestamp): (Timestamp, Timestamp) = {
     if (timestamp.getTime() < firstTimestampValue.getTime())
       throw new IllegalArgumentException("The timestamp over the first data timestamp")
-    val page           = (timestamp.getTime() - firstTimestampValue.getTime() - 1) / TIMESTAMP_PARTITION_RNAGE
+    val page           = (timestamp.getTime() - firstTimestampValue.getTime()) / TIMESTAMP_PARTITION_RNAGE
     val startTimestamp = new Timestamp((page * TIMESTAMP_PARTITION_RNAGE) + firstTimestampValue.getTime())
     val stopTimestamp  = new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
     if (startTimestamp.getTime() > current().getTime() && stopTimestamp.getTime() > current()
           .getTime())
       throw new IllegalArgumentException("The timestamp over the current timestamp")
-    s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
+    (startTimestamp, stopTimestamp)
   }
-  
-  private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
+
+  private[this] def queryData(stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val key                 = partitionKey(tableName, firstTimestampValue, stopTimestamp)
+    val queryTimestamp      = calcQueryTimestamp(firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, key)
 
     val sql =
@@ -136,8 +142,10 @@ class JDBCSourceTask extends RowSourceTask {
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
       prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
-      prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      prepareStatement.setTimestamp(1, queryTimestamp._1, DateTimeUtils.CALENDAR)
+      prepareStatement.setTimestamp(2, queryTimestamp._2, DateTimeUtils.CALENDAR)
+      println(s"starttimestamp: ${queryTimestamp._1}    stoptimestamp: ${queryTimestamp._2}")
+
       val resultSet = prepareStatement.executeQuery()
       try {
         val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
@@ -191,7 +199,7 @@ class JDBCSourceTask extends RowSourceTask {
     stopTimestamp: Timestamp
   ): Boolean = {
     val tableName = jdbcSourceConnectorConfig.dbTableName
-    val dbCount   = count(startTimestamp, stopTimestamp)
+    val dbCount   = count(stopTimestamp)
     val key       = partitionKey(tableName, firstTimestampValue, stopTimestamp)
 
     val offsetIndex = offsetCache.readOffset(key)
@@ -202,7 +210,8 @@ class JDBCSourceTask extends RowSourceTask {
     } else offsetIndex == dbCount
   }
 
-  private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
+  private[this] def count(stopTimestamp: Timestamp) = {
+    val queryTimestamp      = calcQueryTimestamp(firstTimestampValue, stopTimestamp)
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val sql =
@@ -210,8 +219,8 @@ class JDBCSourceTask extends RowSourceTask {
 
     val statement = client.connection.prepareStatement(sql)
     try {
-      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      statement.setTimestamp(1, queryTimestamp._1, DateTimeUtils.CALENDAR)
+      statement.setTimestamp(2, queryTimestamp._2, DateTimeUtils.CALENDAR)
       val resultSet = statement.executeQuery()
       try {
         if (resultSet.next()) resultSet.getInt(1)
