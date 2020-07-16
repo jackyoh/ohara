@@ -34,7 +34,7 @@ import org.junit.{After, Before, Test}
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-//import org.scalatest.matchers.should.Matchers._
+import org.scalatest.matchers.should.Matchers._
 
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{Await, Future}
@@ -87,8 +87,8 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
         .valueSerializer(Serializer.BYTES)
         .build()
     try {
-      // val records1 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
-      // records1.size shouldBe tableCurrentTimeResultCount()
+      val records1 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
+      records1.size shouldBe tableCurrentTimeResultCount()
 
       TimeUnit.SECONDS.sleep(10)
 
@@ -97,8 +97,8 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
       })
 
       consumer.seekToBeginning()
-      // val records2 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
-      // records2.size shouldBe tableCurrentTimeResultCount()
+      val records2 = consumer.poll(java.time.Duration.ofSeconds(10), tableCurrentTimeResultCount()).asScala
+      records2.size shouldBe tableCurrentTimeResultCount()
 
       TimeUnit.SECONDS.sleep(10)
       insertData(Seq(new Timestamp(CommonUtils.current())))

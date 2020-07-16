@@ -63,7 +63,7 @@ class JDBCSourceTask extends RowSourceTask {
     var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE))
 
     // Generate the start timestap and stop timestamp to run multi task for the query
-    while (!needToRun(stopTimestamp) ||
+    while (!needToRun(startTimestamp) ||
            isCompleted(startTimestamp, stopTimestamp)) {
       val currentTimestamp = current()
       val addTimestamp     = new Timestamp(stopTimestamp.getTime() + TIMESTAMP_PARTITION_RNAGE)
@@ -77,7 +77,7 @@ class JDBCSourceTask extends RowSourceTask {
         stopTimestamp = addTimestamp
       }
     }
-    queryData(stopTimestamp).asJava
+    queryData(startTimestamp).asJava
   }
 
   override protected[source] def terminate(): Unit = Releasable.close(client)
@@ -102,9 +102,9 @@ class JDBCSourceTask extends RowSourceTask {
     else timestamp
   }
 
-  private[source] def needToRun(stopTimestamp: Timestamp): Boolean = {
+  private[source] def needToRun(startTimestamp: Timestamp): Boolean = {
     val partitionHashCode =
-      partitionKey(jdbcSourceConnectorConfig.dbTableName, firstTimestampValue, stopTimestamp).hashCode()
+      partitionKey(jdbcSourceConnectorConfig.dbTableName, firstTimestampValue, startTimestamp).hashCode()
     Math.abs(partitionHashCode) % jdbcSourceConnectorConfig.taskTotal == jdbcSourceConnectorConfig.taskHash
   }
 
@@ -129,11 +129,11 @@ class JDBCSourceTask extends RowSourceTask {
     (startTimestamp, stopTimestamp)
   }
 
-  private[this] def queryData(stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
+  private[this] def queryData(startTimestamp: Timestamp): Seq[RowSourceRecord] = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    val key                 = partitionKey(tableName, firstTimestampValue, stopTimestamp)
-    val queryTimestamp      = calcQueryTimestamp(firstTimestampValue, stopTimestamp)
+    val key                 = partitionKey(tableName, firstTimestampValue, startTimestamp)
+    val queryTimestamp      = calcQueryTimestamp(firstTimestampValue, startTimestamp)
     offsetCache.loadIfNeed(rowContext, key)
 
     val sql =
@@ -143,8 +143,7 @@ class JDBCSourceTask extends RowSourceTask {
     try {
       prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
       prepareStatement.setTimestamp(1, queryTimestamp._1, DateTimeUtils.CALENDAR)
-      prepareStatement.setTimestamp(2, queryTimestamp._2, DateTimeUtils.CALENDAR)
-      println(s"starttimestamp: ${queryTimestamp._1}    stoptimestamp: ${queryTimestamp._2}")
+      prepareStatement.setTimestamp(2, replaceToCurrentTimestamp(queryTimestamp._2), DateTimeUtils.CALENDAR)
 
       val resultSet = prepareStatement.executeQuery()
       try {
@@ -199,8 +198,8 @@ class JDBCSourceTask extends RowSourceTask {
     stopTimestamp: Timestamp
   ): Boolean = {
     val tableName = jdbcSourceConnectorConfig.dbTableName
-    val dbCount   = count(stopTimestamp)
-    val key       = partitionKey(tableName, firstTimestampValue, stopTimestamp)
+    val dbCount   = count(startTimestamp)
+    val key       = partitionKey(tableName, firstTimestampValue, startTimestamp)
 
     val offsetIndex = offsetCache.readOffset(key)
     if (dbCount < offsetIndex) {
@@ -210,8 +209,8 @@ class JDBCSourceTask extends RowSourceTask {
     } else offsetIndex == dbCount
   }
 
-  private[this] def count(stopTimestamp: Timestamp) = {
-    val queryTimestamp      = calcQueryTimestamp(firstTimestampValue, stopTimestamp)
+  private[this] def count(startTimestamp: Timestamp) = {
+    val queryTimestamp      = calcQueryTimestamp(firstTimestampValue, startTimestamp)
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val sql =
@@ -220,7 +219,7 @@ class JDBCSourceTask extends RowSourceTask {
     val statement = client.connection.prepareStatement(sql)
     try {
       statement.setTimestamp(1, queryTimestamp._1, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, queryTimestamp._2, DateTimeUtils.CALENDAR)
+      statement.setTimestamp(2, replaceToCurrentTimestamp(queryTimestamp._2), DateTimeUtils.CALENDAR)
       val resultSet = statement.executeQuery()
       try {
         if (resultSet.next()) resultSet.getInt(1)
