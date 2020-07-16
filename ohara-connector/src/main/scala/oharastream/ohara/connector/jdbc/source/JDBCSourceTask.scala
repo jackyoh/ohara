@@ -85,13 +85,17 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def tableFirstTimestampValue(
     timestampColumnName: String
   ): Timestamp = {
-    val sql               = s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName"
+    val sql =
+      s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
       val resultSet = preparedStatement.executeQuery()
       try {
-        if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
-        else new Timestamp(CommonUtils.current())
+        val firstTimestamp =
+          if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
+          else new Timestamp(CommonUtils.current())
+        println(s"first timestmap is ${firstTimestamp}")
+        firstTimestamp
       } finally Releasable.close(resultSet)
     } finally Releasable.close(preparedStatement)
   }
@@ -138,7 +142,7 @@ class JDBCSourceTask extends RowSourceTask {
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val key                 = partitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, key)
-
+    client.connection.setAutoCommit(false)
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
 
@@ -169,7 +173,7 @@ class JDBCSourceTask extends RowSourceTask {
                 else schema
               val offset = rowIndex + 1
               offsetCache.update(key, offset)
-
+              println(s"Columns is ${columns}")
               topics.map(
                 RowSourceRecord
                   .builder()
