@@ -143,7 +143,6 @@ class JDBCSourceTask extends RowSourceTask {
 
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
-
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
       prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
@@ -188,7 +187,13 @@ class JDBCSourceTask extends RowSourceTask {
           }
           .toSeq
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(prepareStatement)
+    } finally {
+      Releasable.close(prepareStatement)
+      // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+      // Confirm this connection ResultSet to update, need to call connection commit function.
+      // Release any database locks currently held by this Connection object
+      this.client.connection.commit()
+    }
   }
 
   /**
@@ -228,7 +233,13 @@ class JDBCSourceTask extends RowSourceTask {
         if (resultSet.next()) resultSet.getInt(1)
         else 0
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
+    } finally {
+      Releasable.close(statement)
+      // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+      // Confirm this connection ResultSet to update, need to call connection commit function.
+      // Release any database locks currently held by this Connection object
+      this.client.connection.commit()
+    }
   }
 
   private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
