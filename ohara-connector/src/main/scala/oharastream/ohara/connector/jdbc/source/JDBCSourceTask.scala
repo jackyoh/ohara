@@ -87,7 +87,7 @@ class JDBCSourceTask extends RowSourceTask {
     timestampColumnName: String
   ): Timestamp = {
     val sql =
-      s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
+      s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName"
     client.connection.setAutoCommit(false)
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
