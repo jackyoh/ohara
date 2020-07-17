@@ -48,6 +48,8 @@ class JDBCSourceTask extends RowSourceTask {
       .user(jdbcSourceConnectorConfig.dbUserName)
       .password(jdbcSourceConnectorConfig.dbPassword)
       .build
+    client.connection.setAutoCommit(false)
+
     dbProduct = client.connection.getMetaData.getDatabaseProductName
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
