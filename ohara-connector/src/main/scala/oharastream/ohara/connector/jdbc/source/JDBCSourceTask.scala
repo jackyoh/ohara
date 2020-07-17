@@ -48,7 +48,7 @@ class JDBCSourceTask extends RowSourceTask {
       .user(jdbcSourceConnectorConfig.dbUserName)
       .password(jdbcSourceConnectorConfig.dbPassword)
       .build
-
+    client.connection.setAutoCommit(false)
     dbProduct = client.connection.getMetaData.getDatabaseProductName
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
@@ -87,22 +87,15 @@ class JDBCSourceTask extends RowSourceTask {
     timestampColumnName: String
   ): Timestamp = {
     val sql =
-      s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName"
-    client.connection.setAutoCommit(false)
+      s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
       val resultSet = preparedStatement.executeQuery()
       try {
-        val timestamp = if (resultSet.next()) {
-          resultSet.getTimestamp(timestampColumnName)
-        } else new Timestamp(CommonUtils.current())
-        println(s"First timestamp $timestamp")
-        timestamp
+        if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
+        else new Timestamp(CommonUtils.current())
       } finally Releasable.close(resultSet)
-    } finally {
-      Releasable.close(preparedStatement)
-      this.client.connection.commit()
-    }
+    } finally Releasable.close(preparedStatement)
   }
 
   private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
@@ -147,7 +140,7 @@ class JDBCSourceTask extends RowSourceTask {
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val key                 = partitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, key)
-    client.connection.setAutoCommit(false)
+
     val sql =
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
     val prepareStatement = client.connection.prepareStatement(sql)
@@ -228,7 +221,6 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
     val tableName           = jdbcSourceConnectorConfig.dbTableName
     val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
-    client.connection.setAutoCommit(false)
     val sql =
       s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
 
