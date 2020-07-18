@@ -153,7 +153,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
     val statement = client.connection.createStatement()
     try {
       // Check the topic data
-      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      val result = consumer.poll(java.time.Duration.ofSeconds(60), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
 
       val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
@@ -215,7 +215,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
       await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue())
 
       consumer.seekToBeginning() //Reset consumer
-      val result3 = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      val result3 = consumer.poll(java.time.Duration.ofSeconds(60), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result3.size
 
       // Check the topic data is equals the database table
@@ -279,7 +279,7 @@ abstract class BasicTestConnectorCollie(platform: ContainerPlatform)
 
       await(() => CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue())
 
-      val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      val result = consumer.poll(java.time.Duration.ofSeconds(60), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
       val topicData: Seq[String] = result
         .map(record => record.key.get.cell(queryColumn).value().toString)
