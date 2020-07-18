@@ -86,8 +86,13 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def tableFirstTimestampValue(
     timestampColumnName: String
   ): Timestamp = {
-    val sql =
-      s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
+    val sql = dbProduct.toUpperCase match {
+      case ORACLE.name =>
+        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} WHERE ROWNUM=1 ORDER BY $timestampColumnName"
+      case _ =>
+        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
+    }
+
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
       val resultSet = preparedStatement.executeQuery()
