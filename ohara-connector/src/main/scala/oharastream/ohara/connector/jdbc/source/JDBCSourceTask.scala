@@ -100,7 +100,10 @@ class JDBCSourceTask extends RowSourceTask {
         if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
         else new Timestamp(CommonUtils.current())
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(preparedStatement)
+    } finally {
+      Releasable.close(preparedStatement)
+      this.client.connection.commit()
+    }
   }
 
   private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
