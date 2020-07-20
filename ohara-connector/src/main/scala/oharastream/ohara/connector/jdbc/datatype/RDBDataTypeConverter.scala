@@ -54,7 +54,7 @@ trait RDBDataTypeConverter {
         Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
       case DataTypeEnum.TIMESTAMP =>
         Optional
-          .ofNullable(resultSet.getTimestamp(columnName))
+          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
           .orElseGet(() => new Timestamp(0))
       case DataTypeEnum.BYTES =>
         Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
