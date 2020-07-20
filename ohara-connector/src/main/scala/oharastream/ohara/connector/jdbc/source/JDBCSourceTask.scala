@@ -176,8 +176,6 @@ class JDBCSourceTask extends RowSourceTask {
                 else schema
               val offset = rowIndex + 1
               offsetCache.update(key, offset)
-              println(s"ROWS IS ${row(newSchema, columns)}")
-
               topics.map(
                 RowSourceRecord
                   .builder()
@@ -275,7 +273,6 @@ class JDBCSourceTask extends RowSourceTask {
         .map(s => (s, values(s.name, columns)))
         .map {
           case (s, value) =>
-            println(s"NAME: ${s.name}   TYPE: ${s.dataType}   VALUE: ${value}")
             Cell.of(
               s.newName,
               s.dataType match {

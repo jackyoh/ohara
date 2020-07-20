@@ -52,10 +52,12 @@ trait RDBDataTypeConverter {
         Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
       case DataTypeEnum.TIME =>
         Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
-      case DataTypeEnum.TIMESTAMP =>
+      case DataTypeEnum.TIMESTAMP => {
+        println(s"Timestamp: ${resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR).getTime}")
         Optional
           .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
           .orElseGet(() => new Timestamp(0))
+      }
       case DataTypeEnum.BYTES =>
         Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
       case _ =>
