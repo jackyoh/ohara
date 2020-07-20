@@ -180,6 +180,7 @@ class JDBCSourceTask extends RowSourceTask {
                 else schema
               val offset = rowIndex + 1
               offsetCache.update(key, offset)
+              println(s"COLUMNS RESULT: ${columns}")
 
               topics.map(
                 RowSourceRecord
