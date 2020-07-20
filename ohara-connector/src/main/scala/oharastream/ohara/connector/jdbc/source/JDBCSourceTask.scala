@@ -98,7 +98,7 @@ class JDBCSourceTask extends RowSourceTask {
       val resultSet = preparedStatement.executeQuery()
       try {
         val timestamp =
-          if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
+          if (resultSet.next()) resultSet.getTimestamp(timestampColumnName, DateTimeUtils.CALENDAR)
           else new Timestamp(CommonUtils.current())
         println(s"Table first timestamp is $timestamp")
         timestamp
@@ -266,7 +266,7 @@ class JDBCSourceTask extends RowSourceTask {
     try {
       val rs = stmt.executeQuery(query)
       try {
-        if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
+        if (rs.next()) rs.getTimestamp(1, DateTimeUtils.CALENDAR) else new Timestamp(0)
       } finally Releasable.close(rs)
     } finally Releasable.close(stmt)
   }
