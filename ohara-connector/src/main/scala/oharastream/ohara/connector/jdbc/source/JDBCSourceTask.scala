@@ -97,8 +97,11 @@ class JDBCSourceTask extends RowSourceTask {
     try {
       val resultSet = preparedStatement.executeQuery()
       try {
-        if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
-        else new Timestamp(CommonUtils.current())
+        val timestamp =
+          if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
+          else new Timestamp(CommonUtils.current())
+        println(s"Table first timestamp is $timestamp")
+        timestamp
       } finally Releasable.close(resultSet)
     } finally Releasable.close(preparedStatement)
   }
@@ -153,6 +156,8 @@ class JDBCSourceTask extends RowSourceTask {
       prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
       prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
       prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+      println(s"StartTimestamp: $startTimestamp   StopTimestamp: $stopTimestamp")
+
       val resultSet = prepareStatement.executeQuery()
       try {
         val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
