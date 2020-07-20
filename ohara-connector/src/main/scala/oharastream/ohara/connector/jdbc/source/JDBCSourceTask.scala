@@ -48,6 +48,7 @@ class JDBCSourceTask extends RowSourceTask {
       .user(jdbcSourceConnectorConfig.dbUserName)
       .password(jdbcSourceConnectorConfig.dbPassword)
       .build
+    // setAutoCommit must be set to false when setting the fetch size
     client.connection.setAutoCommit(false)
     dbProduct = client.connection.getMetaData.getDatabaseProductName
     topics = settings.topicKeys().asScala.toSeq
@@ -88,7 +89,7 @@ class JDBCSourceTask extends RowSourceTask {
   ): Timestamp = {
     val sql = dbProduct.toUpperCase match {
       case ORACLE.name =>
-        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} WHERE ROWNUM=1 ORDER BY $timestampColumnName"
+        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
       case _ =>
         s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
     }
