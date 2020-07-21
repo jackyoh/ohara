@@ -39,6 +39,7 @@ import org.scalatest.matchers.should.Matchers._
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @RunWith(value = classOf[Parameterized])
 class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends With3Brokers3Workers {
@@ -74,46 +75,48 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
   @Test
   def testConnector(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
-    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
-    result(createConnector(connectorAdmin, connectorKey, topicKey))
-
-    val consumer =
-      Consumer
-        .builder()
-        .topicKey(topicKey)
-        .offsetFromBegin()
-        .connectionProps(testUtil.brokersConnProps)
-        .keySerializer(Serializer.ROW)
-        .valueSerializer(Serializer.BYTES)
-        .build()
     try {
-      val records1 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
-      records1.size shouldBe tableCurrentTimeResultCount()
+      val topicKey = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+      result(createConnector(connectorAdmin, connectorKey, topicKey))
 
-      TimeUnit.SECONDS.sleep(10)
+      val consumer =
+        Consumer
+          .builder()
+          .topicKey(topicKey)
+          .offsetFromBegin()
+          .connectionProps(testUtil.brokersConnProps)
+          .keySerializer(Serializer.ROW)
+          .valueSerializer(Serializer.BYTES)
+          .build()
+      try {
+        val records1 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+        records1.size shouldBe tableCurrentTimeResultCount()
 
-      insertData((1 to 100).map { _ =>
-        new Timestamp(CommonUtils.current())
-      })
+        TimeUnit.SECONDS.sleep(10)
 
-      consumer.seekToBeginning()
-      val records2 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
-      records2.size shouldBe tableCurrentTimeResultCount()
+        insertData((1 to 100).map { _ =>
+          new Timestamp(CommonUtils.current())
+        })
 
-      TimeUnit.SECONDS.sleep(10)
-      insertData(Seq(new Timestamp(CommonUtils.current())))
-      consumer.seekToBeginning()
-      val records3 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+        consumer.seekToBeginning()
+        val records2 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+        records2.size shouldBe tableCurrentTimeResultCount()
 
-      tableData(
-        records3
-          .map { record =>
-            record.key().get().cell(timestampColumnName).value().toString()
-          }
-          .sorted[String]
-          .toSeq
-      )
-    } finally Releasable.close(consumer)
+        TimeUnit.SECONDS.sleep(10)
+        insertData(Seq(new Timestamp(CommonUtils.current())))
+        consumer.seekToBeginning()
+        val records3 = consumer.poll(java.time.Duration.ofSeconds(60), tableCurrentTimeResultCount()).asScala
+
+        tableData(
+          records3
+            .map { record =>
+              record.key().get().cell(timestampColumnName).value().toString()
+            }
+            .sorted[String]
+            .toSeq
+        )
+      } finally Releasable.close(consumer)
+    } finally result(connectorAdmin.delete(connectorKey))
   }
 
   private[this] def tableCurrentTimeResultCount(): Int = {

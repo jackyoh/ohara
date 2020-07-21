@@ -48,6 +48,9 @@ class JDBCSourceTask extends RowSourceTask {
       .user(jdbcSourceConnectorConfig.dbUserName)
       .password(jdbcSourceConnectorConfig.dbPassword)
       .build
+    // setAutoCommit must be set to false when setting the fetch size
+    client.connection.setAutoCommit(false)
+
     dbProduct = client.connection.getMetaData.getDatabaseProductName
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
@@ -85,7 +88,13 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] def tableFirstTimestampValue(
     timestampColumnName: String
   ): Timestamp = {
-    val sql               = s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName"
+    val sql = dbProduct.toUpperCase match {
+      case ORACLE.name =>
+        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
+      case _ =>
+        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName LIMIT 1"
+    }
+
     val preparedStatement = client.connection.prepareStatement(sql)
     try {
       val resultSet = preparedStatement.executeQuery()
@@ -186,7 +195,13 @@ class JDBCSourceTask extends RowSourceTask {
           }
           .toSeq
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(prepareStatement)
+    } finally {
+      Releasable.close(prepareStatement)
+      // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+      // Confirm this connection ResultSet to update, need to call connection commit function.
+      // Release any database locks currently held by this Connection object
+      this.client.connection.commit()
+    }
   }
 
   /**
@@ -226,7 +241,13 @@ class JDBCSourceTask extends RowSourceTask {
         if (resultSet.next()) resultSet.getInt(1)
         else 0
       } finally Releasable.close(resultSet)
-    } finally Releasable.close(statement)
+    } finally {
+      Releasable.close(statement)
+      // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+      // Confirm this connection ResultSet to update, need to call connection commit function.
+      // Release any database locks currently held by this Connection object
+      this.client.connection.commit()
+    }
   }
 
   private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
