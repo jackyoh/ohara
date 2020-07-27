@@ -38,7 +38,7 @@ object BrokerApi {
 
   val ZOOKEEPER_CLUSTER_KEY_KEY: String = "zookeeperClusterKey"
 
-  val LOG_DIRS_KEY: String             = "log.dirs"
+  val LOG_DIRS_KEY: String             = "logDirs"
   val NUMBER_OF_PARTITIONS_KEY: String = "num.partitions"
 
   val NUMBER_OF_REPLICATIONS_4_OFFSETS_TOPIC_KEY: String = "offsets.topic.replication.factor"
