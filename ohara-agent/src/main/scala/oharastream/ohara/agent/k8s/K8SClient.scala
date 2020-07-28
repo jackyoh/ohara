@@ -366,7 +366,7 @@ object K8SClient {
         private[this] def removePod(name: String, isForce: Boolean)(
           implicit executionContext: ExecutionContext
         ): Future[Unit] = {
-          val isForceRemovePod: String = if (isForce) "?gracePeriodSeconds=0" else "gracePeriodSeconds=5"
+          val isForceRemovePod: String = if (isForce) "?gracePeriodSeconds=0" else "?gracePeriodSeconds=3"
           containers(name)
             .flatMap(
               Future.traverse(_)(
