@@ -370,11 +370,13 @@ object K8SClient {
           containers(name)
             .flatMap(
               Future.traverse(_)(
-                container =>
+                container => {
+                  println(s"STOP Pod......, pod name is $name")
                   httpExecutor
                     .delete[ErrorResponse](
                       s"$serverURL/namespaces/$namespace/pods/${container.name}${isForceRemovePod}"
                     )
+                }
               )
             )
             .map(_ => ())
