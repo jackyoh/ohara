@@ -17,6 +17,7 @@
 package oharastream.ohara.agent.k8s
 
 import java.util.Objects
+import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.agent.RemoteFolderHandler
 import oharastream.ohara.agent.container.ContainerClient.VolumeCreator
@@ -375,6 +376,7 @@ object K8SClient {
                     .delete[ErrorResponse](
                       s"$serverURL/namespaces/$namespace/pods/${container.name}${isForceRemovePod}"
                     )
+                  TimeUnit.SECONDS.sleep(5)
                 }
               )
             )
