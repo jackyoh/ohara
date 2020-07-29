@@ -376,11 +376,10 @@ object K8SClient {
                     .delete[ErrorResponse](
                       s"$serverURL/namespaces/$namespace/pods/${container.name}${isForceRemovePod}"
                     )
-                  TimeUnit.SECONDS.sleep(5)
                 }
               )
             )
-            .map(_ => ())
+            .map(_ => TimeUnit.SECONDS.sleep(5))
         }
 
         override def close(): Unit = {
