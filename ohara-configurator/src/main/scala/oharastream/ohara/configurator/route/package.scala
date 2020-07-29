@@ -16,7 +16,7 @@
 
 package oharastream.ohara.configurator
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.{ArrayBlockingQueue, ConcurrentHashMap}
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -56,7 +56,7 @@ package object route {
   private[route] val RESUME_COMMAND: String  = oharastream.ohara.client.configurator.RESUME_COMMAND
 
   private[this] val STOPPING_FLAGS = new ConcurrentHashMap[KeyKind, AtomicBoolean]()
-
+  private[this] val queue = new ArrayBlockingQueue[String](100)
   /**
     * This is a workaround of dealing with threads competition on stopping clusters. For example, a stopping worker
     * is unable to accept connection. However, our worker route has to check the active connectors before stopping it.
@@ -70,13 +70,17 @@ package object route {
     override def apply(clusterInfo: Cluster, subName: String, params: Map[String, String]): Future[Unit] = {
       val keyKind    = KeyKind(clusterInfo.key, clusterInfo.kind)
       val isStopping = STOPPING_FLAGS.computeIfAbsent(keyKind, _ => new AtomicBoolean(false))
-      if (isStopping.compareAndSet(false, true)) {
+      println(s"Stop container name is ${clusterInfo.name}")
+
+      if (isStopping.compareAndSet(false, true) && !queue.contains(clusterInfo.key.toString)) {
+        queue.put(clusterInfo.key.toString)
         val f = hookBeforeStop(clusterInfo, subName, params)
         f.onComplete {
           case Success(_) => // we will reset the flag later
           case Failure(_) => isStopping.set(false)
         }
         f.flatMap { _ =>
+            clusterInfo.key
             val f2 =
               if (params.get(FORCE_KEY).exists(_.toLowerCase == "true")) collie.forceRemove(clusterInfo.key)
               else collie.remove(clusterInfo.key)

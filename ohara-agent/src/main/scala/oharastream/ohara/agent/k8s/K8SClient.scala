@@ -379,7 +379,7 @@ object K8SClient {
                 }
               )
             )
-            .map(_ => TimeUnit.SECONDS.sleep(10))
+            .map(_ => ())
         }
 
         override def close(): Unit = {
