@@ -56,7 +56,8 @@ package object route {
   private[route] val RESUME_COMMAND: String  = oharastream.ohara.client.configurator.RESUME_COMMAND
 
   private[this] val STOPPING_FLAGS = new ConcurrentHashMap[KeyKind, AtomicBoolean]()
-  private[this] val queue = new ArrayBlockingQueue[String](100)
+  private[this] val queue          = new ArrayBlockingQueue[String](100)
+
   /**
     * This is a workaround of dealing with threads competition on stopping clusters. For example, a stopping worker
     * is unable to accept connection. However, our worker route has to check the active connectors before stopping it.
