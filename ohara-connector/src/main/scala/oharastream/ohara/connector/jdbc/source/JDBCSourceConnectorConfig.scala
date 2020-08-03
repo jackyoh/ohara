@@ -29,8 +29,8 @@ case class JDBCSourceConnectorConfig(
   dbTableName: String,
   dbCatalogPattern: Option[String],
   dbSchemaPattern: Option[String],
-  jdbcFetchDataSize: Int,
-  jdbcFlushDataSize: Int,
+  fetchDataSize: Int,
+  flushDataSize: Int,
   timestampColumnName: String,
   taskTotal: Int,
   taskHash: Int
@@ -41,8 +41,8 @@ case class JDBCSourceConnectorConfig(
       DB_USERNAME           -> dbUserName,
       DB_PASSWORD           -> dbPassword,
       DB_TABLENAME          -> dbTableName,
-      JDBC_FETCHDATA_SIZE   -> jdbcFetchDataSize.toString,
-      JDBC_FLUSHDATA_SIZE   -> jdbcFlushDataSize.toString,
+      FETCHDATA_SIZE        -> fetchDataSize.toString,
+      FLUSHDATA_SIZE        -> flushDataSize.toString,
       TIMESTAMP_COLUMN_NAME -> timestampColumnName,
       TASK_TOTAL_KEY        -> taskTotal.toString,
       TASK_HASH_KEY         -> taskHash.toString
@@ -60,8 +60,8 @@ object JDBCSourceConnectorConfig {
       dbTableName = settings.stringValue(DB_TABLENAME),
       dbCatalogPattern = Option(settings.stringOption(DB_CATALOG_PATTERN).orElse(null)).filterNot(CommonUtils.isEmpty),
       dbSchemaPattern = Option(settings.stringOption(DB_SCHEMA_PATTERN).orElse(null)).filterNot(CommonUtils.isEmpty),
-      jdbcFetchDataSize = settings.intOption(JDBC_FETCHDATA_SIZE).orElse(JDBC_FETCHDATA_SIZE_DEFAULT),
-      jdbcFlushDataSize = settings.intOption(JDBC_FLUSHDATA_SIZE).orElse(JDBC_FLUSHDATA_SIZE_DEFAULT),
+      fetchDataSize = settings.intOption(FETCHDATA_SIZE).orElse(FETCHDATA_SIZE_DEFAULT),
+      flushDataSize = settings.intOption(FLUSHDATA_SIZE).orElse(FLUSHDATA_SIZE_DEFAULT),
       timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME),
       taskTotal = settings.intOption(TASK_TOTAL_KEY).orElse(0),
       taskHash = settings.intOption(TASK_HASH_KEY).orElse(0)

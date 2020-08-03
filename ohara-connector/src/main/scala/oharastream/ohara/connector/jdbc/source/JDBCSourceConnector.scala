@@ -40,14 +40,14 @@ class JDBCSourceConnector extends RowSourceConnector {
   override protected def run(settings: TaskSetting): Unit = {
     this.settings = settings
 
-    val jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
-    val tableName                                            = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName                                  = jdbcSourceConnectorConfig.timestampColumnName
+    val config: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
+    val tableName                         = config.dbTableName
+    val timestampColumnName               = config.timestampColumnName
 
     val client = DatabaseClient.builder
-      .url(jdbcSourceConnectorConfig.dbURL)
-      .user(jdbcSourceConnectorConfig.dbUserName)
-      .password(jdbcSourceConnectorConfig.dbPassword)
+      .url(config.dbURL)
+      .user(config.dbUserName)
+      .password(config.dbPassword)
       .build
     try {
       checkTimestampColumnName(timestampColumnName)
@@ -169,28 +169,28 @@ class JDBCSourceConnector extends RowSourceConnector {
         .key(TIMESTAMP_COLUMN_NAME)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      JDBC_FETCHDATA_SIZE -> SettingDef
+      FETCHDATA_SIZE -> SettingDef
         .builder()
         .displayName("JDBC fetch size")
         .documentation("Setting JDBC fetch data size for ResultSet")
-        .key(JDBC_FETCHDATA_SIZE)
-        .optional(JDBC_FETCHDATA_SIZE_DEFAULT)
+        .key(FETCHDATA_SIZE)
+        .optional(FETCHDATA_SIZE_DEFAULT)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      JDBC_FLUSHDATA_SIZE -> SettingDef
+      FLUSHDATA_SIZE -> SettingDef
         .builder()
         .displayName("JDBC flush size")
         .documentation("Setting Data flush to topic size")
-        .key(JDBC_FLUSHDATA_SIZE)
-        .optional(JDBC_FLUSHDATA_SIZE_DEFAULT)
+        .key(FLUSHDATA_SIZE)
+        .optional(FLUSHDATA_SIZE_DEFAULT)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      JDBC_FREQUENCE_TIME -> SettingDef
+      FREQUENCE_TIME -> SettingDef
         .builder()
         .displayName("Fetch data frequence")
         .documentation("Setting fetch data frequency from database")
-        .key(JDBC_FREQUENCE_TIME)
-        .optional(java.time.Duration.ofMillis(JDBC_FREQUENCE_TIME_DEFAULT.toMillis))
+        .key(FREQUENCE_TIME)
+        .optional(java.time.Duration.ofMillis(FREQUENCE_TIME_DEFAULT.toMillis))
         .orderInGroup(counter.getAndIncrement())
         .build()
     ).asJava

@@ -87,8 +87,8 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
     when(taskSetting.stringOption(DB_SCHEMA_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringOption(DB_CATALOG_PATTERN)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME)).thenReturn(timestampColumnName)
-    when(taskSetting.intOption(JDBC_FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
-    when(taskSetting.intOption(JDBC_FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(FETCHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.intOption(FLUSHDATA_SIZE)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
     when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
 

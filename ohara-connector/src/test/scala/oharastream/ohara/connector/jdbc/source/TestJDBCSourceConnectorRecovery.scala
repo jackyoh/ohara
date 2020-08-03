@@ -185,8 +185,8 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers {
         DB_PASSWORD           -> db.password,
         DB_TABLENAME          -> tableName,
         TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-        JDBC_FETCHDATA_SIZE   -> "1",
-        JDBC_FLUSHDATA_SIZE   -> "1"
+        FETCHDATA_SIZE        -> "1",
+        FLUSHDATA_SIZE        -> "1"
       ).asJava
     )
   )

@@ -34,19 +34,19 @@ class JDBCSourceTask extends RowSourceTask {
   protected[this] var dbProduct: String              = _
   protected[this] var firstTimestampValue: Timestamp = _
 
-  private[this] var jdbcSourceConnectorConfig: JDBCSourceConnectorConfig = _
-  private[this] var client: DatabaseClient                               = _
-  private[this] val TIMESTAMP_PARTITION_RNAGE: Int                       = 86400000 // 1 day
-  private[this] var offsetCache: JDBCOffsetCache                         = _
-  private[this] var topics: Seq[TopicKey]                                = _
-  private[this] var schema: Seq[Column]                                  = _
+  private[this] var config: JDBCSourceConnectorConfig = _
+  private[this] var client: DatabaseClient            = _
+  private[this] val TIMESTAMP_PARTITION_RNAGE: Int    = 86400000 // 1 day
+  private[this] var offsetCache: JDBCOffsetCache      = _
+  private[this] var topics: Seq[TopicKey]             = _
+  private[this] var schema: Seq[Column]               = _
 
   override protected[source] def run(settings: TaskSetting): Unit = {
-    jdbcSourceConnectorConfig = JDBCSourceConnectorConfig(settings)
+    config = JDBCSourceConnectorConfig(settings)
     client = DatabaseClient.builder
-      .url(jdbcSourceConnectorConfig.dbURL)
-      .user(jdbcSourceConnectorConfig.dbUserName)
-      .password(jdbcSourceConnectorConfig.dbPassword)
+      .url(config.dbURL)
+      .user(config.dbUserName)
+      .password(config.dbPassword)
       .build
     // setAutoCommit must be set to false when setting the fetch size
     client.connection.setAutoCommit(false)
@@ -54,7 +54,7 @@ class JDBCSourceTask extends RowSourceTask {
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
     val timestampColumnName =
-      jdbcSourceConnectorConfig.timestampColumnName
+      config.timestampColumnName
 
     this.offsetCache = new JDBCOffsetCache()
     firstTimestampValue = tableFirstTimestampValue(timestampColumnName)
@@ -89,9 +89,9 @@ class JDBCSourceTask extends RowSourceTask {
   ): Timestamp = {
     val sql = dbProduct.toUpperCase match {
       case ORACLE.name =>
-        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
+        s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
       case _ =>
-        s"SELECT $timestampColumnName FROM ${jdbcSourceConnectorConfig.dbTableName} ORDER BY $timestampColumnName limit 1"
+        s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName limit 1"
     }
 
     val preparedStatement = client.connection.prepareStatement(sql)
@@ -112,8 +112,8 @@ class JDBCSourceTask extends RowSourceTask {
 
   private[source] def needToRun(stopTimestamp: Timestamp): Boolean = {
     val partitionHashCode =
-      partitionKey(jdbcSourceConnectorConfig.dbTableName, firstTimestampValue, stopTimestamp).hashCode()
-    Math.abs(partitionHashCode) % jdbcSourceConnectorConfig.taskTotal == jdbcSourceConnectorConfig.taskHash
+      partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp).hashCode()
+    Math.abs(partitionHashCode) % config.taskTotal == config.taskHash
   }
 
   private[source] def partitionKey(
@@ -142,8 +142,8 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
+    val tableName           = config.dbTableName
+    val timestampColumnName = config.timestampColumnName
     val key                 = partitionKey(tableName, firstTimestampValue, stopTimestamp)
     offsetCache.loadIfNeed(rowContext, key)
 
@@ -151,7 +151,7 @@ class JDBCSourceTask extends RowSourceTask {
       s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
-      prepareStatement.setFetchSize(jdbcSourceConnectorConfig.jdbcFetchDataSize)
+      prepareStatement.setFetchSize(config.fetchDataSize)
       prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
       prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
       val resultSet = prepareStatement.executeQuery()
@@ -167,7 +167,7 @@ class JDBCSourceTask extends RowSourceTask {
             case (_, index) =>
               index >= offset
           }
-          .take(jdbcSourceConnectorConfig.jdbcFlushDataSize)
+          .take(config.flushDataSize)
           .flatMap {
             case (columns, rowIndex) =>
               val newSchema =
@@ -212,9 +212,8 @@ class JDBCSourceTask extends RowSourceTask {
     startTimestamp: Timestamp,
     stopTimestamp: Timestamp
   ): Boolean = {
-    val tableName = jdbcSourceConnectorConfig.dbTableName
-    val dbCount   = count(startTimestamp, stopTimestamp)
-    val key       = partitionKey(tableName, firstTimestampValue, stopTimestamp)
+    val dbCount = count(startTimestamp, stopTimestamp)
+    val key     = partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp)
 
     val offsetIndex = offsetCache.readOffset(key)
     if (dbCount < offsetIndex) {
@@ -225,10 +224,8 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
-    val tableName           = jdbcSourceConnectorConfig.dbTableName
-    val timestampColumnName = jdbcSourceConnectorConfig.timestampColumnName
     val sql =
-      s"SELECT count(*) FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ?"
+      s"SELECT count(*) FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? and ${config.timestampColumnName} < ?"
 
     val statement = client.connection.prepareStatement(sql)
     try {

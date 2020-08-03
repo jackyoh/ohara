@@ -72,9 +72,9 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
 
   @Test
   def checkFetchDataSize(): Unit = {
-    val definition = jdbcSource.settingDefinitions().get(JDBC_FETCHDATA_SIZE)
+    val definition = jdbcSource.settingDefinitions().get(FETCHDATA_SIZE)
     definition.necessary() should not be Necessary.REQUIRED
-    definition.defaultInt shouldBe JDBC_FETCHDATA_SIZE_DEFAULT
+    definition.defaultInt shouldBe FETCHDATA_SIZE_DEFAULT
     definition.permission() shouldBe Permission.EDITABLE
     definition.internal() shouldBe false
     definition.reference() shouldBe Reference.NONE
@@ -83,9 +83,9 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
 
   @Test
   def checkFlushDataSize(): Unit = {
-    val definition = jdbcSource.settingDefinitions().get(JDBC_FLUSHDATA_SIZE)
+    val definition = jdbcSource.settingDefinitions().get(FLUSHDATA_SIZE)
     definition.necessary() should not be Necessary.REQUIRED
-    definition.defaultInt shouldBe JDBC_FLUSHDATA_SIZE_DEFAULT
+    definition.defaultInt shouldBe FLUSHDATA_SIZE_DEFAULT
     definition.permission() shouldBe Permission.EDITABLE
     definition.internal() shouldBe false
     definition.reference() shouldBe Reference.NONE
@@ -94,9 +94,9 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
 
   @Test
   def checkFrequenceTime(): Unit = {
-    val definition = jdbcSource.settingDefinitions().get(JDBC_FREQUENCE_TIME)
+    val definition = jdbcSource.settingDefinitions().get(FREQUENCE_TIME)
     definition.necessary should not be Necessary.REQUIRED
-    definition.defaultDuration() shouldBe java.time.Duration.ofMillis(JDBC_FREQUENCE_TIME_DEFAULT.toMillis)
+    definition.defaultDuration() shouldBe java.time.Duration.ofMillis(FREQUENCE_TIME_DEFAULT.toMillis)
     definition.permission() shouldBe Permission.EDITABLE
     definition.internal() shouldBe false
     definition.reference() shouldBe Reference.NONE
@@ -181,9 +181,9 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
             DB_PASSWORD           -> password,
             DB_TABLENAME          -> tableName,
             TIMESTAMP_COLUMN_NAME -> timeStampColumnName,
-            JDBC_FETCHDATA_SIZE   -> "1000",
-            JDBC_FLUSHDATA_SIZE   -> "1000",
-            JDBC_FREQUENCE_TIME   -> "1 second"
+            FETCHDATA_SIZE        -> "1000",
+            FLUSHDATA_SIZE        -> "1000",
+            FREQUENCE_TIME        -> "1 second"
           )
         )
         .connectorClass(classOf[JDBCSourceConnector])
@@ -266,7 +266,7 @@ class TestJDBCSourceConnectorDefinition extends WithBrokerWorker {
     response
       .settings()
       .asScala
-      .filter(_.value().key() == JDBC_FREQUENCE_TIME)
+      .filter(_.value().key() == FREQUENCE_TIME)
       .head
       .definition()
       .necessary() should not be Necessary.REQUIRED

@@ -44,7 +44,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     jdbcSourceConnectorConfig.dbTableName shouldBe "TABLE1"
     jdbcSourceConnectorConfig.dbSchemaPattern.get shouldBe "schema1"
     jdbcSourceConnectorConfig.timestampColumnName shouldBe "CDC_TIMESTAMP"
-    jdbcSourceConnectorConfig.jdbcFetchDataSize shouldBe JDBC_FETCHDATA_SIZE_DEFAULT
+    jdbcSourceConnectorConfig.fetchDataSize shouldBe FETCHDATA_SIZE_DEFAULT
   }
 
   @Test
@@ -56,12 +56,12 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
         DB_PASSWORD           -> "123456",
         DB_TABLENAME          -> "TABLE1",
         DB_SCHEMA_PATTERN     -> "schema1",
-        JDBC_FETCHDATA_SIZE   -> "500",
+        FETCHDATA_SIZE        -> "500",
         TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
       )
 
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
-    jdbcSourceConnectorConfig.jdbcFetchDataSize shouldBe 500
+    jdbcSourceConnectorConfig.fetchDataSize shouldBe 500
   }
   @Test
   def testException(): Unit = {
@@ -87,8 +87,8 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       dbTableName = "123",
       dbCatalogPattern = None,
       dbSchemaPattern = None,
-      jdbcFetchDataSize = 1000,
-      jdbcFlushDataSize = 1000,
+      fetchDataSize = 1000,
+      flushDataSize = 1000,
       timestampColumnName = "123",
       taskTotal = 0,
       taskHash = 0

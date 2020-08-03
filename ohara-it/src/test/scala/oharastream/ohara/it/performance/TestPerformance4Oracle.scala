@@ -47,8 +47,8 @@ class TestPerformance4Oracle extends BasicTestPerformance4Jdbc {
           oharastream.ohara.connector.jdbc.source.DB_TABLENAME          -> JsString(tableName),
           oharastream.ohara.connector.jdbc.source.TIMESTAMP_COLUMN_NAME -> JsString(timestampColumnName),
           oharastream.ohara.connector.jdbc.source.DB_SCHEMA_PATTERN     -> JsString(user),
-          oharastream.ohara.connector.jdbc.source.JDBC_FETCHDATA_SIZE   -> JsNumber(10000),
-          oharastream.ohara.connector.jdbc.source.JDBC_FLUSHDATA_SIZE   -> JsNumber(10000)
+          oharastream.ohara.connector.jdbc.source.FETCHDATA_SIZE        -> JsNumber(10000),
+          oharastream.ohara.connector.jdbc.source.FLUSHDATA_SIZE        -> JsNumber(10000)
         )
       )
       sleepUntilEnd()
