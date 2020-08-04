@@ -105,92 +105,76 @@ class JDBCSourceConnector extends RowSourceConnector {
   private[this] val counter = new AtomicInteger(0)
   override protected def customSettingDefinitions(): java.util.Map[String, SettingDef] =
     Map(
-      DB_URL -> SettingDef
+      DB_URL_KEY -> SettingDef
         .builder()
         .displayName("jdbc url")
         .documentation("Connection database url")
         .required(SettingDef.Type.STRING)
-        .key(DB_URL)
+        .key(DB_URL_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      DB_USERNAME -> SettingDef
+      DB_USERNAME_KEY -> SettingDef
         .builder()
         .displayName("user name")
         .documentation("Connection database user name")
         .required(SettingDef.Type.STRING)
-        .key(DB_USERNAME)
+        .key(DB_USERNAME_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      DB_PASSWORD -> SettingDef
+      DB_PASSWORD_KEY -> SettingDef
         .builder()
         .displayName("password")
         .documentation("Connection database user password")
         .required(SettingDef.Type.PASSWORD)
-        .key(DB_PASSWORD)
+        .key(DB_PASSWORD_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      DB_TABLENAME -> SettingDef
+      DB_TABLENAME_KEY -> SettingDef
         .builder()
         .displayName("table name")
         .documentation("write to topic from database table name")
         .required(SettingDef.Type.JDBC_TABLE)
-        .key(DB_TABLENAME)
+        .key(DB_TABLENAME_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      DB_CATALOG_PATTERN -> SettingDef
+      DB_CATALOG_PATTERN_KEY -> SettingDef
         .builder()
         .displayName("catalog pattern")
         .documentation("database metadata catalog")
         .optional(SettingDef.Type.STRING)
-        .key(DB_CATALOG_PATTERN)
+        .key(DB_CATALOG_PATTERN_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      DB_SCHEMA_PATTERN -> SettingDef
+      DB_SCHEMA_PATTERN_KEY -> SettingDef
         .builder()
         .displayName("schema pattern")
         .documentation("database metadata schema pattern")
         .optional(SettingDef.Type.STRING)
-        .key(DB_SCHEMA_PATTERN)
+        .key(DB_SCHEMA_PATTERN_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      MODE -> SettingDef
-        .builder()
-        .displayName("mode")
-        .documentation("Only support timestamp column")
-        .key(MODE)
-        .optional(MODE_DEFAULT)
-        .orderInGroup(counter.getAndIncrement())
-        .build(),
-      TIMESTAMP_COLUMN_NAME -> SettingDef
+      TIMESTAMP_COLUMN_NAME_KEY -> SettingDef
         .builder()
         .displayName("timestamp column name")
         .documentation("Use a timestamp column to detect new and modified rows")
         .required(SettingDef.Type.STRING)
-        .key(TIMESTAMP_COLUMN_NAME)
+        .key(TIMESTAMP_COLUMN_NAME_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      FETCHDATA_SIZE -> SettingDef
+      FETCH_DATA_SIZE_KEY -> SettingDef
         .builder()
         .displayName("JDBC fetch size")
         .documentation("Setting JDBC fetch data size for ResultSet")
-        .key(FETCHDATA_SIZE)
-        .optional(FETCHDATA_SIZE_DEFAULT)
+        .key(FETCH_DATA_SIZE_KEY)
+        .optional(FETCH_DATA_SIZE_DEFAULT)
         .orderInGroup(counter.getAndIncrement())
         .build(),
-      FLUSHDATA_SIZE -> SettingDef
+      FLUSH_DATA_SIZE_KEY -> SettingDef
         .builder()
         .displayName("JDBC flush size")
         .documentation("Setting Data flush to topic size")
-        .key(FLUSHDATA_SIZE)
-        .optional(FLUSHDATA_SIZE_DEFAULT)
-        .orderInGroup(counter.getAndIncrement())
-        .build(),
-      FREQUENCE_TIME -> SettingDef
-        .builder()
-        .displayName("Fetch data frequence")
-        .documentation("Setting fetch data frequency from database")
-        .key(FREQUENCE_TIME)
-        .optional(java.time.Duration.ofMillis(FREQUENCE_TIME_DEFAULT.toMillis))
+        .key(FLUSH_DATA_SIZE_KEY)
+        .optional(FLUSH_DATA_SIZE_DEFAULT)
         .orderInGroup(counter.getAndIncrement())
         .build()
     ).asJava

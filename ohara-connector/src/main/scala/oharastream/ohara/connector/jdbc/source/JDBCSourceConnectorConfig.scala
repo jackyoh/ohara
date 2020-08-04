@@ -37,32 +37,33 @@ case class JDBCSourceConnectorConfig(
 ) {
   def toMap: Map[String, String] =
     Map(
-      DB_URL                -> dbURL,
-      DB_USERNAME           -> dbUserName,
-      DB_PASSWORD           -> dbPassword,
-      DB_TABLENAME          -> dbTableName,
-      FETCHDATA_SIZE        -> fetchDataSize.toString,
-      FLUSHDATA_SIZE        -> flushDataSize.toString,
-      TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-      TASK_TOTAL_KEY        -> taskTotal.toString,
-      TASK_HASH_KEY         -> taskHash.toString
-    ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN -> s)).getOrElse(Map.empty) ++ dbSchemaPattern
-      .map(s => Map(DB_SCHEMA_PATTERN                     -> s))
+      DB_URL_KEY                -> dbURL,
+      DB_USERNAME_KEY           -> dbUserName,
+      DB_PASSWORD_KEY           -> dbPassword,
+      DB_TABLENAME_KEY          -> dbTableName,
+      FETCH_DATA_SIZE_KEY       -> fetchDataSize.toString,
+      FLUSH_DATA_SIZE_KEY       -> flushDataSize.toString,
+      TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
+      TASK_TOTAL_KEY            -> taskTotal.toString,
+      TASK_HASH_KEY             -> taskHash.toString
+    ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN_KEY -> s)).getOrElse(Map.empty) ++ dbSchemaPattern
+      .map(s => Map(DB_SCHEMA_PATTERN_KEY                     -> s))
       .getOrElse(Map.empty)
 }
 
 object JDBCSourceConnectorConfig {
   def apply(settings: TaskSetting): JDBCSourceConnectorConfig = {
     JDBCSourceConnectorConfig(
-      dbURL = settings.stringValue(DB_URL),
-      dbUserName = settings.stringValue(DB_USERNAME),
-      dbPassword = settings.stringValue(DB_PASSWORD),
-      dbTableName = settings.stringValue(DB_TABLENAME),
-      dbCatalogPattern = Option(settings.stringOption(DB_CATALOG_PATTERN).orElse(null)).filterNot(CommonUtils.isEmpty),
-      dbSchemaPattern = Option(settings.stringOption(DB_SCHEMA_PATTERN).orElse(null)).filterNot(CommonUtils.isEmpty),
-      fetchDataSize = settings.intOption(FETCHDATA_SIZE).orElse(FETCHDATA_SIZE_DEFAULT),
-      flushDataSize = settings.intOption(FLUSHDATA_SIZE).orElse(FLUSHDATA_SIZE_DEFAULT),
-      timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME),
+      dbURL = settings.stringValue(DB_URL_KEY),
+      dbUserName = settings.stringValue(DB_USERNAME_KEY),
+      dbPassword = settings.stringValue(DB_PASSWORD_KEY),
+      dbTableName = settings.stringValue(DB_TABLENAME_KEY),
+      dbCatalogPattern =
+        Option(settings.stringOption(DB_CATALOG_PATTERN_KEY).orElse(null)).filterNot(CommonUtils.isEmpty),
+      dbSchemaPattern = Option(settings.stringOption(DB_SCHEMA_PATTERN_KEY).orElse(null)).filterNot(CommonUtils.isEmpty),
+      fetchDataSize = settings.intOption(FETCH_DATA_SIZE_KEY).orElse(FETCH_DATA_SIZE_DEFAULT),
+      flushDataSize = settings.intOption(FLUSH_DATA_SIZE_KEY).orElse(FLUSH_DATA_SIZE_DEFAULT),
+      timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME_KEY),
       taskTotal = settings.intOption(TASK_TOTAL_KEY).orElse(0),
       taskHash = settings.intOption(TASK_HASH_KEY).orElse(0)
     )

@@ -29,12 +29,12 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
   def testSettingProperty(): Unit = {
     val map1: Map[String, String] =
       Map(
-        DB_URL                -> "jdbc:mysql://localhost/test",
-        DB_USERNAME           -> "root",
-        DB_PASSWORD           -> "123456",
-        DB_TABLENAME          -> "TABLE1",
-        DB_SCHEMA_PATTERN     -> "schema1",
-        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
+        DB_URL_KEY                -> "jdbc:mysql://localhost/test",
+        DB_USERNAME_KEY           -> "root",
+        DB_PASSWORD_KEY           -> "123456",
+        DB_TABLENAME_KEY          -> "TABLE1",
+        DB_SCHEMA_PATTERN_KEY     -> "schema1",
+        TIMESTAMP_COLUMN_NAME_KEY -> "CDC_TIMESTAMP"
       )
 
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
@@ -44,20 +44,20 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
     jdbcSourceConnectorConfig.dbTableName shouldBe "TABLE1"
     jdbcSourceConnectorConfig.dbSchemaPattern.get shouldBe "schema1"
     jdbcSourceConnectorConfig.timestampColumnName shouldBe "CDC_TIMESTAMP"
-    jdbcSourceConnectorConfig.fetchDataSize shouldBe FETCHDATA_SIZE_DEFAULT
+    jdbcSourceConnectorConfig.fetchDataSize shouldBe FETCH_DATA_SIZE_DEFAULT
   }
 
   @Test
   def testFetchDataSize(): Unit = {
     val map1: Map[String, String] =
       Map(
-        DB_URL                -> "jdbc:mysql://localhost/test",
-        DB_USERNAME           -> "root",
-        DB_PASSWORD           -> "123456",
-        DB_TABLENAME          -> "TABLE1",
-        DB_SCHEMA_PATTERN     -> "schema1",
-        FETCHDATA_SIZE        -> "500",
-        TIMESTAMP_COLUMN_NAME -> "CDC_TIMESTAMP"
+        DB_URL_KEY                -> "jdbc:mysql://localhost/test",
+        DB_USERNAME_KEY           -> "root",
+        DB_PASSWORD_KEY           -> "123456",
+        DB_TABLENAME_KEY          -> "TABLE1",
+        DB_SCHEMA_PATTERN_KEY     -> "schema1",
+        FETCH_DATA_SIZE_KEY       -> "500",
+        TIMESTAMP_COLUMN_NAME_KEY -> "CDC_TIMESTAMP"
       )
 
     val jdbcSourceConnectorConfig = jdbcConfig(map1)
@@ -67,15 +67,15 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
   def testException(): Unit = {
     intercept[NoSuchElementException] {
       jdbcConfig(Map())
-    }.getMessage shouldBe s"$DB_URL doesn't exist"
+    }.getMessage shouldBe s"$DB_URL_KEY doesn't exist"
 
     intercept[NoSuchElementException] {
-      jdbcConfig(Map(DB_URL -> "jdbc:mysql://localhost:3306"))
-    }.getMessage shouldBe s"$DB_USERNAME doesn't exist"
+      jdbcConfig(Map(DB_URL_KEY -> "jdbc:mysql://localhost:3306"))
+    }.getMessage shouldBe s"$DB_USERNAME_KEY doesn't exist"
 
     intercept[NoSuchElementException] {
-      jdbcConfig(Map(DB_URL -> "jdbc:mysql://localhost/test", DB_USERNAME -> "root"))
-    }.getMessage shouldBe s"$DB_PASSWORD doesn't exist"
+      jdbcConfig(Map(DB_URL_KEY -> "jdbc:mysql://localhost/test", DB_USERNAME_KEY -> "root"))
+    }.getMessage shouldBe s"$DB_PASSWORD_KEY doesn't exist"
   }
 
   @Test
@@ -94,30 +94,28 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       taskHash = 0
     )
 
-    config.toMap.contains(DB_CATALOG_PATTERN) shouldBe false
-    config.toMap.contains(DB_SCHEMA_PATTERN) shouldBe false
+    config.toMap.contains(DB_CATALOG_PATTERN_KEY) shouldBe false
+    config.toMap.contains(DB_SCHEMA_PATTERN_KEY) shouldBe false
 
     val configMap = Map[String, String](
-      DB_URL                -> "aa",
-      DB_USERNAME           -> "aa",
-      DB_PASSWORD           -> "aa",
-      DB_TABLENAME          -> "aa",
-      DB_CATALOG_PATTERN    -> "aa",
-      DB_SCHEMA_PATTERN     -> "aa",
-      MODE                  -> "aa",
-      TIMESTAMP_COLUMN_NAME -> "aa"
+      DB_URL_KEY                -> "aa",
+      DB_USERNAME_KEY           -> "aa",
+      DB_PASSWORD_KEY           -> "aa",
+      DB_TABLENAME_KEY          -> "aa",
+      DB_CATALOG_PATTERN_KEY    -> "aa",
+      DB_SCHEMA_PATTERN_KEY     -> "aa",
+      TIMESTAMP_COLUMN_NAME_KEY -> "aa"
     )
 
     jdbcConfig(configMap).dbSchemaPattern.isEmpty shouldBe false
     jdbcConfig(configMap).dbCatalogPattern.isEmpty shouldBe false
 
     val configMap2 = Map[String, String](
-      DB_URL                -> "aa",
-      DB_USERNAME           -> "aa",
-      DB_PASSWORD           -> "aa",
-      DB_TABLENAME          -> "aa",
-      MODE                  -> "aa",
-      TIMESTAMP_COLUMN_NAME -> "aa"
+      DB_URL_KEY                -> "aa",
+      DB_USERNAME_KEY           -> "aa",
+      DB_PASSWORD_KEY           -> "aa",
+      DB_TABLENAME_KEY          -> "aa",
+      TIMESTAMP_COLUMN_NAME_KEY -> "aa"
     )
 
     jdbcConfig(configMap2).dbSchemaPattern.isEmpty shouldBe true

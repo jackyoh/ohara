@@ -21,24 +21,20 @@ import oharastream.ohara.client.Enum
 import scala.concurrent.duration.Duration
 
 package object source {
-  val DB_URL: String                   = "source.db.url"
-  val DB_USERNAME: String              = "source.db.username"
-  val DB_PASSWORD: String              = "source.db.password"
-  val DB_TABLENAME: String             = "source.table.name"
-  val DB_CATALOG_PATTERN: String       = "source.schema.catalog"
-  val DB_SCHEMA_PATTERN: String        = "source.schema.pattern"
-  val TASK_TOTAL_KEY                   = "task.total"
-  val TASK_HASH_KEY                    = "tash.hash"
-  val FETCHDATA_SIZE: String           = "source.jdbc.fetch.size"
-  val FLUSHDATA_SIZE: String           = "source.jdbc.flush.size"
-  val FREQUENCE_TIME: String           = "source.jdbc.frequence.time"
-  val MODE: String                     = "mode"
-  val MODE_DEFAULT                     = "timestamp"
-  val FETCHDATA_SIZE_DEFAULT: Int      = 1000
-  val FLUSHDATA_SIZE_DEFAULT: Int      = 1000
-  val FREQUENCE_TIME_DEFAULT: Duration = Duration("0 second")
-  val TIMESTAMP_COLUMN_NAME: String    = "source.timestamp.column.name"
-  val ORACLE_DB_NAME                   = "oracle"
+  val DB_URL_KEY: String                = "source.db.url"
+  val DB_USERNAME_KEY: String           = "source.db.username"
+  val DB_PASSWORD_KEY: String           = "source.db.password"
+  val DB_TABLENAME_KEY: String          = "source.table.name"
+  val DB_CATALOG_PATTERN_KEY: String    = "source.schema.catalog"
+  val DB_SCHEMA_PATTERN_KEY: String     = "source.schema.pattern"
+  val TASK_TOTAL_KEY: String            = "task.total"
+  val TASK_HASH_KEY: String             = "tash.hash"
+  val FETCH_DATA_SIZE_KEY: String       = "source.jdbc.fetch.size"
+  val FLUSH_DATA_SIZE_KEY: String       = "source.jdbc.flush.size"
+  val TIMESTAMP_COLUMN_NAME_KEY: String = "source.timestamp.column.name"
+  val FETCH_DATA_SIZE_DEFAULT: Int      = 1000
+  val FLUSH_DATA_SIZE_DEFAULT: Int      = 1000
+  val ORACLE_DB_NAME                    = "oracle"
 
   def toJavaDuration(d: Duration): java.time.Duration = java.time.Duration.ofMillis(d.toMillis)
   def toScalaDuration(d: java.time.Duration): Duration =

@@ -67,7 +67,7 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
   @Before
   def setup(): Unit = {
     client.createTable(tableName, columns)
-    insertData(startTimestamp.getTime().to(stopTimestamp.getTime()).by(incrementTimestamp).map { value =>
+    insertData(startTimestamp.getTime.to(stopTimestamp.getTime).by(incrementTimestamp).map { value =>
       new Timestamp(value)
     })
   }
@@ -110,7 +110,7 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
         tableData(
           records3
             .map { record =>
-              record.key().get().cell(timestampColumnName).value().toString()
+              record.key().get().cell(timestampColumnName).value().toString
             }
             .sorted[String]
             .toSeq
@@ -148,7 +148,7 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
           .zipWithIndex
           .foreach {
             case (result, index) =>
-              result.getTimestamp(timestampColumnName).toString() shouldBe topicRecords(index)
+              result.getTimestamp(timestampColumnName).toString shouldBe topicRecords(index)
           }
       } finally Releasable.close(resultSet)
     } finally Releasable.close(preparedStatement)
@@ -161,9 +161,7 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
       timestamps.foreach { timestamp =>
         preparedStatement.setTimestamp(1, timestamp)
         rowData().asScala.zipWithIndex.foreach {
-          case (result, index) => {
-            preparedStatement.setString(index + 2, result.value().toString)
-          }
+          case (result, index) => preparedStatement.setString(index + 2, result.value().toString)
         }
         preparedStatement.execute()
       }
@@ -209,13 +207,13 @@ class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends Wi
     JDBCSourceConnectorConfig(
       TaskSetting.of(
         Map(
-          DB_URL                -> db.url,
-          DB_USERNAME           -> db.user,
-          DB_PASSWORD           -> db.password,
-          DB_TABLENAME          -> tableName,
-          TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-          TASK_TOTAL_KEY        -> "0",
-          TASK_HASH_KEY         -> "0"
+          DB_URL_KEY                -> db.url,
+          DB_USERNAME_KEY           -> db.user,
+          DB_PASSWORD_KEY           -> db.password,
+          DB_TABLENAME_KEY          -> tableName,
+          TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
+          TASK_TOTAL_KEY            -> "0",
+          TASK_HASH_KEY             -> "0"
         ).asJava
       )
     )
@@ -229,37 +227,34 @@ object TestJDBCSourceConnectorTimeRange {
     val ONE_DAY_TIMESTAMP  = 86400000  // 1 * 24 * 60 * 60 * 1000 => 1 day
     val ONE_HOUR_TIMESTAMP = 3600000   // 60 * 60 * 1000 => 1 hour
 
-    (1 to 3)
-      .map { taskNumber =>
-        Seq(
-          // For test the from 5 day ago to 1 day ago data
-          TimeRangeParameter(
-            new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
-            new Timestamp(CommonUtils.current() - ONE_DAY_TIMESTAMP),
-            ONE_HOUR_TIMESTAMP,
-            s"Number of tasks: $taskNumber, Less current timestamp",
-            taskNumber
-          ),
-          // For test the from 5 day ago to current time
-          TimeRangeParameter(
-            new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
-            new Timestamp(CommonUtils.current()),
-            ONE_HOUR_TIMESTAMP,
-            s"Number of tasks: $taskNumber, Equals current timestamp",
-            taskNumber
-          ),
-          // For the the from 5 day ago to 5 day later
-          TimeRangeParameter(
-            new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
-            new Timestamp(CommonUtils.current() + FIVE_DAY_TIMESTAMP),
-            ONE_HOUR_TIMESTAMP,
-            s"Number of tasks: $taskNumber, more than the current timestamp",
-            taskNumber
-          )
+    (1 to 3).flatMap { taskNumber =>
+      Seq(
+        // For test the from 5 day ago to 1 day ago data
+        TimeRangeParameter(
+          new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
+          new Timestamp(CommonUtils.current() - ONE_DAY_TIMESTAMP),
+          ONE_HOUR_TIMESTAMP,
+          s"Number of tasks: $taskNumber, Less current timestamp",
+          taskNumber
+        ),
+        // For test the from 5 day ago to current time
+        TimeRangeParameter(
+          new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
+          new Timestamp(CommonUtils.current()),
+          ONE_HOUR_TIMESTAMP,
+          s"Number of tasks: $taskNumber, Equals current timestamp",
+          taskNumber
+        ),
+        // For the the from 5 day ago to 5 day later
+        TimeRangeParameter(
+          new Timestamp(CommonUtils.current() - FIVE_DAY_TIMESTAMP),
+          new Timestamp(CommonUtils.current() + FIVE_DAY_TIMESTAMP),
+          ONE_HOUR_TIMESTAMP,
+          s"Number of tasks: $taskNumber, more than the current timestamp",
+          taskNumber
         )
-      }
-      .flatten
-      .asJava
+      )
+    }.asJava
   }
 }
 
@@ -270,5 +265,5 @@ case class TimeRangeParameter(
   describe: String,
   taskNumber: Int
 ) {
-  override def toString(): String = describe
+  override def toString: String = describe
 }

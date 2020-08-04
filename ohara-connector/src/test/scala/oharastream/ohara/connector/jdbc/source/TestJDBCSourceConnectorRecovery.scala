@@ -180,13 +180,13 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers {
   private[this] val props = JDBCSourceConnectorConfig(
     TaskSetting.of(
       Map(
-        DB_URL                -> db.url,
-        DB_USERNAME           -> db.user,
-        DB_PASSWORD           -> db.password,
-        DB_TABLENAME          -> tableName,
-        TIMESTAMP_COLUMN_NAME -> timestampColumnName,
-        FETCHDATA_SIZE        -> "1",
-        FLUSHDATA_SIZE        -> "1"
+        DB_URL_KEY                -> db.url,
+        DB_USERNAME_KEY           -> db.user,
+        DB_PASSWORD_KEY           -> db.password,
+        DB_TABLENAME_KEY          -> tableName,
+        TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
+        FETCH_DATA_SIZE_KEY       -> "1",
+        FLUSH_DATA_SIZE_KEY       -> "1"
       ).asJava
     )
   )
