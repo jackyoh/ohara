@@ -119,8 +119,8 @@ class JDBCSourceTask extends RowSourceTask {
   private[source] def partitionKey(tableName: String, firstTimestampValue: Timestamp, timestamp: Timestamp): String = {
     if (timestamp.getTime < firstTimestampValue.getTime)
       throw new IllegalArgumentException("The timestamp over the first data timestamp")
-    val avgTimestamp                = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
-    val startTimestamp              = new Timestamp((avgTimestamp * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
+    val page                        = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
+    val startTimestamp              = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
     val stopTimestamp               = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
     val currentTimestamp: Timestamp = current()
     if (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
