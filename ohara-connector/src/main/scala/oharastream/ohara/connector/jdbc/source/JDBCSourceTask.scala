@@ -65,7 +65,7 @@ class JDBCSourceTask extends RowSourceTask {
     var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE))
 
     // Generate the start timestamp and stop timestamp to run multi task for the query
-    while (!needToRun(stopTimestamp) ||
+    while (!needToRun(startTimestamp) ||
            isCompleted(startTimestamp, stopTimestamp)) {
       val currentTimestamp = current()
       val addTimestamp     = new Timestamp(stopTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
@@ -110,9 +110,9 @@ class JDBCSourceTask extends RowSourceTask {
     else timestamp
   }
 
-  private[source] def needToRun(stopTimestamp: Timestamp): Boolean = {
+  private[source] def needToRun(timestamp: Timestamp): Boolean = {
     val partitionHashCode =
-      partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp).hashCode()
+      partitionKey(config.dbTableName, firstTimestampValue, timestamp).hashCode()
     Math.abs(partitionHashCode) % config.taskTotal == config.taskHash
   }
 
@@ -203,11 +203,11 @@ class JDBCSourceTask extends RowSourceTask {
     val key     = partitionKey(config.dbTableName, firstTimestampValue, startTimestamp)
 
     val offsetIndex = offsetCache.readOffset(key)
-    if (dbCount < offsetIndex) {
+    if (dbCount < offsetIndex)
       throw new IllegalArgumentException(
         s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"
       )
-    } else offsetIndex == dbCount
+    else offsetIndex == dbCount
   }
 
   private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
