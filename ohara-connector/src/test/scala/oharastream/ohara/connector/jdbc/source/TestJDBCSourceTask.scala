@@ -357,7 +357,7 @@ class TestJDBCSourceTask extends OharaTest {
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME_KEY)).thenReturn(timestampColumnName)
     when(taskSetting.intOption(FETCH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(FLUSH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
-    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(2))
+    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(1))
     when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(3))
     jdbcSourceTask.run(taskSetting)
 
