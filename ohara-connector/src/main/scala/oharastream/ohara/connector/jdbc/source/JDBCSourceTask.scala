@@ -17,7 +17,6 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
-
 import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
@@ -27,7 +26,6 @@ import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector._
-
 import scala.jdk.CollectionConverters._
 
 class JDBCSourceTask extends RowSourceTask {
@@ -48,16 +46,14 @@ class JDBCSourceTask extends RowSourceTask {
       .user(config.dbUserName)
       .password(config.dbPassword)
       .build
+
     // setAutoCommit must be set to false when setting the fetch size
     client.connection.setAutoCommit(false)
     dbProduct = client.connection.getMetaData.getDatabaseProductName
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
-    val timestampColumnName =
-      config.timestampColumnName
-
-    this.offsetCache = new JDBCOffsetCache()
-    firstTimestampValue = tableFirstTimestampValue(timestampColumnName)
+    offsetCache = new JDBCOffsetCache()
+    firstTimestampValue = tableFirstTimestampValue(config.timestampColumnName)
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
@@ -91,7 +87,7 @@ class JDBCSourceTask extends RowSourceTask {
       case ORACLE.name =>
         s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
       case _ =>
-        s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName limit 1"
+        s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName LIMIT 1"
     }
 
     val preparedStatement = client.connection.prepareStatement(sql)
@@ -118,7 +114,7 @@ class JDBCSourceTask extends RowSourceTask {
 
   private[source] def partitionKey(tableName: String, firstTimestampValue: Timestamp, timestamp: Timestamp): String = {
     if (timestamp.getTime < firstTimestampValue.getTime)
-      throw new IllegalArgumentException("The timestamp over the first data timestamp")
+      throw new IllegalArgumentException("The timestamp less than the first data timestamp")
     val page                        = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
     val startTimestamp              = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
     val stopTimestamp               = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
@@ -135,7 +131,7 @@ class JDBCSourceTask extends RowSourceTask {
     offsetCache.loadIfNeed(rowContext, key)
 
     val sql =
-      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? and $timestampColumnName < ? ORDER BY $timestampColumnName"
+      s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? ORDER BY $timestampColumnName"
     val prepareStatement = client.connection.prepareStatement(sql)
     try {
       prepareStatement.setFetchSize(config.fetchDataSize)
@@ -185,7 +181,7 @@ class JDBCSourceTask extends RowSourceTask {
       // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
       // Confirm this connection ResultSet to update, need to call connection commit function.
       // Release any database locks currently held by this Connection object
-      this.client.connection.commit()
+      client.connection.commit()
     }
   }
 
@@ -212,7 +208,7 @@ class JDBCSourceTask extends RowSourceTask {
 
   private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
     val sql =
-      s"SELECT count(*) FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? and ${config.timestampColumnName} < ?"
+      s"SELECT COUNT(*) FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? AND ${config.timestampColumnName} < ?"
 
     val statement = client.connection.prepareStatement(sql)
     try {
@@ -228,7 +224,7 @@ class JDBCSourceTask extends RowSourceTask {
       // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
       // Confirm this connection ResultSet to update, need to call connection commit function.
       // Release any database locks currently held by this Connection object
-      this.client.connection.commit()
+      client.connection.commit()
     }
   }
 

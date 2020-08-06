@@ -190,9 +190,9 @@ class TestJDBCSourceTask extends OharaTest {
 
     // First timestamp data from the rdb table. This is fake data
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
-    val stopTimestamp: Timestamp  = Timestamp.valueOf("2020-06-09 15:00:00")
+    val timestamp: Timestamp      = Timestamp.valueOf("2020-06-09 15:00:00")
     an[IllegalArgumentException] should be thrownBy
-      task.partitionKey("table1", firstTimestamp, stopTimestamp)
+      task.partitionKey("table1", firstTimestamp, timestamp)
   }
 
   @Test
@@ -201,20 +201,44 @@ class TestJDBCSourceTask extends OharaTest {
     task.run(taskSetting())
     // Partition Range timestamp is over the current timestamp
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
-    val stopTimestamp: Timestamp  = new Timestamp(CommonUtils.current() + 86400000)
+    val timestamp: Timestamp      = new Timestamp(CommonUtils.current() + 86400000)
     an[IllegalArgumentException] should be thrownBy
-      task.partitionKey("table1", firstTimestamp, stopTimestamp)
+      task.partitionKey("table1", firstTimestamp, timestamp)
   }
 
   @Test
-  def testPartitionKeyNormal(): Unit = {
+  def testPartitionKeyNormal1(): Unit = {
     val task: JDBCSourceTask = new JDBCSourceTask()
     task.run(taskSetting())
 
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
     // Test the current timestamp is not stop timestamp
-    val stopTimestamp: Timestamp = Timestamp.valueOf("2020-06-12 12:00:00")
-    val result                   = task.partitionKey("table1", firstTimestamp, stopTimestamp)
+    val timestamp: Timestamp = Timestamp.valueOf("2020-06-12 12:00:00")
+    val result               = task.partitionKey("table1", firstTimestamp, timestamp)
+    result shouldBe "table1:2020-06-11 15:00:00.0~2020-06-12 15:00:00.0"
+  }
+
+  @Test
+  def testPartitionKeyNormal2(): Unit = {
+    val task: JDBCSourceTask = new JDBCSourceTask()
+    task.run(taskSetting())
+
+    val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
+    // Test the current timestamp is not stop timestamp
+    val timestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
+    val result               = task.partitionKey("table1", firstTimestamp, timestamp)
+    result shouldBe "table1:2020-06-10 15:00:00.0~2020-06-11 15:00:00.0"
+  }
+
+  @Test
+  def testPartitionKeyNormal3(): Unit = {
+    val task: JDBCSourceTask = new JDBCSourceTask()
+    task.run(taskSetting())
+
+    val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
+    // Test the current timestamp is not stop timestamp
+    val timestamp: Timestamp = Timestamp.valueOf("2020-06-11 15:00:00")
+    val result               = task.partitionKey("table1", firstTimestamp, timestamp)
     result shouldBe "table1:2020-06-11 15:00:00.0~2020-06-12 15:00:00.0"
   }
 
