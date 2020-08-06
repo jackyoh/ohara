@@ -57,23 +57,21 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
-    var startTimestamp = firstTimestampValue
-    var stopTimestamp  = replaceToCurrentTimestamp(new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE))
+    val timestampRange = calcTimestampRange(firstTimestampValue, firstTimestampValue)
+    var startTimestamp = timestampRange._1
+    var stopTimestamp  = replaceToCurrentTimestamp(timestampRange._2)
 
     // Generate the start timestamp and stop timestamp to run multi task for the query
     while (!needToRun(startTimestamp) ||
            isCompleted(startTimestamp, stopTimestamp)) {
       val currentTimestamp = current()
-      val addTimestamp     = new Timestamp(stopTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
+      val timestampRange   = calcTimestampRange(firstTimestampValue, stopTimestamp)
 
-      if (addTimestamp.getTime > currentTimestamp.getTime) {
-        if (needToRun(currentTimestamp)) {
-          return queryData(stopTimestamp, currentTimestamp).asJava
-        } else return Seq.empty.asJava
-      } else {
-        startTimestamp = stopTimestamp
-        stopTimestamp = addTimestamp
-      }
+      if (timestampRange._2.getTime <= currentTimestamp.getTime) {
+        startTimestamp = timestampRange._1
+        stopTimestamp = timestampRange._2
+      } else if (needToRun(currentTimestamp)) return queryData(stopTimestamp, currentTimestamp).asJava
+      else return Seq.empty.asJava
     }
     queryData(startTimestamp, stopTimestamp).asJava
   }
@@ -113,6 +111,14 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[source] def partitionKey(tableName: String, firstTimestampValue: Timestamp, timestamp: Timestamp): String = {
+    val timestampRange = calcTimestampRange(firstTimestampValue, timestamp)
+    s"$tableName:${timestampRange._1.toString}~${timestampRange._2.toString}"
+  }
+
+  private[source] def calcTimestampRange(
+    firstTimestampValue: Timestamp,
+    timestamp: Timestamp
+  ): (Timestamp, Timestamp) = {
     if (timestamp.getTime < firstTimestampValue.getTime)
       throw new IllegalArgumentException("The timestamp less than the first data timestamp")
     val page                        = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
@@ -121,7 +127,7 @@ class JDBCSourceTask extends RowSourceTask {
     val currentTimestamp: Timestamp = current()
     if (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
       throw new IllegalArgumentException("The timestamp over the current timestamp")
-    s"$tableName:${startTimestamp.toString}~${stopTimestamp.toString}"
+    (startTimestamp, stopTimestamp)
   }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
