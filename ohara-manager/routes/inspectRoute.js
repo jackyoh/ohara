@@ -22,6 +22,7 @@ module.exports = (app) => {
   // our UI to consume. It reads a JSON file which is generated
   // by our Backend code
   app.get('/api/inspect/manager', (req, res) => {
+    // For QA TEST
     // OHARA_MANAGER_RUNNING_MODE is set in ohara/bin/ohara-env.sh
     // NODE_ENV is set in npm scripts
     const isProduction =
