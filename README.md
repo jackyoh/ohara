@@ -18,8 +18,6 @@ Ohara provides an architecture to scale, so the users can focus on their busines
 
 ### [Ohara Documentation](https://oharastream.github.io)
 
-Looking for the document of v0.10.x ? Please goto [here](https://ohara.readthedocs.io/en/0.10.x/).
-
 **[Facebook 中文使用者社群](https://www.facebook.com/groups/oharastream)**
 
 ---
