@@ -293,6 +293,28 @@ class TestJDBCSourceTask extends OharaTest {
     needToRun shouldBe true
   }
 
+  @Test
+  def testCalcTimestampRangeSameDataTime(): Unit = {
+    val task = new JDBCSourceTask()
+    task.run(taskSetting())
+    val firstTimestamp = Timestamp.valueOf("2020-08-01 00:11:22")
+    val timestamp      = Timestamp.valueOf("2020-08-01 00:11:22")
+    val result         = task.calcTimestampRange(firstTimestamp, timestamp)
+    result._1.getTime shouldBe Timestamp.valueOf("2020-08-01 00:11:22").getTime
+    result._2.getTime shouldBe Timestamp.valueOf("2020-08-02 00:11:22").getTime
+  }
+
+  @Test
+  def testCalcTimestampRangeNormal(): Unit = {
+    val task = new JDBCSourceTask()
+    task.run(taskSetting())
+    val firstTimestamp = Timestamp.valueOf("2020-08-01 00:00:00")
+    val timestamp      = Timestamp.valueOf("2020-08-02 00:00:00")
+    val result         = task.calcTimestampRange(firstTimestamp, timestamp)
+    result._1.getTime shouldBe Timestamp.valueOf("2020-08-02 00:00:00").getTime
+    result._2.getTime shouldBe Timestamp.valueOf("2020-08-03 00:00:00").getTime
+  }
+
   private[this] def taskSetting(): TaskSetting = {
     val taskSetting: TaskSetting = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL_KEY)).thenReturn(db.url)
