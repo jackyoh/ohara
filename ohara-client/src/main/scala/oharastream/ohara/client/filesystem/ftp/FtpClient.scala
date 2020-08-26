@@ -348,8 +348,6 @@ object FtpClient {
 
           override def close(): Unit = {
             inputStream.close()
-            if (client == null || !client.completePendingCommand())
-              throw new IllegalStateException("Failed to complete pending command")
           }
 
           override def mark(readlimit: Int): Unit = inputStream.mark(readlimit)
