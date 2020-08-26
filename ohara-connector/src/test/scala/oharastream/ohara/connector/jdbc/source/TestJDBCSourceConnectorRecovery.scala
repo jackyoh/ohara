@@ -54,11 +54,11 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers {
     client.createTable(tableName, Seq(column1, column2, column3, column4))
     val statement: Statement = db.connection.createStatement()
 
-    (1 to 1000).foreach(x => {
+    (1 to 1000).foreach { i =>
       statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a${x}-1', 'a${x}-2', ${x})"
+        s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a$i-1', 'a$i-2', $i)"
       )
-    })
+    }
   }
 
   @Test
@@ -166,7 +166,7 @@ class TestJDBCSourceConnectorRecovery extends With3Brokers3Workers {
         consumer.seekToBeginning() //Reset consumer
         val poll6 = consumer.poll(java.time.Duration.ofSeconds(30), 1002).asScala
         poll6.size shouldBe 1002
-      } finally consumer.close
+      } finally Releasable.close(consumer)
     } finally result(connectorAdmin.delete(connectorKey))
   }
 

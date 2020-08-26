@@ -64,7 +64,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     val pool            = Executors.newSingleThreadExecutor()
     val startTime: Long = CommonUtils.current()
     pool.execute(() => {
-      if (client.tables().map(_.name).find(_ == tableName).isEmpty) createTable()
+      if (!client.tables().map(_.name).contains(tableName)) createTable()
 
       val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
       val preparedStatement = client.connection.prepareStatement(sql)
@@ -74,9 +74,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
           val timestampData = new Timestamp(CommonUtils.current() - 432000000 + tableTotalCount.intValue())
           preparedStatement.setTimestamp(1, timestampData)
           rowData().asScala.zipWithIndex.foreach {
-            case (result, index) => {
-              preparedStatement.setString(index + 2, result.value().toString)
-            }
+            case (result, index) => preparedStatement.setString(index + 2, result.value().toString)
           }
           preparedStatement.execute()
           tableTotalCount.add(1)
@@ -287,15 +285,14 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       .connectorClass(classOf[JDBCSourceConnector])
       .topicKey(topicKey)
       .numberOfTasks(3)
-      .settings(jdbcSourceConnectorProps.toMap)
+      .settings(sourceConnectorProps.toMap)
       .create()
   }
 
   private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit = {
     tableData.zipWithIndex.foreach {
-      case (record, index) => {
+      case (record, index) =>
         record shouldBe topicData(index)
-      }
     }
   }
 
@@ -307,7 +304,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     )
   }
 
-  private[this] val jdbcSourceConnectorProps = JDBCSourceConnectorConfig(
+  private[this] val sourceConnectorProps = JDBCSourceConnectorConfig(
     TaskSetting.of(
       Map(
         DB_URL_KEY                -> db.url,

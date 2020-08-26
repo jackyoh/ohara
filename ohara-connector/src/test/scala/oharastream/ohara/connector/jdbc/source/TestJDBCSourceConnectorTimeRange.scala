@@ -43,7 +43,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @RunWith(value = classOf[Parameterized])
 class TestJDBCSourceConnectorTimeRange(parameter: TimeRangeParameter) extends With3Brokers3Workers {
-  private[this] var startTimestamp     = parameter.startTimestamp
+  private[this] val startTimestamp     = parameter.startTimestamp
   private[this] val stopTimestamp      = parameter.stopTimestamp
   private[this] val incrementTimestamp = parameter.increment
 
