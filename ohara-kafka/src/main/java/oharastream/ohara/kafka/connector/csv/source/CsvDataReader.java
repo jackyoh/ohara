@@ -62,14 +62,18 @@ public class CsvDataReader implements DataReader {
               .build();
 
       List<RowSourceRecord> records;
+      boolean notHavaData = true;
       try (BufferedReader reader =
           new BufferedReader(
               new InputStreamReader(fs.open(path), Charset.forName(config.encode())))) {
         records = converter.convert(reader.lines());
+        String lines;
+        while ((lines = reader.readLine()) != null && lines.length() != 0) {
+          notHavaData = false;
+        }
       }
-
       // eof so we mark the file as "completed"
-      if (records.isEmpty()) handleCompletedFile(path);
+      if (notHavaData) handleCompletedFile(path);
       return records;
     } catch (Exception e) {
       LOG.error("failed to handle " + path, e);
