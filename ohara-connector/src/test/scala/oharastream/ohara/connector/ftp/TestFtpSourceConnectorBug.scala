@@ -49,7 +49,7 @@ class TestFtpSourceConnectorBug extends With3Brokers3Workers {
     createFolder(fileSystem, inputFolder)
     createFolder(fileSystem, completedFolder)
     createFolder(fileSystem, outputFolder)
-    val header = "TX_ACCT_DT,ACCT_KEY,TX_TIME,TX_DT,TX_TYPE,CUR_CD,TX_AMT,DB_CR,AMT_BAL,CUST_KEY"
+    val header = "column1,column2,column3,column4,column5,column6,column7,column8,column9,column10"
     val data = (1 to 100000)
       .map { i =>
         Seq(s"a-$i", s"b-$i", s"c-$i", s"d-$i", s"e-$i", s"f-$i", s"g-$i", s"h-$i", s"i-$i", s"j-$i")
