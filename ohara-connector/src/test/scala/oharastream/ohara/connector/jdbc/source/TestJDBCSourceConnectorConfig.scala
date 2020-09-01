@@ -90,6 +90,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       fetchDataSize = 1000,
       flushDataSize = 1000,
       timestampColumnName = "123",
+      incrementColumnName = None,
       taskTotal = 0,
       taskHash = 0
     )
@@ -104,11 +105,13 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       DB_TABLENAME_KEY          -> "aa",
       DB_CATALOG_PATTERN_KEY    -> "aa",
       DB_SCHEMA_PATTERN_KEY     -> "aa",
-      TIMESTAMP_COLUMN_NAME_KEY -> "aa"
+      TIMESTAMP_COLUMN_NAME_KEY -> "aa",
+      INCREMENT_COLUMN_NAME_KEY -> "aa"
     )
 
     jdbcConfig(configMap).dbSchemaPattern.isEmpty shouldBe false
     jdbcConfig(configMap).dbCatalogPattern.isEmpty shouldBe false
+    jdbcConfig(configMap).incrementColumnName.isEmpty shouldBe false
 
     val configMap2 = Map[String, String](
       DB_URL_KEY                -> "aa",
@@ -120,6 +123,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
 
     jdbcConfig(configMap2).dbSchemaPattern.isEmpty shouldBe true
     jdbcConfig(configMap2).dbCatalogPattern.isEmpty shouldBe true
+    jdbcConfig(configMap2).incrementColumnName.isEmpty shouldBe true
 
     jdbcConfig(configMap2) shouldBe jdbcConfig(configMap2)
     jdbcConfig(configMap2) shouldBe jdbcConfig(jdbcConfig(configMap2).toMap)

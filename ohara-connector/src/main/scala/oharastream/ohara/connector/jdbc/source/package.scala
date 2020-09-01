@@ -32,6 +32,7 @@ package object source {
   val FETCH_DATA_SIZE_KEY: String       = "source.jdbc.fetch.size"
   val FLUSH_DATA_SIZE_KEY: String       = "source.jdbc.flush.size"
   val TIMESTAMP_COLUMN_NAME_KEY: String = "source.timestamp.column.name"
+  val INCREMENT_COLUMN_NAME_KEY: String = "source.increment.column.name"
   val FETCH_DATA_SIZE_DEFAULT: Int      = 1000
   val FLUSH_DATA_SIZE_DEFAULT: Int      = 1000
   val ORACLE_DB_NAME                    = "oracle"

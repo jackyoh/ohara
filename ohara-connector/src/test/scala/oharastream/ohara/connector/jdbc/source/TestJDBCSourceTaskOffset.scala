@@ -73,6 +73,7 @@ class TestJDBCSourceTaskOffset extends OharaTest {
       when(taskSetting.stringOption(DB_SCHEMA_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
       when(taskSetting.stringOption(DB_CATALOG_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
       when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME_KEY)).thenReturn(timestampColumnName)
+      when(taskSetting.stringOption(INCREMENT_COLUMN_NAME_KEY)).thenReturn(java.util.Optional.empty[String]())
       when(taskSetting.intOption(FETCH_DATA_SIZE_KEY))
         .thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
       when(taskSetting.intOption(FLUSH_DATA_SIZE_KEY))

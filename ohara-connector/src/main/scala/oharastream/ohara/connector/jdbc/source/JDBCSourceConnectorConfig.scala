@@ -32,6 +32,7 @@ case class JDBCSourceConnectorConfig(
   fetchDataSize: Int,
   flushDataSize: Int,
   timestampColumnName: String,
+  incrementColumnName: Option[String],
   taskTotal: Int,
   taskHash: Int
 ) {
@@ -46,9 +47,9 @@ case class JDBCSourceConnectorConfig(
       TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
       TASK_TOTAL_KEY            -> taskTotal.toString,
       TASK_HASH_KEY             -> taskHash.toString
-    ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN_KEY -> s)).getOrElse(Map.empty) ++ dbSchemaPattern
-      .map(s => Map(DB_SCHEMA_PATTERN_KEY                     -> s))
-      .getOrElse(Map.empty)
+    ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN_KEY    -> s)).getOrElse(Map.empty) ++
+      dbSchemaPattern.map(s => Map(DB_SCHEMA_PATTERN_KEY         -> s)).getOrElse(Map.empty) ++
+      incrementColumnName.map(s => Map(INCREMENT_COLUMN_NAME_KEY -> s)).getOrElse(Map.empty)
 }
 
 object JDBCSourceConnectorConfig {
@@ -64,6 +65,8 @@ object JDBCSourceConnectorConfig {
       fetchDataSize = settings.intOption(FETCH_DATA_SIZE_KEY).orElse(FETCH_DATA_SIZE_DEFAULT),
       flushDataSize = settings.intOption(FLUSH_DATA_SIZE_KEY).orElse(FLUSH_DATA_SIZE_DEFAULT),
       timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME_KEY),
+      incrementColumnName =
+        Option(settings.stringOption(INCREMENT_COLUMN_NAME_KEY).orElse(null)).filterNot(CommonUtils.isEmpty),
       taskTotal = settings.intOption(TASK_TOTAL_KEY).orElse(0),
       taskHash = settings.intOption(TASK_HASH_KEY).orElse(0)
     )

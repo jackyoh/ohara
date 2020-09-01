@@ -161,6 +161,14 @@ class JDBCSourceConnector extends RowSourceConnector {
         .key(TIMESTAMP_COLUMN_NAME_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
+      INCREMENT_COLUMN_NAME_KEY -> SettingDef
+        .builder()
+        .displayName("increment column name")
+        .documentation("Use a increment column for the exactly once")
+        .optional(SettingDef.Type.STRING)
+        .key(INCREMENT_COLUMN_NAME_KEY)
+        .orderInGroup(counter.getAndIncrement())
+        .build(),
       FETCH_DATA_SIZE_KEY -> SettingDef
         .builder()
         .displayName("JDBC fetch size")
