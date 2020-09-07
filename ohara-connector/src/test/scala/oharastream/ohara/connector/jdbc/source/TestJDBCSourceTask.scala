@@ -44,6 +44,7 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Before
   def setup(): Unit = {
+    client.connection.setAutoCommit(false)
     val column1 = RdbColumn("COLUMN1", "TIMESTAMP(6)", true)
     val column2 = RdbColumn("COLUMN2", "varchar(45)", false)
     val column3 = RdbColumn("COLUMN3", "VARCHAR(45)", false)
@@ -140,32 +141,29 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testRowTimestamp(): Unit = {
-    val task                                   = new JDBCSourceTask()
     val schema: Seq[Column]                    = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Timestamp]] = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
-    val row0: Row                              = task.row(schema, columnInfo)
+    val row0: Row                              = TimestampQueryMode.builder.build.row(schema, columnInfo)
     row0.cell("COLUMN1").value.toString shouldBe "1970-01-01 08:00:00.0"
   }
 
   @Test
   def testRowInt(): Unit = {
-    val task                             = new JDBCSourceTask()
     val schema: Seq[Column]              = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = task.row(schema, columnInfo)
+    val row0: Row                        = TimestampQueryMode.builder.build.row(schema, columnInfo)
     row0.cell("COLUMN1").value shouldBe 100
   }
 
   @Test
   def testCellOrder(): Unit = {
-    val task = new JDBCSourceTask()
     val schema: Seq[Column] = Seq(
       Column.builder().name("c1").dataType(DataType.INT).order(1).build(),
       Column.builder().name("c0").dataType(DataType.INT).order(0).build()
     )
     val columnInfo: Seq[ColumnInfo[Int]] =
       Seq(ColumnInfo("c1", "int", Integer.valueOf(100)), ColumnInfo("c0", "int", Integer.valueOf(50)))
-    val cells = task.row(schema, columnInfo).cells().asScala
+    val cells = TimestampQueryMode.builder.build.row(schema, columnInfo).cells().asScala
     cells.head.name shouldBe "c0"
     cells.head.value shouldBe 50
     cells(1).name shouldBe "c1"
@@ -174,12 +172,11 @@ class TestJDBCSourceTask extends OharaTest {
 
   @Test
   def testRowNewName(): Unit = {
-    val task = new JDBCSourceTask()
     val schema: Seq[Column] = Seq(
       Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.INT).order(0).build()
     )
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = task.row(schema, columnInfo)
+    val row0: Row                        = TimestampQueryMode.builder.build.row(schema, columnInfo)
     row0.cell("COLUMN100").value shouldBe 100
   }
 
@@ -259,7 +256,9 @@ class TestJDBCSourceTask extends OharaTest {
 
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
-    val isCompleted               = task.isCompleted(startTimestamp, stopTimestamp)
+    val isCompleted = TimestampQueryMode.builder
+      .build()
+      .isCompleted(startTimestamp, stopTimestamp, task.partitionKey(tableName, startTimestamp, stopTimestamp))
     isCompleted shouldBe false
   }
 
@@ -281,7 +280,13 @@ class TestJDBCSourceTask extends OharaTest {
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     task.pollRecords()
-    val isCompleted = task.isCompleted(startTimestamp, stopTimestamp)
+
+    val isCompleted = TimestampQueryMode.builder
+      .config(JDBCSourceConnectorConfig(taskSetting()))
+      .client(client)
+      .offsetCache(new JDBCOffsetCache())
+      .build()
+      .isCompleted(startTimestamp, stopTimestamp, task.partitionKey(tableName, startTimestamp, stopTimestamp))
     isCompleted shouldBe true
   }
 
