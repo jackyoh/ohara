@@ -21,7 +21,18 @@ import java.sql.Timestamp
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
 trait BaseQueryMode {
-  protected[source] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord]
+  /**
+    * Query table data from the database
+    * @param key key timestamp key
+    * @param startTimestamp start timestamp
+    * @param stopTimestamp stop timestamp
+    * @return
+    */
+  protected[source] def queryData(
+    key: String,
+    startTimestamp: Timestamp,
+    stopTimestamp: Timestamp
+  ): Seq[RowSourceRecord]
 
   /**
     * The start timestamp and stop timestamp range can't change.
