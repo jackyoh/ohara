@@ -17,34 +17,39 @@
 package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
 
+import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
+import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
+import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.Releasable
-import oharastream.ohara.connector.jdbc.util.DateTimeUtils
-import oharastream.ohara.kafka.connector.RowSourceRecord
+import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
+import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
+import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
 trait TimestampQueryMode extends BaseQueryMode {
   def config: JDBCSourceConnectorConfig
-  def offsetCache: JDBCOffsetCache
   def client: DatabaseClient
   def firstTimestampValue: Timestamp
+  def dbProduct: String
+  def rowSourceContext: RowSourceContext
+  def topics: Seq[TopicKey]
+  def schema: Seq[Column]
 }
 
 object TimestampQueryMode {
   def builder: Builder = new Builder()
 
   class Builder private[source] extends oharastream.ohara.common.pattern.Builder[TimestampQueryMode] {
-    private[this] var config: JDBCSourceConnectorConfig = _
-    private[this] var offsetCache: JDBCOffsetCache      = _
-    private[this] var client: DatabaseClient            = _
-    private[this] var firstTimestampValue: Timestamp    = _
+    private[this] var config: JDBCSourceConnectorConfig  = _
+    private[this] var client: DatabaseClient             = _
+    private[this] var firstTimestampValue: Timestamp     = _
+    private[this] var dbProduct: String                  = _
+    private[this] var rowSourceContext: RowSourceContext = _
+    private[this] var topics: Seq[TopicKey]              = _
+    private[this] var schema: Seq[Column]                = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
       this.config = config
-      this
-    }
-
-    def offsetCache(offsetCache: JDBCOffsetCache): Builder = {
-      this.offsetCache = offsetCache
       this
     }
 
@@ -58,17 +63,100 @@ object TimestampQueryMode {
       this
     }
 
+    def dbProduct(dbProduct: String): Builder = {
+      this.dbProduct = dbProduct
+      this
+    }
+
+    def rowSourceContext(rowSourceContext: RowSourceContext): Builder = {
+      this.rowSourceContext = rowSourceContext
+      this
+    }
+
+    def topics(topics: Seq[TopicKey]): Builder = {
+      this.topics = topics
+      this
+    }
+
+    def schema(schema: Seq[Column]): Builder = {
+      this.schema = schema
+      this
+    }
+
     override def build(): TimestampQueryMode = new TimestampQueryMode {
-      override val config: JDBCSourceConnectorConfig = Builder.this.config
-      override def offsetCache: JDBCOffsetCache      = Builder.this.offsetCache
-      override def client: DatabaseClient            = Builder.this.client
-      override def firstTimestampValue: Timestamp    = Builder.this.firstTimestampValue
+      private[this] val offsetCache: JDBCOffsetCache = new JDBCOffsetCache()
+
+      override val config: JDBCSourceConnectorConfig  = Builder.this.config
+      override def client: DatabaseClient             = Builder.this.client
+      override def firstTimestampValue: Timestamp     = Builder.this.firstTimestampValue
+      override def dbProduct: String                  = Builder.this.dbProduct
+      override def rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
+      override def topics: Seq[TopicKey]              = Builder.this.topics
+      override def schema: Seq[Column]                = Builder.this.schema
 
       override protected[source] def queryData(
+        key: String,
         startTimestamp: Timestamp,
         stopTimestamp: Timestamp
       ): Seq[RowSourceRecord] = {
-        null
+        val tableName           = config.dbTableName
+        val timestampColumnName = config.timestampColumnName
+        // val key                 = partitionKey(tableName, firstTimestampValue, startTimestamp)
+        offsetCache.loadIfNeed(rowSourceContext, key)
+
+        val sql =
+          s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? ORDER BY $timestampColumnName"
+        val prepareStatement = client.connection.prepareStatement(sql)
+        try {
+          prepareStatement.setFetchSize(config.fetchDataSize)
+          prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+          prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+          val resultSet = prepareStatement.executeQuery()
+          try {
+            val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
+            val rdbColumnInfo                              = columns(client, tableName)
+            val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
+
+            val offset = offsetCache.readOffset(key)
+
+            results.zipWithIndex
+              .filter {
+                case (_, index) =>
+                  index >= offset
+              }
+              .take(config.flushDataSize)
+              .flatMap {
+                case (columns, rowIndex) =>
+                  val newSchema =
+                    if (schema.isEmpty)
+                      columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+                    else schema
+                  val offset = rowIndex + 1
+                  offsetCache.update(key, offset)
+
+                  topics.map(
+                    RowSourceRecord
+                      .builder()
+                      .sourcePartition(java.util.Map.of(JDBCOffsetCache.TABLE_PARTITION_KEY, key))
+                      //Writer Offset
+                      .sourceOffset(
+                        java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, offset.toString)
+                      )
+                      //Create Ohara Row
+                      .row(row(newSchema, columns))
+                      .topicKey(_)
+                      .build()
+                  )
+              }
+              .toSeq
+          } finally Releasable.close(resultSet)
+        } finally {
+          Releasable.close(prepareStatement)
+          // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+          // Confirm this connection ResultSet to update, need to call connection commit function.
+          // Release any database locks currently held by this Connection object
+          client.connection.commit()
+        }
       }
 
       override protected[source] def isCompleted(
@@ -76,9 +164,7 @@ object TimestampQueryMode {
         startTimestamp: Timestamp,
         stopTimestamp: Timestamp
       ): Boolean = {
-        val dbCount = count(startTimestamp, stopTimestamp)
-        //val key     = partitionKey(config.dbTableName, firstTimestampValue, startTimestamp)
-
+        val dbCount     = count(startTimestamp, stopTimestamp)
         val offsetIndex = offsetCache.readOffset(key)
         if (dbCount < offsetIndex)
           throw new IllegalArgumentException(
@@ -108,6 +194,41 @@ object TimestampQueryMode {
           client.connection.commit()
         }
       }
+      private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
+        val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
+        rdbTables.head.columns
+      }
+    }
+    private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row = {
+      Row.of(
+        schema
+          .sortBy(_.order)
+          .map(s => (s, values(s.name, columns)))
+          .map {
+            case (s, value) =>
+              Cell.of(
+                s.newName,
+                s.dataType match {
+                  case DataType.BOOLEAN                 => value.asInstanceOf[Boolean]
+                  case DataType.SHORT                   => value.asInstanceOf[Short]
+                  case DataType.INT                     => value.asInstanceOf[Int]
+                  case DataType.LONG                    => value.asInstanceOf[Long]
+                  case DataType.FLOAT                   => value.asInstanceOf[Float]
+                  case DataType.DOUBLE                  => value.asInstanceOf[Double]
+                  case DataType.BYTE                    => value.asInstanceOf[Byte]
+                  case DataType.STRING                  => value.asInstanceOf[String]
+                  case DataType.BYTES | DataType.OBJECT => value
+                  case _                                => throw new IllegalArgumentException("Unsupported type...")
+                }
+              )
+          }: _*
+      )
+    }
+    private[this] def values(schemaColumnName: String, dbColumnInfos: Seq[ColumnInfo[_]]): Any = {
+      dbColumnInfos
+        .find(_.columnName == schemaColumnName)
+        .map(_.value)
+        .getOrElse(throw new RuntimeException(s"Database Table not have the $schemaColumnName column"))
     }
   }
 }
