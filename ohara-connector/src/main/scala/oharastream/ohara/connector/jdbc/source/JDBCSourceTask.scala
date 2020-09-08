@@ -17,6 +17,7 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
+
 import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
@@ -26,18 +27,22 @@ import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector._
+
 import scala.jdk.CollectionConverters._
 
 class JDBCSourceTask extends RowSourceTask {
+  private[this] val TIMESTAMP_PARTITION_RANGE: Int = 86400000 // 1 day
+
   protected[this] var dbProduct: String              = _
   protected[this] var firstTimestampValue: Timestamp = _
 
   private[this] var config: JDBCSourceConnectorConfig = _
   private[this] var client: DatabaseClient            = _
-  private[this] val TIMESTAMP_PARTITION_RANGE: Int    = 86400000 // 1 day
-  private[this] var offsetCache: JDBCOffsetCache      = _
-  private[this] var topics: Seq[TopicKey]             = _
-  private[this] var schema: Seq[Column]               = _
+
+  private[this] var offsetCache: JDBCOffsetCache = _
+  private[this] var topics: Seq[TopicKey]        = _
+  private[this] var schema: Seq[Column]          = _
+  private[this] var queryMode: BaseQueryMode     = _
 
   override protected[source] def run(settings: TaskSetting): Unit = {
     config = JDBCSourceConnectorConfig(settings)
@@ -54,6 +59,12 @@ class JDBCSourceTask extends RowSourceTask {
     schema = settings.columns.asScala.toSeq
     offsetCache = new JDBCOffsetCache()
     firstTimestampValue = tableFirstTimestampValue(config.timestampColumnName)
+    queryMode = TimestampQueryMode.builder
+      .client(client)
+      .config(config)
+      .offsetCache(offsetCache)
+      .firstTimestampValue(firstTimestampValue)
+      .build()
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
@@ -63,7 +74,11 @@ class JDBCSourceTask extends RowSourceTask {
 
     // Generate the start timestamp and stop timestamp to run multi task for the query
     while (!needToRun(startTimestamp) ||
-           isCompleted(startTimestamp, stopTimestamp)) {
+           queryMode.isCompleted(
+             partitionKey(config.dbTableName, startTimestamp, stopTimestamp),
+             startTimestamp,
+             stopTimestamp
+           )) {
       val currentTimestamp = current()
       val timestampRange   = calcTimestampRange(firstTimestampValue, stopTimestamp)
 
@@ -105,29 +120,8 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   private[source] def needToRun(timestamp: Timestamp): Boolean = {
-    val partitionHashCode =
-      partitionKey(config.dbTableName, firstTimestampValue, timestamp).hashCode()
+    val partitionHashCode = partitionKey(config.dbTableName, firstTimestampValue, timestamp).hashCode()
     Math.abs(partitionHashCode) % config.taskTotal == config.taskHash
-  }
-
-  private[source] def partitionKey(tableName: String, firstTimestampValue: Timestamp, timestamp: Timestamp): String = {
-    val timestampRange = calcTimestampRange(firstTimestampValue, timestamp)
-    s"$tableName:${timestampRange._1.toString}~${timestampRange._2.toString}"
-  }
-
-  private[source] def calcTimestampRange(
-    firstTimestampValue: Timestamp,
-    timestamp: Timestamp
-  ): (Timestamp, Timestamp) = {
-    if (timestamp.getTime < firstTimestampValue.getTime)
-      throw new IllegalArgumentException("The timestamp less than the first data timestamp")
-    val page                        = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
-    val startTimestamp              = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
-    val stopTimestamp               = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
-    val currentTimestamp: Timestamp = current()
-    if (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
-      throw new IllegalArgumentException("The timestamp over the current timestamp")
-    (startTimestamp, stopTimestamp)
   }
 
   private[this] def queryData(startTimestamp: Timestamp, stopTimestamp: Timestamp): Seq[RowSourceRecord] = {
@@ -191,47 +185,19 @@ class JDBCSourceTask extends RowSourceTask {
     }
   }
 
-  /**
-    * The start timestamp and stop timestamp range can't change.
-    * @param startTimestamp start timestamp
-    * @param stopTimestamp stop timestamp
-    * @return true or false
-    */
-  private[source] def isCompleted(
-    startTimestamp: Timestamp,
-    stopTimestamp: Timestamp
-  ): Boolean = {
-    val dbCount = count(startTimestamp, stopTimestamp)
-    val key     = partitionKey(config.dbTableName, firstTimestampValue, startTimestamp)
-
-    val offsetIndex = offsetCache.readOffset(key)
-    if (dbCount < offsetIndex)
-      throw new IllegalArgumentException(
-        s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"
-      )
-    else offsetIndex == dbCount
-  }
-
-  private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
-    val sql =
-      s"SELECT COUNT(*) FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? AND ${config.timestampColumnName} < ?"
-
-    val statement = client.connection.prepareStatement(sql)
-    try {
-      statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-      statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-      val resultSet = statement.executeQuery()
-      try {
-        if (resultSet.next()) resultSet.getInt(1)
-        else 0
-      } finally Releasable.close(resultSet)
-    } finally {
-      Releasable.close(statement)
-      // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
-      // Confirm this connection ResultSet to update, need to call connection commit function.
-      // Release any database locks currently held by this Connection object
-      client.connection.commit()
-    }
+  protected[source] def calcTimestampRange(
+    firstTimestampValue: Timestamp,
+    timestamp: Timestamp
+  ): (Timestamp, Timestamp) = {
+    if (timestamp.getTime < firstTimestampValue.getTime)
+      throw new IllegalArgumentException("The timestamp less than the first data timestamp")
+    val page                        = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
+    val startTimestamp              = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
+    val stopTimestamp               = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
+    val currentTimestamp: Timestamp = current()
+    if (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
+      throw new IllegalArgumentException("The timestamp over the current timestamp")
+    (startTimestamp, stopTimestamp)
   }
 
   private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
@@ -251,6 +217,11 @@ class JDBCSourceTask extends RowSourceTask {
         if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
       } finally Releasable.close(rs)
     } finally Releasable.close(stmt)
+  }
+
+  private[source] def partitionKey(tableName: String, firstTimestampValue: Timestamp, timestamp: Timestamp): String = {
+    val timestampRange = calcTimestampRange(firstTimestampValue, timestamp)
+    s"$tableName:${timestampRange._1.toString}~${timestampRange._2.toString}"
   }
 
   private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row = {
