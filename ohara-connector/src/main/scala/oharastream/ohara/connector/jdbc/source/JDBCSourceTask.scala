@@ -135,10 +135,10 @@ class JDBCSourceTask extends RowSourceTask {
   ): (Timestamp, Timestamp) = {
     if (timestamp.getTime < firstTimestampValue.getTime)
       throw new IllegalArgumentException("The timestamp less than the first data timestamp")
-    val page                        = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
-    val startTimestamp              = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
-    val stopTimestamp               = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
-    val currentTimestamp: Timestamp = current()
+    val page             = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
+    val startTimestamp   = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
+    val stopTimestamp    = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
+    val currentTimestamp = current()
     if (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
       throw new IllegalArgumentException("The timestamp over the current timestamp")
     (startTimestamp, stopTimestamp)

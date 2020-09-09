@@ -222,11 +222,11 @@ object TimestampQueryMode {
           }: _*
       )
     }
-    private[this] def values(schemaColumnName: String, dbColumnInfos: Seq[ColumnInfo[_]]): Any = {
-      dbColumnInfos
+    private[this] def values(schemaColumnName: String, dbColumnInfo: Seq[ColumnInfo[_]]): Any = {
+      dbColumnInfo
         .find(_.columnName == schemaColumnName)
         .map(_.value)
-        .getOrElse(throw new RuntimeException(s"Database Table not have the $schemaColumnName column"))
+        .getOrElse(throw new RuntimeException(s"Database table not have the $schemaColumnName column"))
     }
   }
 }
