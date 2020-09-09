@@ -21,7 +21,7 @@ import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.setting.TopicKey
-import oharastream.ohara.common.util.Releasable
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
@@ -34,6 +34,7 @@ trait TimestampQueryMode extends BaseQueryMode {
   def rowSourceContext: RowSourceContext
   def topics: Seq[TopicKey]
   def schema: Seq[Column]
+  def offsetCache: JDBCOffsetCache
 }
 
 object TimestampQueryMode {
@@ -49,12 +50,14 @@ object TimestampQueryMode {
     private[this] var schema: Seq[Column]                = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
-      this.config = config
+      if (config == null) throw new IllegalArgumentException("JDBCSourceConnectorConfig object can't set the null")
+      else this.config = config
       this
     }
 
     def client(client: DatabaseClient): Builder = {
-      this.client = client
+      if (client == null) throw new IllegalArgumentException("DatabaseClient object can't set the null")
+      else this.client = client
       this
     }
 
@@ -64,7 +67,7 @@ object TimestampQueryMode {
     }
 
     def dbProduct(dbProduct: String): Builder = {
-      this.dbProduct = dbProduct
+      this.dbProduct = CommonUtils.requireNonEmpty(dbProduct)
       this
     }
 
@@ -84,15 +87,14 @@ object TimestampQueryMode {
     }
 
     override def build(): TimestampQueryMode = new TimestampQueryMode {
-      private[this] val offsetCache: JDBCOffsetCache = new JDBCOffsetCache()
-
+      override val offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
       override val config: JDBCSourceConnectorConfig  = Builder.this.config
-      override def client: DatabaseClient             = Builder.this.client
-      override def firstTimestampValue: Timestamp     = Builder.this.firstTimestampValue
-      override def dbProduct: String                  = Builder.this.dbProduct
-      override def rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
-      override def topics: Seq[TopicKey]              = Builder.this.topics
-      override def schema: Seq[Column]                = Builder.this.schema
+      override val client: DatabaseClient             = Builder.this.client
+      override val firstTimestampValue: Timestamp     = Builder.this.firstTimestampValue
+      override val dbProduct: String                  = Builder.this.dbProduct
+      override val rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
+      override val topics: Seq[TopicKey]              = Builder.this.topics
+      override val schema: Seq[Column]                = Builder.this.schema
 
       override protected[source] def queryData(
         key: String,
