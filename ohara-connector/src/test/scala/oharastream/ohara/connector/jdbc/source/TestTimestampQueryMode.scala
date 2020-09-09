@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 is-land
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
@@ -103,9 +119,10 @@ class TestTimestampQueryMode extends OharaTest {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
-    val queryMode                 = mockQueryMode(1)
-    queryMode.queryData(key, startTimestamp, stopTimestamp)
-    queryMode.isCompleted(key, startTimestamp, stopTimestamp) shouldBe false
+    (0 to 4).foreach { i =>
+      val queryMode = mockQueryMode(key, i)
+      queryMode.isCompleted(key, startTimestamp, stopTimestamp) shouldBe false
+    }
   }
 
   @Test
@@ -113,7 +130,7 @@ class TestTimestampQueryMode extends OharaTest {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
-    mockQueryMode(5).isCompleted(key, startTimestamp, stopTimestamp) shouldBe true
+    mockQueryMode(key, 5).isCompleted(key, startTimestamp, stopTimestamp) shouldBe true
   }
 
   @Test
@@ -122,10 +139,10 @@ class TestTimestampQueryMode extends OharaTest {
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     an[IllegalArgumentException] should be thrownBy
-      mockQueryMode(6).isCompleted(key, startTimestamp, stopTimestamp)
+      mockQueryMode(key, 6).isCompleted(key, startTimestamp, stopTimestamp)
   }
 
-  private[this] def mockQueryMode(value: Int): TimestampQueryMode = {
+  private[this] def mockQueryMode(key: String, value: Int): TimestampQueryMode = {
     val rowSourceContext          = Mockito.mock(classOf[RowSourceContext])
     val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> value.toString)
     when(
@@ -134,7 +151,7 @@ class TestTimestampQueryMode extends OharaTest {
       )
     ).thenReturn(maps.asJava)
 
-    TimestampQueryMode.builder
+    val queryMode = TimestampQueryMode.builder
       .config(JDBCSourceConnectorConfig(taskSetting()))
       .client(client)
       .rowSourceContext(rowSourceContext)
@@ -142,6 +159,8 @@ class TestTimestampQueryMode extends OharaTest {
       .schema(Seq.empty)
       .topics(Seq.empty)
       .build()
+    queryMode.offsetCache.loadIfNeed(rowSourceContext, key)
+    queryMode
   }
 
   private[this] def taskSetting(): TaskSetting = {
