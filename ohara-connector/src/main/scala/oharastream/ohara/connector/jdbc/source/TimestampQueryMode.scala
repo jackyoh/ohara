@@ -101,7 +101,6 @@ object TimestampQueryMode {
       ): Seq[RowSourceRecord] = {
         val tableName           = config.dbTableName
         val timestampColumnName = config.timestampColumnName
-        // val key                 = partitionKey(tableName, firstTimestampValue, startTimestamp)
         offsetCache.loadIfNeed(rowSourceContext, key)
 
         val sql =
@@ -116,9 +115,7 @@ object TimestampQueryMode {
             val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
             val rdbColumnInfo                              = columns(client, tableName)
             val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
-
-            val offset = offsetCache.readOffset(key)
-
+            val offset                                     = offsetCache.readOffset(key)
             results.zipWithIndex
               .filter {
                 case (_, index) =>
@@ -133,7 +130,6 @@ object TimestampQueryMode {
                     else schema
                   val offset = rowIndex + 1
                   offsetCache.update(key, offset)
-
                   topics.map(
                     RowSourceRecord
                       .builder()
@@ -168,7 +164,7 @@ object TimestampQueryMode {
         val offsetIndex = offsetCache.readOffset(key)
         if (dbCount < offsetIndex)
           throw new IllegalArgumentException(
-            s"The $startTimestamp~$stopTimestamp data offset index error ($dbCount < $offsetIndex). Please confirm your data"
+            s"The $startTimestamp~$stopTimestamp data offset value over the table count. Please confirm your data"
           )
         else offsetIndex == dbCount
       }

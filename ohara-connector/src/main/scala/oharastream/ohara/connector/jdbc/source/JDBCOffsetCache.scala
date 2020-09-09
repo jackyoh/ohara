@@ -17,7 +17,6 @@
 package oharastream.ohara.connector.jdbc.source
 
 import oharastream.ohara.kafka.connector.RowSourceContext
-
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
@@ -32,14 +31,12 @@ class JDBCOffsetCache {
       if (offset.nonEmpty) update(tableTimestampPartition, offsetValue(offset))
     }
 
-  def update(tableTimestampPartition: String, value: Long): Unit =
-    this.cache.put(tableTimestampPartition, value)
+  def update(tableTimestampPartition: String, value: Long): Unit = this.cache.put(tableTimestampPartition, value)
 
-  def readOffset(tableTimestampPartition: String): Long =
-    this.cache.get(tableTimestampPartition).getOrElse(0)
+  def readOffset(tableTimestampPartition: String): Long = this.cache.getOrElse(tableTimestampPartition, 0)
 
   private[this] def offsetValue(offset: Map[String, _]): Long =
-    offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString().toLong
+    offset(JDBCOffsetCache.TABLE_OFFSET_KEY).toString.toLong
 }
 
 object JDBCOffsetCache {
