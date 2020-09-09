@@ -23,7 +23,7 @@ import oharastream.ohara.kafka.connector.RowSourceRecord
 trait BaseQueryMode {
   /**
     * Query table data from the database
-    * @param key key timestamp key
+    * @param key split task
     * @param startTimestamp start timestamp
     * @param stopTimestamp stop timestamp
     * @return
@@ -36,7 +36,7 @@ trait BaseQueryMode {
 
   /**
     * The start timestamp and stop timestamp range can't change.
-    * @Param key timestamp key
+    * @param key split task
     * @param startTimestamp start timestamp
     * @param stopTimestamp stop timestamp
     * @return true or false
