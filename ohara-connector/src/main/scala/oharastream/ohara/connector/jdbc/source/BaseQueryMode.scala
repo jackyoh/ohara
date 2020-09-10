@@ -35,6 +35,7 @@ trait BaseQueryMode {
   ): Seq[RowSourceRecord]
 
   /**
+    * Confirm data write to the topic
     * The start timestamp and stop timestamp range can't change.
     * @param key split task
     * @param startTimestamp start timestamp

@@ -22,7 +22,7 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.connector.jdbc.datatype.{RDBDataTypeConverter, RDBDataTypeConverterFactory}
+import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
@@ -114,10 +114,10 @@ object TimestampQueryMode {
           prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
           val resultSet = prepareStatement.executeQuery()
           try {
-            val rdbDataTypeConverter: RDBDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
-            val rdbColumnInfo                              = columns(client, tableName)
-            val results                                    = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
-            val offset                                     = offsetCache.readOffset(key)
+            val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
+            val rdbColumnInfo        = columns(client, tableName)
+            val results              = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
+            val offset               = offsetCache.readOffset(key)
             results.zipWithIndex
               .filter {
                 case (_, index) =>
@@ -180,10 +180,9 @@ object TimestampQueryMode {
           statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
           statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
           val resultSet = statement.executeQuery()
-          try {
-            if (resultSet.next()) resultSet.getInt(1)
-            else 0
-          } finally Releasable.close(resultSet)
+          try if (resultSet.next()) resultSet.getInt(1)
+          else 0
+          finally Releasable.close(resultSet)
         } finally {
           Releasable.close(statement)
           // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
@@ -197,7 +196,8 @@ object TimestampQueryMode {
         rdbTables.head.columns
       }
     }
-    private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row = {
+
+    private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =
       Row.of(
         schema
           .sortBy(_.order)
@@ -221,12 +221,11 @@ object TimestampQueryMode {
               )
           }: _*
       )
-    }
-    private[this] def values(schemaColumnName: String, dbColumnInfo: Seq[ColumnInfo[_]]): Any = {
+
+    private[this] def values(schemaColumnName: String, dbColumnInfo: Seq[ColumnInfo[_]]): Any =
       dbColumnInfo
         .find(_.columnName == schemaColumnName)
         .map(_.value)
         .getOrElse(throw new RuntimeException(s"Database table not have the $schemaColumnName column"))
-    }
   }
 }
