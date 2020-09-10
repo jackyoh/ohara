@@ -52,15 +52,22 @@ class JDBCSourceTask extends RowSourceTask {
     topics = settings.topicKeys().asScala.toSeq
     schema = settings.columns.asScala.toSeq
     firstTimestampValue = tableFirstTimestampValue(config.timestampColumnName)
-    queryMode = TimestampQueryMode.builder
-      .client(client)
-      .config(config)
-      .firstTimestampValue(firstTimestampValue)
-      .dbProduct(dbProduct)
-      .rowSourceContext(rowContext)
-      .topics(topics)
-      .schema(schema)
-      .build()
+
+    queryMode = config.incrementColumnName
+      .map { _ =>
+        TimestampIncrementQueryMode.builder.build()
+      }
+      .getOrElse(
+        TimestampQueryMode.builder
+          .client(client)
+          .config(config)
+          .firstTimestampValue(firstTimestampValue)
+          .dbProduct(dbProduct)
+          .rowSourceContext(rowContext)
+          .topics(topics)
+          .schema(schema)
+          .build()
+      )
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
