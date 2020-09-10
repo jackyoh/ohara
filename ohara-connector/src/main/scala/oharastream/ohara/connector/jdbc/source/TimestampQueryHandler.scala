@@ -16,6 +16,7 @@
 
 package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
+import java.util.Objects
 
 import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
@@ -26,7 +27,7 @@ import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
-trait TimestampQueryMode extends BaseQueryMode {
+trait TimestampQueryHandler extends BaseQueryHandler {
   def config: JDBCSourceConnectorConfig
   def client: DatabaseClient
   def firstTimestampValue: Timestamp
@@ -37,10 +38,10 @@ trait TimestampQueryMode extends BaseQueryMode {
   def offsetCache: JDBCOffsetCache
 }
 
-object TimestampQueryMode {
+object TimestampQueryHandler {
   def builder: Builder = new Builder()
 
-  class Builder private[source] extends oharastream.ohara.common.pattern.Builder[TimestampQueryMode] {
+  class Builder private[source] extends oharastream.ohara.common.pattern.Builder[TimestampQueryHandler] {
     private[this] var config: JDBCSourceConnectorConfig  = _
     private[this] var client: DatabaseClient             = _
     private[this] var firstTimestampValue: Timestamp     = _
@@ -50,19 +51,17 @@ object TimestampQueryMode {
     private[this] var schema: Seq[Column]                = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
-      if (config == null) throw new IllegalArgumentException("JDBCSourceConnectorConfig object can't set the null")
-      else this.config = config
+      this.config = Objects.requireNonNull(config)
       this
     }
 
     def client(client: DatabaseClient): Builder = {
-      if (client == null) throw new IllegalArgumentException("DatabaseClient object can't set the null")
-      else this.client = client
+      this.client = Objects.requireNonNull(client)
       this
     }
 
     def firstTimestampValue(firstTimestampValue: Timestamp): Builder = {
-      this.firstTimestampValue = firstTimestampValue
+      this.firstTimestampValue = Objects.requireNonNull(firstTimestampValue)
       this
     }
 
@@ -72,7 +71,7 @@ object TimestampQueryMode {
     }
 
     def rowSourceContext(rowSourceContext: RowSourceContext): Builder = {
-      this.rowSourceContext = rowSourceContext
+      this.rowSourceContext = Objects.requireNonNull(rowSourceContext)
       this
     }
 
@@ -86,7 +85,7 @@ object TimestampQueryMode {
       this
     }
 
-    override def build(): TimestampQueryMode = new TimestampQueryMode {
+    override def build(): TimestampQueryHandler = new TimestampQueryHandler {
       override val offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
       override val config: JDBCSourceConnectorConfig  = Builder.this.config
       override val client: DatabaseClient             = Builder.this.client
@@ -157,7 +156,7 @@ object TimestampQueryMode {
         }
       }
 
-      override protected[source] def isCompleted(
+      override protected[source] def completed(
         key: String,
         startTimestamp: Timestamp,
         stopTimestamp: Timestamp

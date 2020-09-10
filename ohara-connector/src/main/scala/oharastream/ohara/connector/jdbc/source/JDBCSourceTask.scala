@@ -18,8 +18,6 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 import oharastream.ohara.client.database.DatabaseClient
-import oharastream.ohara.common.data.Column
-import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.kafka.connector._
@@ -33,10 +31,7 @@ class JDBCSourceTask extends RowSourceTask {
 
   private[this] var config: JDBCSourceConnectorConfig = _
   private[this] var client: DatabaseClient            = _
-
-  private[this] var topics: Seq[TopicKey]    = _
-  private[this] var schema: Seq[Column]      = _
-  private[this] var queryMode: BaseQueryMode = _
+  private[this] var queryMode: BaseQueryHandler       = _
 
   override protected[source] def run(settings: TaskSetting): Unit = {
     config = JDBCSourceConnectorConfig(settings)
@@ -49,17 +44,15 @@ class JDBCSourceTask extends RowSourceTask {
     // setAutoCommit must be set to false when setting the fetch size
     client.connection.setAutoCommit(false)
     dbProduct = client.connection.getMetaData.getDatabaseProductName
-    topics = settings.topicKeys().asScala.toSeq
-    schema = settings.columns.asScala.toSeq
     firstTimestampValue = tableFirstTimestampValue(config.timestampColumnName)
-    queryMode = TimestampQueryMode.builder
+    queryMode = TimestampQueryHandler.builder
       .client(client)
       .config(config)
       .firstTimestampValue(firstTimestampValue)
       .dbProduct(dbProduct)
       .rowSourceContext(rowContext)
-      .topics(topics)
-      .schema(schema)
+      .topics(settings.topicKeys().asScala.toSeq)
+      .schema(settings.columns.asScala.toSeq)
       .build()
   }
 
@@ -70,7 +63,7 @@ class JDBCSourceTask extends RowSourceTask {
 
     // Generate the start timestamp and stop timestamp to run multi task for the query
     while (!needToRun(startTimestamp) ||
-           queryMode.isCompleted(
+           queryMode.completed(
              partitionKey(config.dbTableName, firstTimestampValue, startTimestamp),
              startTimestamp,
              stopTimestamp

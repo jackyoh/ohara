@@ -140,6 +140,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testPartitionKeyError_1(): Unit = {
     val task: JDBCSourceTask = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
 
     // First timestamp data from the rdb table. This is fake data
@@ -152,6 +153,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testPartitionKeyError_2(): Unit = {
     val task: JDBCSourceTask = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
     // Partition Range timestamp is over the current timestamp
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
@@ -163,6 +165,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testPartitionKeyNormal1(): Unit = {
     val task: JDBCSourceTask = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
 
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
@@ -175,6 +178,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testPartitionKeyNormal2(): Unit = {
     val task: JDBCSourceTask = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
 
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
@@ -187,6 +191,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testPartitionKeyNormal3(): Unit = {
     val task: JDBCSourceTask = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
 
     val firstTimestamp: Timestamp = Timestamp.valueOf("2020-06-10 15:00:00")
@@ -199,6 +204,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testNeedToRun(): Unit = {
     val task = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
     val needToRun = task.needToRun(Timestamp.valueOf("2018-09-01 00:00:00"))
     needToRun shouldBe true
@@ -207,6 +213,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testCalcTimestampRangeSameDataTime(): Unit = {
     val task = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
     val firstTimestamp = Timestamp.valueOf("2020-08-01 00:11:22")
     val timestamp      = Timestamp.valueOf("2020-08-01 00:11:22")
@@ -218,6 +225,7 @@ class TestJDBCSourceTask extends OharaTest {
   @Test
   def testCalcTimestampRangeNormal(): Unit = {
     val task = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
     task.run(taskSetting())
     val firstTimestamp = Timestamp.valueOf("2020-08-01 00:00:00")
     val timestamp      = Timestamp.valueOf("2020-08-02 00:00:00")

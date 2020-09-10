@@ -33,7 +33,7 @@ import org.scalatest.matchers.should.Matchers._
 
 import scala.jdk.CollectionConverters._
 
-class TestTimestampQueryMode extends OharaTest {
+class TestTimestampQueryHandler extends OharaTest {
   private[this] val db                  = Database.local()
   private[this] val client              = DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName           = "TABLE1"
@@ -77,7 +77,7 @@ class TestTimestampQueryMode extends OharaTest {
   def testRowTimestamp(): Unit = {
     val schema: Seq[Column]                    = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Timestamp]] = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
-    val row0: Row                              = TimestampQueryMode.builder.row(schema, columnInfo)
+    val row0: Row                              = TimestampQueryHandler.builder.row(schema, columnInfo)
     row0.cell("COLUMN1").value.toString shouldBe "1970-01-01 08:00:00.0"
   }
 
@@ -85,7 +85,7 @@ class TestTimestampQueryMode extends OharaTest {
   def testRowInt(): Unit = {
     val schema: Seq[Column]              = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = TimestampQueryMode.builder.row(schema, columnInfo)
+    val row0: Row                        = TimestampQueryHandler.builder.row(schema, columnInfo)
     row0.cell("COLUMN1").value shouldBe 100
   }
 
@@ -97,7 +97,7 @@ class TestTimestampQueryMode extends OharaTest {
     )
     val columnInfo: Seq[ColumnInfo[Int]] =
       Seq(ColumnInfo("c1", "int", Integer.valueOf(100)), ColumnInfo("c0", "int", Integer.valueOf(50)))
-    val cells = TimestampQueryMode.builder.row(schema, columnInfo).cells().asScala
+    val cells = TimestampQueryHandler.builder.row(schema, columnInfo).cells().asScala
     cells.head.name shouldBe "c0"
     cells.head.value shouldBe 50
     cells(1).name shouldBe "c1"
@@ -110,7 +110,7 @@ class TestTimestampQueryMode extends OharaTest {
       Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.INT).order(0).build()
     )
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = TimestampQueryMode.builder.row(schema, columnInfo)
+    val row0: Row                        = TimestampQueryHandler.builder.row(schema, columnInfo)
     row0.cell("COLUMN100").value shouldBe 100
   }
 
@@ -121,7 +121,7 @@ class TestTimestampQueryMode extends OharaTest {
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     (0 to 4).foreach { i =>
       val queryMode = mockQueryMode(key, i)
-      queryMode.isCompleted(key, startTimestamp, stopTimestamp) shouldBe false
+      queryMode.completed(key, startTimestamp, stopTimestamp) shouldBe false
     }
   }
 
@@ -130,7 +130,7 @@ class TestTimestampQueryMode extends OharaTest {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
-    mockQueryMode(key, 5).isCompleted(key, startTimestamp, stopTimestamp) shouldBe true
+    mockQueryMode(key, 5).completed(key, startTimestamp, stopTimestamp) shouldBe true
   }
 
   @Test
@@ -139,10 +139,10 @@ class TestTimestampQueryMode extends OharaTest {
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     an[IllegalArgumentException] should be thrownBy
-      mockQueryMode(key, 6).isCompleted(key, startTimestamp, stopTimestamp)
+      mockQueryMode(key, 6).completed(key, startTimestamp, stopTimestamp)
   }
 
-  private[this] def mockQueryMode(key: String, value: Int): TimestampQueryMode = {
+  private[this] def mockQueryMode(key: String, value: Int): TimestampQueryHandler = {
     val rowSourceContext          = Mockito.mock(classOf[RowSourceContext])
     val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> value.toString)
     when(
@@ -151,7 +151,7 @@ class TestTimestampQueryMode extends OharaTest {
       )
     ).thenReturn(maps.asJava)
 
-    val queryMode = TimestampQueryMode.builder
+    val queryMode = TimestampQueryHandler.builder
       .config(JDBCSourceConnectorConfig(taskSetting()))
       .client(client)
       .rowSourceContext(rowSourceContext)

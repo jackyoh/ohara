@@ -20,7 +20,7 @@ import java.sql.Timestamp
 
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
-trait BaseQueryMode {
+trait BaseQueryHandler {
   /**
     * Query table data from the database
     * @param key split task
@@ -42,5 +42,5 @@ trait BaseQueryMode {
     * @param stopTimestamp stop timestamp
     * @return true or false
     */
-  protected[source] def isCompleted(key: String, startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean
+  protected[source] def completed(key: String, startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean
 }
