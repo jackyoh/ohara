@@ -120,8 +120,8 @@ class TestTimestampQueryHandler extends OharaTest {
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     (0 to 4).foreach { i =>
-      val queryMode = mockQueryMode(key, i)
-      queryMode.completed(key, startTimestamp, stopTimestamp) shouldBe false
+      val queryHandler = mockQueryHandler(key, i)
+      queryHandler.completed(key, startTimestamp, stopTimestamp) shouldBe false
     }
   }
 
@@ -130,7 +130,7 @@ class TestTimestampQueryHandler extends OharaTest {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
-    mockQueryMode(key, 5).completed(key, startTimestamp, stopTimestamp) shouldBe true
+    mockQueryHandler(key, 5).completed(key, startTimestamp, stopTimestamp) shouldBe true
   }
 
   @Test
@@ -139,10 +139,10 @@ class TestTimestampQueryHandler extends OharaTest {
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     an[IllegalArgumentException] should be thrownBy
-      mockQueryMode(key, 6).completed(key, startTimestamp, stopTimestamp)
+      mockQueryHandler(key, 6).completed(key, startTimestamp, stopTimestamp)
   }
 
-  private[this] def mockQueryMode(key: String, value: Int): TimestampQueryHandler = {
+  private[this] def mockQueryHandler(key: String, value: Int): TimestampQueryHandler = {
     val rowSourceContext          = Mockito.mock(classOf[RowSourceContext])
     val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> value.toString)
     when(
@@ -151,16 +151,14 @@ class TestTimestampQueryHandler extends OharaTest {
       )
     ).thenReturn(maps.asJava)
 
-    val queryMode = TimestampQueryHandler.builder
+    val queryHandler = TimestampQueryHandler.builder
       .config(JDBCSourceConnectorConfig(taskSetting()))
-      .client(client)
       .rowSourceContext(rowSourceContext)
-      .dbProduct("mysql")
       .schema(Seq.empty)
       .topics(Seq.empty)
       .build()
-    queryMode.offsetCache.loadIfNeed(rowSourceContext, key)
-    queryMode
+    queryHandler.offsetCache.loadIfNeed(rowSourceContext, key)
+    queryHandler
   }
 
   private[this] def taskSetting(): TaskSetting = {

@@ -23,15 +23,13 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
 trait TimestampQueryHandler extends BaseQueryHandler {
   def config: JDBCSourceConnectorConfig
-  def client: DatabaseClient
-  def firstTimestampValue: Timestamp
-  def dbProduct: String
   def rowSourceContext: RowSourceContext
   def topics: Seq[TopicKey]
   def schema: Seq[Column]
@@ -43,30 +41,12 @@ object TimestampQueryHandler {
 
   class Builder private[source] extends oharastream.ohara.common.pattern.Builder[TimestampQueryHandler] {
     private[this] var config: JDBCSourceConnectorConfig  = _
-    private[this] var client: DatabaseClient             = _
-    private[this] var firstTimestampValue: Timestamp     = _
-    private[this] var dbProduct: String                  = _
     private[this] var rowSourceContext: RowSourceContext = _
     private[this] var topics: Seq[TopicKey]              = _
     private[this] var schema: Seq[Column]                = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
       this.config = Objects.requireNonNull(config)
-      this
-    }
-
-    def client(client: DatabaseClient): Builder = {
-      this.client = Objects.requireNonNull(client)
-      this
-    }
-
-    def firstTimestampValue(firstTimestampValue: Timestamp): Builder = {
-      this.firstTimestampValue = Objects.requireNonNull(firstTimestampValue)
-      this
-    }
-
-    def dbProduct(dbProduct: String): Builder = {
-      this.dbProduct = CommonUtils.requireNonEmpty(dbProduct)
       this
     }
 
@@ -88,12 +68,17 @@ object TimestampQueryHandler {
     override def build(): TimestampQueryHandler = new TimestampQueryHandler {
       override val offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
       override val config: JDBCSourceConnectorConfig  = Builder.this.config
-      override val client: DatabaseClient             = Builder.this.client
-      override val firstTimestampValue: Timestamp     = Builder.this.firstTimestampValue
-      override val dbProduct: String                  = Builder.this.dbProduct
       override val rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
       override val topics: Seq[TopicKey]              = Builder.this.topics
       override val schema: Seq[Column]                = Builder.this.schema
+
+      private[this] val client: DatabaseClient = DatabaseClient.builder
+        .url(config.dbURL)
+        .user(config.dbUserName)
+        .password(config.dbPassword)
+        .build
+      client.connection.setAutoCommit(false)
+      private[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
 
       override protected[source] def queryData(
         key: String,
@@ -170,6 +155,38 @@ object TimestampQueryHandler {
         else offsetIndex == dbCount
       }
 
+      override protected[source] def tableFirstTimestampValue(timestampColumnName: String): Timestamp = {
+        val sql = dbProduct.toUpperCase match {
+          case ORACLE.name =>
+            s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
+          case _ =>
+            s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName LIMIT 1"
+        }
+
+        val preparedStatement = client.connection.prepareStatement(sql)
+        try {
+          val resultSet = preparedStatement.executeQuery()
+          try {
+            if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
+            else new Timestamp(CommonUtils.current())
+          } finally Releasable.close(resultSet)
+        } finally Releasable.close(preparedStatement)
+      }
+
+      override protected[source] def dbCurrentTimestamp(): Timestamp = {
+        val query = dbProduct.toUpperCase match {
+          case ORACLE.name => "SELECT CURRENT_TIMESTAMP FROM dual"
+          case _           => "SELECT CURRENT_TIMESTAMP;"
+        }
+        val stmt = client.connection.createStatement()
+        try {
+          val rs = stmt.executeQuery(query)
+          try {
+            if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
+          } finally Releasable.close(rs)
+        } finally Releasable.close(stmt)
+      }
+
       private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
         val sql =
           s"SELECT COUNT(*) FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? AND ${config.timestampColumnName} < ?"
@@ -190,10 +207,13 @@ object TimestampQueryHandler {
           client.connection.commit()
         }
       }
+
       private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
         val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
         rdbTables.head.columns
       }
+
+      override def close(): Unit = Releasable.close(client)
     }
 
     private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =

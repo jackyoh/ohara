@@ -18,9 +18,10 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 
+import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
-trait BaseQueryHandler {
+trait BaseQueryHandler extends Releasable {
   /**
     * Query table data from the database
     * @param key split task
@@ -43,4 +44,17 @@ trait BaseQueryHandler {
     * @return true or false
     */
   protected[source] def completed(key: String, startTimestamp: Timestamp, stopTimestamp: Timestamp): Boolean
+
+  /**
+    * Query first row from the database table
+    * @param timestampColumnName timestamp column name
+    * @return timestamp
+    */
+  protected[source] def tableFirstTimestampValue(timestampColumnName: String): Timestamp
+
+  /**
+    * Query current timestamp from the database
+    * @return timestamp
+    */
+  protected[source] def dbCurrentTimestamp(): Timestamp
 }
