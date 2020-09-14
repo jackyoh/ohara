@@ -55,7 +55,14 @@ class JDBCSourceTask extends RowSourceTask {
 
     queryMode = config.incrementColumnName
       .map { _ =>
-        TimestampIncrementQueryMode.builder.build()
+        TimestampIncrementQueryMode.builder
+          .client(client)
+          .config(config)
+          .dbProduct(dbProduct)
+          .rowSourceContext(rowContext)
+          .topics(topics)
+          .schema(schema)
+          .build()
       }
       .getOrElse(
         TimestampQueryMode.builder

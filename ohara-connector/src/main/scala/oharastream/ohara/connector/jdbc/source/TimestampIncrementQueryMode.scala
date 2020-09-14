@@ -30,6 +30,7 @@ trait TimestampIncrementQueryMode extends BaseQueryMode {
   def config: JDBCSourceConnectorConfig
   def rowSourceContext: RowSourceContext
   def client: DatabaseClient
+  def dbProduct: String
   def topics: Seq[TopicKey]
   def schema: Seq[Column]
 }
@@ -41,6 +42,7 @@ object TimestampIncrementQueryMode {
     private[this] var config: JDBCSourceConnectorConfig  = _
     private[this] var rowSourceContext: RowSourceContext = _
     private[this] var client: DatabaseClient             = _
+    private[this] var dbProduct: String                  = _
     private[this] var topics: Seq[TopicKey]              = _
     private[this] var schema: Seq[Column]                = _
 
@@ -69,12 +71,18 @@ object TimestampIncrementQueryMode {
       this
     }
 
+    def dbProduct(dbProduct: String): Builder = {
+      this.dbProduct = dbProduct
+      this
+    }
+
     override def build(): TimestampIncrementQueryMode = new TimestampIncrementQueryMode() {
       override val offsetCache: JDBCOffsetCache = new JDBCOffsetCache()
 
       override val config: JDBCSourceConnectorConfig  = Builder.this.config
       override val rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
       override val client: DatabaseClient             = Builder.this.client
+      override val dbProduct: String                  = Builder.this.dbProduct
       override val topics: Seq[TopicKey]              = Builder.this.topics
       override val schema: Seq[Column]                = Builder.this.schema
 
@@ -99,12 +107,11 @@ object TimestampIncrementQueryMode {
           prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
           val resultSet = prepareStatement.executeQuery()
           try {
-            val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter("mysql")
+            val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
             val rdbColumnInfo        = columns(client, tableName)
             val results              = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
             val offset               = offsetCache.readOffset(key)
             results
-              .take(config.flushDataSize)
               .filter { result =>
                 result
                   .find(_.columnName == incrementColumnName)
@@ -113,6 +120,7 @@ object TimestampIncrementQueryMode {
                     throw new IllegalArgumentException(s"$incrementColumnName increment column not found")
                   ) > offset
               }
+              .take(config.flushDataSize)
               .flatMap { columns =>
                 val newSchema =
                   if (schema.isEmpty)
@@ -130,7 +138,7 @@ object TimestampIncrementQueryMode {
                     .sourcePartition(java.util.Map.of(JDBCOffsetCache.TABLE_PARTITION_KEY, key))
                     //Writer Offset
                     .sourceOffset(
-                      java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, offset.toString)
+                      java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, offset)
                     )
                     //Create Ohara Row
                     .row(row(newSchema, columns))
@@ -139,7 +147,6 @@ object TimestampIncrementQueryMode {
                 )
               }
               .toSeq
-            Seq.empty
           } finally Releasable.close(resultSet)
         } finally Releasable.close(prepareStatement)
       }
