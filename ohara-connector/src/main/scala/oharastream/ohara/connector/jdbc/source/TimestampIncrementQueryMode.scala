@@ -18,15 +18,20 @@ package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
 
 import oharastream.ohara.client.database.DatabaseClient
+import oharastream.ohara.common.data.{Column, DataType}
+import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.Releasable
+import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
 import oharastream.ohara.connector.jdbc.util.DateTimeUtils
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
 trait TimestampIncrementQueryMode extends BaseQueryMode {
-  def config: JDBCSourceConnectorConfig
   def offsetCache: JDBCOffsetCache
+  def config: JDBCSourceConnectorConfig
   def rowSourceContext: RowSourceContext
   def client: DatabaseClient
+  def topics: Seq[TopicKey]
+  def schema: Seq[Column]
 }
 
 object TimestampIncrementQueryMode {
@@ -36,6 +41,8 @@ object TimestampIncrementQueryMode {
     private[this] var config: JDBCSourceConnectorConfig  = _
     private[this] var rowSourceContext: RowSourceContext = _
     private[this] var client: DatabaseClient             = _
+    private[this] var topics: Seq[TopicKey]              = _
+    private[this] var schema: Seq[Column]                = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
       this.config = config
@@ -52,18 +59,89 @@ object TimestampIncrementQueryMode {
       this
     }
 
+    def topics(topics: Seq[TopicKey]): Builder = {
+      this.topics = topics
+      this
+    }
+
+    def schema(schema: Seq[Column]): Builder = {
+      this.schema = schema
+      this
+    }
+
     override def build(): TimestampIncrementQueryMode = new TimestampIncrementQueryMode() {
-      override val offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
+      override val offsetCache: JDBCOffsetCache = new JDBCOffsetCache()
+
       override val config: JDBCSourceConnectorConfig  = Builder.this.config
       override val rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
       override val client: DatabaseClient             = Builder.this.client
+      override val topics: Seq[TopicKey]              = Builder.this.topics
+      override val schema: Seq[Column]                = Builder.this.schema
 
       override protected[source] def queryData(
         key: String,
         startTimestamp: Timestamp,
         stopTimestamp: Timestamp
       ): Seq[RowSourceRecord] = {
-        Seq.empty
+        val tableName           = config.dbTableName
+        val timestampColumnName = config.timestampColumnName
+        offsetCache.loadIfNeed(rowSourceContext, key)
+
+        val incrementColumnName =
+          config.incrementColumnName.getOrElse(throw new IllegalArgumentException("The increment column not setting"))
+
+        val sql =
+          s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? ORDER BY $timestampColumnName,$incrementColumnName"
+        val prepareStatement = client.connection.prepareStatement(sql)
+        try {
+          prepareStatement.setFetchSize(config.fetchDataSize)
+          prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+          prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+          val resultSet = prepareStatement.executeQuery()
+          try {
+            val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter("mysql")
+            val rdbColumnInfo        = columns(client, tableName)
+            val results              = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
+            val offset               = offsetCache.readOffset(key)
+            results
+              .take(config.flushDataSize)
+              .filter { result =>
+                result
+                  .find(_.columnName == incrementColumnName)
+                  .map(_.value.asInstanceOf[Int])
+                  .getOrElse(
+                    throw new IllegalArgumentException(s"$incrementColumnName increment column not found")
+                  ) > offset
+              }
+              .flatMap { columns =>
+                val newSchema =
+                  if (schema.isEmpty)
+                    columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
+                  else schema
+                val offset = columns
+                  .find(_.columnName == incrementColumnName)
+                  .map(_.value.asInstanceOf[Int])
+                  .getOrElse(throw new IllegalArgumentException(s"$incrementColumnName increment column not found"))
+
+                offsetCache.update(key, offset)
+                topics.map(
+                  RowSourceRecord
+                    .builder()
+                    .sourcePartition(java.util.Map.of(JDBCOffsetCache.TABLE_PARTITION_KEY, key))
+                    //Writer Offset
+                    .sourceOffset(
+                      java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, offset.toString)
+                    )
+                    //Create Ohara Row
+                    .row(row(newSchema, columns))
+                    .topicKey(_)
+                    .build()
+                )
+              }
+              .toSeq
+            Seq.empty
+          } finally Releasable.close(resultSet)
+        } finally Releasable.close(prepareStatement)
       }
 
       override protected[source] def isCompleted(
