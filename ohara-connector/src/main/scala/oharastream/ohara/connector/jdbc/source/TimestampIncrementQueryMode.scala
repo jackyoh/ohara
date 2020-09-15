@@ -110,15 +110,18 @@ object TimestampIncrementQueryMode {
             val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
             val rdbColumnInfo        = columns(client, tableName)
             val results              = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
-            val offset               = offsetCache.readOffset(key)
+            val offset = offsetCache.readOffset(key)
+            
             results
               .filter { result =>
-                result
+
+                val index = result
                   .find(_.columnName == incrementColumnName)
                   .map(_.value.asInstanceOf[Int])
                   .getOrElse(
                     throw new IllegalArgumentException(s"$incrementColumnName increment column not found")
-                  ) > offset
+                  )
+                index > offset
               }
               .take(config.flushDataSize)
               .flatMap { columns =>
@@ -126,19 +129,19 @@ object TimestampIncrementQueryMode {
                   if (schema.isEmpty)
                     columns.map(c => Column.builder().name(c.columnName).dataType(DataType.OBJECT).order(0).build())
                   else schema
-                val offset = columns
+                val value = columns
                   .find(_.columnName == incrementColumnName)
                   .map(_.value.asInstanceOf[Int])
                   .getOrElse(throw new IllegalArgumentException(s"$incrementColumnName increment column not found"))
 
-                offsetCache.update(key, offset)
+                offsetCache.update(key, value)
                 topics.map(
                   RowSourceRecord
                     .builder()
                     .sourcePartition(java.util.Map.of(JDBCOffsetCache.TABLE_PARTITION_KEY, key))
                     //Writer Offset
                     .sourceOffset(
-                      java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, offset)
+                      java.util.Map.of(JDBCOffsetCache.TABLE_OFFSET_KEY, value)
                     )
                     //Create Ohara Row
                     .row(row(newSchema, columns))

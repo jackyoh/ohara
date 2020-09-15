@@ -95,7 +95,7 @@ class JDBCSourceTask extends RowSourceTask {
       if (timestampRange._2.getTime <= currentTimestamp.getTime) {
         startTimestamp = timestampRange._1
         stopTimestamp = timestampRange._2
-      } else if (needToRun(currentTimestamp))
+      } /*else if (needToRun(currentTimestamp)) {
         return queryMode
           .queryData(
             partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp),
@@ -103,6 +103,7 @@ class JDBCSourceTask extends RowSourceTask {
             currentTimestamp
           )
           .asJava
+      }*/
       else return Seq.empty.asJava
     }
     queryMode

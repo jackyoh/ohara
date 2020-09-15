@@ -227,7 +227,10 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
       awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      println(s"Table total size is ${tableTotalCount.intValue}")
+      println(s"Topic total size is ${result.size}")
       tableTotalCount.intValue() shouldBe result.size
+
       val topicData: Seq[String] = result
         .map(record => record.key.get.cell(queryColumn).value().toString)
         .sorted[String]
@@ -274,6 +277,11 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 
       val expectedRow = tableTotalCount.intValue() + 2
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
+
+      /*val query = statement.executeQuery(s"SELECT * FROM $tableName ORDER BY $timestampColumnName")
+      Iterator.continually(query).takeWhile(_.next()).foreach { result =>
+        println(result.getTimestamp(timestampColumnName))
+      }*/
       result.size shouldBe expectedRow // Because update and insert the different timestamp
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
