@@ -40,7 +40,7 @@ import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
 class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
-  private[this] val inputDataTime = 30000L
+  private[this] val inputDataTime = 1000L
   private[this] val db: Database  = Database.local()
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
@@ -197,6 +197,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     val startTestTimestamp = CommonUtils.current()
     val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    TimeUnit.SECONDS.sleep(10)
     result(createConnector(connectorAdmin, connectorKey, topicKey))
 
     val consumer =
@@ -210,25 +211,37 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         .build()
     val statement = client.connection.createStatement()
     try {
-      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-      val queryResult: (String, String) = Iterator
+      //val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      /*val queryResult: (String, String) = Iterator
         .continually(resultSet)
         .takeWhile(_.next())
         .map { x =>
           (x.getString(timestampColumnName), x.getString(queryColumn))
         }
         .toSeq
-        .head
+        .head*/
 
-      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
+      /*statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES('${queryResult._1}', '${queryResult._2}')"
-      )
+      )*/
 
       awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       println(s"Table total size is ${tableTotalCount.intValue}")
       println(s"Topic total size is ${result.size}")
+
+      val query = statement.executeQuery(s"SELECT * FROM $tableName ORDER BY $timestampColumnName")
+      println("=================")
+      Iterator.continually(query).takeWhile(_.next()).foreach { result =>
+        println(s"${result.getInt(incrementColumnName)}   ${result.getTimestamp(timestampColumnName)}")
+      }
+      println("=================")
+      result.foreach { x =>
+        println(s"${x.key().get().cell(incrementColumnName).value}   ${x.key().get().cell(timestampColumnName).value}")
+      }
+      println("=================")
+
       tableTotalCount.intValue() shouldBe result.size
 
       val topicData: Seq[String] = result
@@ -273,15 +286,25 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       statement.executeUpdate(
         s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello2')"
       )
-      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName = NOW() WHERE $queryColumn = 'hello2'")
+      //statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName = NOW() WHERE $queryColumn = 'hello2'")
 
       val expectedRow = tableTotalCount.intValue() + 2
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
+      //val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
+      println(s"Table total size is ${tableTotalCount.intValue}")
+      println(s"Topic total size is ${result.size}")
 
-      /*val query = statement.executeQuery(s"SELECT * FROM $tableName ORDER BY $timestampColumnName")
+      val query = statement.executeQuery(s"SELECT * FROM $tableName ORDER BY $timestampColumnName")
+      println("=================")
       Iterator.continually(query).takeWhile(_.next()).foreach { result =>
-        println(result.getTimestamp(timestampColumnName))
-      }*/
+        println(s"${result.getInt(incrementColumnName)}   ${result.getTimestamp(timestampColumnName)}")
+      }
+      println("=================")
+      result.foreach { x =>
+        println(s"${x.key().get().cell(incrementColumnName).value}   ${x.key().get().cell(timestampColumnName).value}")
+      }
+      println("=================")
+
       result.size shouldBe expectedRow // Because update and insert the different timestamp
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
