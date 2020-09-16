@@ -99,22 +99,22 @@ object TimestampIncrementQueryMode {
           config.incrementColumnName.getOrElse(throw new IllegalArgumentException("The increment column not setting"))
 
         val sql =
-          s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? ORDER BY $timestampColumnName,$incrementColumnName"
+          s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? AND $incrementColumnName >= ? ORDER BY $timestampColumnName,$incrementColumnName"
         val prepareStatement = client.connection.prepareStatement(sql)
         try {
+          val offset = offsetCache.readOffset(key)
           prepareStatement.setFetchSize(config.fetchDataSize)
           prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
           prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+          prepareStatement.setLong(3, offset)
           val resultSet = prepareStatement.executeQuery()
           try {
             val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
             val rdbColumnInfo        = columns(client, tableName)
             val results              = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
-            val offset = offsetCache.readOffset(key)
-            
+
             results
               .filter { result =>
-
                 val index = result
                   .find(_.columnName == incrementColumnName)
                   .map(_.value.asInstanceOf[Int])

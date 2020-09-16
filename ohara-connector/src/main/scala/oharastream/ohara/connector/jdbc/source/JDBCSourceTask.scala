@@ -96,7 +96,7 @@ class JDBCSourceTask extends RowSourceTask {
         startTimestamp = timestampRange._1
         stopTimestamp = timestampRange._2
       } else if (needToRun(currentTimestamp)) {
-        println(s"stopTimestamp: $stopTimestamp   CurrentTimestamp: $currentTimestamp")
+        //println(s"stopTimestamp: $stopTimestamp   CurrentTimestamp: $currentTimestamp")
         return queryMode
           .queryData(
             partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp),
@@ -104,8 +104,7 @@ class JDBCSourceTask extends RowSourceTask {
             currentTimestamp
           )
           .asJava
-      }
-      else return Seq.empty.asJava
+      } else return Seq.empty.asJava
     }
     queryMode
       .queryData(partitionKey(config.dbTableName, firstTimestampValue, startTimestamp), startTimestamp, stopTimestamp)

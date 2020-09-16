@@ -40,7 +40,7 @@ import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
 class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
-  private[this] val inputDataTime = 1000L
+  private[this] val inputDataTime = 20000L
   private[this] val db: Database  = Database.local()
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
@@ -291,10 +291,10 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       val expectedRow = tableTotalCount.intValue() + 2
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
       //val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
-      println(s"Table total size is ${tableTotalCount.intValue}")
+      println(s"Table total size is $expectedRow")
       println(s"Topic total size is ${result.size}")
 
-      val query = statement.executeQuery(s"SELECT * FROM $tableName ORDER BY $timestampColumnName")
+      /*val query = statement.executeQuery(s"SELECT * FROM $tableName ORDER BY $timestampColumnName")
       println("=================")
       Iterator.continually(query).takeWhile(_.next()).foreach { result =>
         println(s"${result.getInt(incrementColumnName)}   ${result.getTimestamp(timestampColumnName)}")
@@ -303,7 +303,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       result.foreach { x =>
         println(s"${x.key().get().cell(incrementColumnName).value}   ${x.key().get().cell(timestampColumnName).value}")
       }
-      println("=================")
+      println("=================")*/
 
       result.size shouldBe expectedRow // Because update and insert the different timestamp
     } finally {
