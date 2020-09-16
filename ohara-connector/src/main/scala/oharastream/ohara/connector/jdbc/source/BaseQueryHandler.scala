@@ -56,5 +56,5 @@ trait BaseQueryHandler extends Releasable {
     * Query current timestamp from the database
     * @return timestamp
     */
-  protected[source] def dbCurrentTimestamp(): Timestamp
+  protected[source] def current(): Timestamp
 }

@@ -50,7 +50,7 @@ class JDBCSourceTask extends RowSourceTask {
              startTimestamp,
              stopTimestamp
            )) {
-      val currentTimestamp = queryHandler.dbCurrentTimestamp()
+      val currentTimestamp = queryHandler.current()
       val timestampRange   = calcTimestampRange(firstTimestampValue, stopTimestamp)
 
       if (timestampRange._2.getTime <= currentTimestamp.getTime) {
@@ -74,7 +74,7 @@ class JDBCSourceTask extends RowSourceTask {
   override protected[source] def terminate(): Unit = Releasable.close(queryHandler)
 
   private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
-    val currentTimestamp = queryHandler.dbCurrentTimestamp()
+    val currentTimestamp = queryHandler.current()
     if (timestamp.getTime > currentTimestamp.getTime) currentTimestamp
     else timestamp
   }
@@ -93,7 +93,7 @@ class JDBCSourceTask extends RowSourceTask {
     val page             = (timestamp.getTime - firstTimestampValue.getTime) / TIMESTAMP_PARTITION_RANGE
     val startTimestamp   = new Timestamp((page * TIMESTAMP_PARTITION_RANGE) + firstTimestampValue.getTime)
     val stopTimestamp    = new Timestamp(startTimestamp.getTime + TIMESTAMP_PARTITION_RANGE)
-    val currentTimestamp = queryHandler.dbCurrentTimestamp()
+    val currentTimestamp = queryHandler.current()
     if (startTimestamp.getTime > currentTimestamp.getTime && stopTimestamp.getTime > currentTimestamp.getTime)
       throw new IllegalArgumentException("The timestamp over the current timestamp")
     (startTimestamp, stopTimestamp)

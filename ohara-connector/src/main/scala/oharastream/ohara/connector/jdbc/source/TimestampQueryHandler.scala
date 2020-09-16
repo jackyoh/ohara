@@ -173,7 +173,7 @@ object TimestampQueryHandler {
         } finally Releasable.close(preparedStatement)
       }
 
-      override protected[source] def dbCurrentTimestamp(): Timestamp = {
+      override protected[source] def current(): Timestamp = {
         val query = dbProduct.toUpperCase match {
           case ORACLE.name => "SELECT CURRENT_TIMESTAMP FROM dual"
           case _           => "SELECT CURRENT_TIMESTAMP;"
