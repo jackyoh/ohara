@@ -99,7 +99,8 @@ object TimestampIncrementQueryMode {
           config.incrementColumnName.getOrElse(throw new IllegalArgumentException("The increment column not setting"))
 
         val sql =
-          s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? AND $incrementColumnName >= ? ORDER BY $timestampColumnName,$incrementColumnName"
+          s"SELECT * FROM $tableName WHERE $timestampColumnName >= ? AND $timestampColumnName < ? AND $incrementColumnName > ? ORDER BY $timestampColumnName,$incrementColumnName"
+
         val prepareStatement = client.connection.prepareStatement(sql)
         try {
           val offset = offsetCache.readOffset(key)
@@ -107,12 +108,12 @@ object TimestampIncrementQueryMode {
           prepareStatement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
           prepareStatement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
           prepareStatement.setLong(3, offset)
+
           val resultSet = prepareStatement.executeQuery()
           try {
             val rdbDataTypeConverter = RDBDataTypeConverterFactory.dataTypeConverter(dbProduct)
             val rdbColumnInfo        = columns(client, tableName)
             val results              = new QueryResultIterator(rdbDataTypeConverter, resultSet, rdbColumnInfo)
-
             results
               .filter { result =>
                 val index = result
@@ -151,7 +152,13 @@ object TimestampIncrementQueryMode {
               }
               .toSeq
           } finally Releasable.close(resultSet)
-        } finally Releasable.close(prepareStatement)
+        } finally {
+          Releasable.close(prepareStatement)
+          // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+          // Confirm this connection ResultSet to update, need to call connection commit function.
+          // Release any database locks currently held by this Connection object
+          client.connection.commit()
+        }
       }
 
       override protected[source] def isCompleted(
