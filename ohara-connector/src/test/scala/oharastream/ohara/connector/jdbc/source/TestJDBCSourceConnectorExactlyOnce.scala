@@ -31,7 +31,9 @@ import oharastream.ohara.kafka.Consumer
 import oharastream.ohara.kafka.connector.TaskSetting
 import oharastream.ohara.testing.With3Brokers3Workers
 import oharastream.ohara.testing.service.Database
-import org.junit.jupiter.api.{AfterEach, Test}
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.{Arguments, MethodSource}
 import org.scalatest.matchers.should.Matchers._
 
 import scala.concurrent.{Await, Future}
@@ -45,8 +47,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
   private[this] val tableName           = "table1"
-  private[this] val incrementColumnName = "increment"
-  private[this] val timestampColumnName = "c0"
+  private[this] val incrementColumnName = TestJDBCSourceConnectorExactlyOnce.INCREMENT_COLUMN_NAME
+  private[this] val timestampColumnName = TestJDBCSourceConnectorExactlyOnce.TIMESTAMP_COLUMN_NAME
   private[this] val queryColumn         = "c1"
   private[this] val columnSize          = 3
   private[this] val columns = Seq(RdbColumn(timestampColumnName, "TIMESTAMP(6)", false)) ++
@@ -91,12 +93,13 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     }
   }
 
-  @Test
-  def testConnectorStartPauseResume(): Unit = {
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testConnectorStartPauseResume(settings: Map[String, String]): Unit = {
     val startTestTimestamp = CommonUtils.current()
     val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
-    result(createConnector(connectorAdmin, connectorKey, topicKey))
+    result(createConnector(connectorAdmin, connectorKey, topicKey, settings))
 
     val consumer =
       Consumer
@@ -137,12 +140,13 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     }
   }
 
-  @Test
-  def testConnectorStartDelete(): Unit = {
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testConnectorStartDelete(settings: Map[String, String]): Unit = {
     val startTestTimestamp = CommonUtils.current()
     val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
-    result(createConnector(connectorAdmin, connectorKey, topicKey))
+    result(createConnector(connectorAdmin, connectorKey, topicKey, settings))
 
     val consumer =
       Consumer
@@ -159,13 +163,13 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       tableTotalCount.intValue() >= records1.size shouldBe true
 
       result(connectorAdmin.delete(connectorKey))
-      result(createConnector(connectorAdmin, connectorKey, topicKey))
+      result(createConnector(connectorAdmin, connectorKey, topicKey, settings))
       TimeUnit.SECONDS.sleep(5)
       val records2 = consumer.poll(java.time.Duration.ofSeconds(5), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() >= records2.size shouldBe true
 
       result(connectorAdmin.delete(connectorKey))
-      result(createConnector(connectorAdmin, connectorKey, topicKey))
+      result(createConnector(connectorAdmin, connectorKey, topicKey, settings))
 
       awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
 
@@ -190,12 +194,13 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     }
   }
 
-  @Test
-  def testTableInsertDelete(): Unit = {
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testTableInsertDelete(settings: Map[String, String]): Unit = {
     val startTestTimestamp = CommonUtils.current()
     val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
-    result(createConnector(connectorAdmin, connectorKey, topicKey))
+    result(createConnector(connectorAdmin, connectorKey, topicKey, settings))
 
     val consumer =
       Consumer
@@ -241,12 +246,13 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     }
   }
 
-  @Test
-  def testTableUpdate(): Unit = {
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testTableUpdate(settings: Map[String, String]): Unit = {
     val startTestTimestamp = CommonUtils.current()
     val connectorKey       = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey           = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
-    result(createConnector(connectorAdmin, connectorKey, topicKey))
+    result(createConnector(connectorAdmin, connectorKey, topicKey, settings))
 
     val consumer =
       Consumer
@@ -283,7 +289,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
   private[this] def createConnector(
     connectorAdmin: ConnectorAdmin,
     connectorKey: ConnectorKey,
-    topicKey: TopicKey
+    topicKey: TopicKey,
+    settings: Map[String, String]
   ): Future[ConnectorCreationResponse] = {
     connectorAdmin
       .connectorCreator()
@@ -291,7 +298,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       .connectorClass(classOf[JDBCSourceConnector])
       .topicKey(topicKey)
       .numberOfTasks(3)
-      .settings(sourceConnectorProps.toMap)
+      .settings(sourceConnectorProps(settings).toMap)
       .create()
   }
 
@@ -310,16 +317,14 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     )
   }
 
-  private[this] val sourceConnectorProps = JDBCSourceConnectorConfig(
+  private[this] def sourceConnectorProps(settings: Map[String, String]) = JDBCSourceConnectorConfig(
     TaskSetting.of(
-      Map(
-        DB_URL_KEY                -> db.url,
-        DB_USERNAME_KEY           -> db.user,
-        DB_PASSWORD_KEY           -> db.password,
-        DB_TABLENAME_KEY          -> tableName,
-        TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
-        INCREMENT_COLUMN_NAME_KEY -> incrementColumnName
-      ).asJava
+      (Map(
+        DB_URL_KEY       -> db.url,
+        DB_USERNAME_KEY  -> db.user,
+        DB_PASSWORD_KEY  -> db.password,
+        DB_TABLENAME_KEY -> tableName
+      ) ++ settings).asJava
     )
   )
 
@@ -357,4 +362,14 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     Releasable.close(client)
     Releasable.close(db)
   }
+}
+
+object TestJDBCSourceConnectorExactlyOnce {
+  private[source] val TIMESTAMP_COLUMN_NAME = "c0"
+  private[source] val INCREMENT_COLUMN_NAME = "c1"
+  def parameters: java.util.stream.Stream[Arguments] =
+    Seq(
+      Map(TIMESTAMP_COLUMN_NAME_KEY -> TIMESTAMP_COLUMN_NAME),
+      Map(TIMESTAMP_COLUMN_NAME_KEY -> TIMESTAMP_COLUMN_NAME, INCREMENT_COLUMN_NAME_KEY -> INCREMENT_COLUMN_NAME)
+    ).map(o => Arguments.of(o)).asJava.stream()
 }
