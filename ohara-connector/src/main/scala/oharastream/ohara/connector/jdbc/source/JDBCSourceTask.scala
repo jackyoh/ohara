@@ -29,12 +29,24 @@ class JDBCSourceTask extends RowSourceTask {
 
   override protected[source] def run(settings: TaskSetting): Unit = {
     config = JDBCSourceConnectorConfig(settings)
-    queryHandler = TimestampQueryHandler.builder
-      .config(config)
-      .rowSourceContext(rowContext)
-      .topics(settings.topicKeys().asScala.toSeq)
-      .schema(settings.columns.asScala.toSeq)
-      .build()
+    queryHandler = config.incrementColumnName
+      .map { incrementColumnName =>
+        TimestampIncrementQueryHandler.builder
+          .config(config)
+          .incrementColumnName(incrementColumnName)
+          .rowSourceContext(rowContext)
+          .topics(settings.topicKeys().asScala.toSeq)
+          .schema(settings.columns.asScala.toSeq)
+          .build()
+      }
+      .getOrElse {
+        TimestampQueryHandler.builder
+          .config(config)
+          .rowSourceContext(rowContext)
+          .topics(settings.topicKeys().asScala.toSeq)
+          .schema(settings.columns.asScala.toSeq)
+          .build()
+      }
     firstTimestampValue = queryHandler.tableFirstTimestampValue(config.timestampColumnName)
   }
 

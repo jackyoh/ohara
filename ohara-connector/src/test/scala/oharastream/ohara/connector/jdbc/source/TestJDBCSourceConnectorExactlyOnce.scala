@@ -311,7 +311,8 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         DB_USERNAME_KEY           -> db.user,
         DB_PASSWORD_KEY           -> db.password,
         DB_TABLENAME_KEY          -> tableName,
-        TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName
+        TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
+        INCREMENT_COLUMN_NAME_KEY -> ""
       ).asJava
     )
   )
