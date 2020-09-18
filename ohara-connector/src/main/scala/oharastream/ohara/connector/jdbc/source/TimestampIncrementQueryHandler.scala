@@ -40,12 +40,12 @@ object TimestampIncrementQueryHandler {
   def builder: Builder = new Builder()
 
   class Builder private[source] extends oharastream.ohara.common.pattern.Builder[TimestampIncrementQueryHandler] {
+    private[this] var offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
     private[this] var config: JDBCSourceConnectorConfig  = _
     private[this] var incrementColumnName: String        = _
     private[this] var rowSourceContext: RowSourceContext = _
     private[this] var topics: Seq[TopicKey]              = _
     private[this] var schema: Seq[Column]                = _
-    private[this] var offsetCache: JDBCOffsetCache       = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
       this.config = config
