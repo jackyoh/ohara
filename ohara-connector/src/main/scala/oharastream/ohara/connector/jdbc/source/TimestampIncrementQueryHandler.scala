@@ -16,6 +16,7 @@
 
 package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
+import java.util.Objects
 
 import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
@@ -40,7 +41,6 @@ object TimestampIncrementQueryHandler {
   def builder: Builder = new Builder()
 
   class Builder private[source] extends oharastream.ohara.common.pattern.Builder[TimestampIncrementQueryHandler] {
-    private[this] var offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
     private[this] var config: JDBCSourceConnectorConfig  = _
     private[this] var incrementColumnName: String        = _
     private[this] var rowSourceContext: RowSourceContext = _
@@ -48,17 +48,17 @@ object TimestampIncrementQueryHandler {
     private[this] var schema: Seq[Column]                = _
 
     def config(config: JDBCSourceConnectorConfig): Builder = {
-      this.config = config
+      this.config = Objects.requireNonNull(config)
       this
     }
 
     def incrementColumnName(incrementColumnName: String): Builder = {
-      this.incrementColumnName = incrementColumnName
+      this.incrementColumnName = Objects.requireNonNull(incrementColumnName)
       this
     }
 
     def rowSourceContext(rowSourceContext: RowSourceContext): Builder = {
-      this.rowSourceContext = rowSourceContext
+      this.rowSourceContext = Objects.requireNonNull(rowSourceContext)
       this
     }
 
@@ -72,18 +72,13 @@ object TimestampIncrementQueryHandler {
       this
     }
 
-    def offsetCache(offsetCache: JDBCOffsetCache): Builder = {
-      this.offsetCache = offsetCache
-      this
-    }
-
     override def build(): TimestampIncrementQueryHandler = new TimestampIncrementQueryHandler() {
+      override val offsetCache: JDBCOffsetCache       = new JDBCOffsetCache()
       override val config: JDBCSourceConnectorConfig  = Builder.this.config
       override val incrementColumnName: String        = Builder.this.incrementColumnName
       override val rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
       override val topics: Seq[TopicKey]              = Builder.this.topics
       override val schema: Seq[Column]                = Builder.this.schema
-      override val offsetCache: JDBCOffsetCache       = Builder.this.offsetCache
 
       private[this] val client: DatabaseClient = DatabaseClient.builder
         .url(config.dbURL)

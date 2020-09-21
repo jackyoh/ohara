@@ -23,8 +23,8 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Column, DataType}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.TopicKey
-import oharastream.ohara.common.util.Releasable
-import oharastream.ohara.kafka.connector.{RowSourceContext, TaskSetting}
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord, TaskSetting}
 import oharastream.ohara.testing.service.Database
 import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.mockito.Mockito
@@ -54,31 +54,31 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
     val statement = client.connection.createStatement
     try {
       statement.executeUpdate(
-        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
       )
       statement.executeUpdate(
-        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:01', 'a21', 'a22', 2)"
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:01', 'a21', 'a22', 2)"
       )
       statement.executeUpdate(
-        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:02', 'a31', 'a32', 3)"
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:02', 'a31', 'a32', 3)"
       )
       statement.executeUpdate(
-        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:03.12', 'a41', 'a42', 4)"
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:03.12', 'a41', 'a42', 4)"
       )
       statement.executeUpdate(
-        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:04.123456', 'a51', 'a52', 5)"
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:04.123456', 'a51', 'a52', 5)"
       )
       statement.executeUpdate(
-        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
       )
       statement.executeUpdate(
-        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
+        s"INSERT INTO $tableName($timestampColumnName,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
       )
     } finally Releasable.close(statement)
   }
 
   @Test
-  def testIsCompletedTrue(): Unit = {
+  def testCompletedTrue(): Unit = {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
@@ -86,7 +86,7 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
   }
 
   @Test
-  def testIsCompletedFalse(): Unit = {
+  def testCompletedFalse(): Unit = {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
@@ -96,12 +96,25 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
   }
 
   @Test
-  def testIsCompletedException(): Unit = {
+  def testCompletedException(): Unit = {
     val key                       = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val startTimestamp: Timestamp = Timestamp.valueOf("2018-09-01 00:00:00")
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     an[IllegalArgumentException] should be thrownBy
       mockQueryHandler(key, 6).completed(key, startTimestamp, stopTimestamp)
+  }
+
+  @Test
+  def testQueryData(): Unit = {
+    val key            = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
+    val queryHandler   = mockQueryHandler(key, 0)
+    val startTimestamp = queryHandler.tableFirstTimestampValue(timestampColumnName)
+    val stopTimestamp  = new Timestamp(startTimestamp.getTime + 86400000)
+
+    val result: Seq[RowSourceRecord] = queryHandler.queryData(key, startTimestamp, stopTimestamp)
+    result.size shouldBe 5
+    result.head.row().cell("COLUMN2").value shouldBe "a11"
+    result.last.row().cell("COLUMN2").value shouldBe "a51"
   }
 
   private[this] def mockQueryHandler(key: String, value: Int): TimestampIncrementQueryHandler = {
@@ -116,8 +129,9 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
     val queryHandler = TimestampIncrementQueryHandler.builder
       .config(JDBCSourceConnectorConfig(taskSetting()))
       .rowSourceContext(rowSourceContext)
-      .offsetCache(new JDBCOffsetCache())
       .incrementColumnName(incrementColumnName)
+      .schema(Seq.empty)
+      .topics(Seq(TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))))
       .build()
     queryHandler.offsetCache.loadIfNeed(rowSourceContext, key)
     queryHandler
@@ -139,7 +153,7 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
     when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
     when(taskSetting.columns).thenReturn(
       Seq(
-        Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build(),
+        Column.builder().name(timestampColumnName).dataType(DataType.OBJECT).order(0).build(),
         Column.builder().name("COLUMN2").dataType(DataType.STRING).order(1).build(),
         Column.builder().name("COLUMN4").dataType(DataType.INT).order(3).build()
       ).asJava
