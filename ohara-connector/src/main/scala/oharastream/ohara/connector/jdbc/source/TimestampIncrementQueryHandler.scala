@@ -177,6 +177,29 @@ object TimestampIncrementQueryHandler {
         else value == offsetIndex
       }
 
+      private[this] def incrementValue(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
+        val incrementColumnName =
+          config.incrementColumnName.getOrElse(throw new IllegalArgumentException("The increment column not setting"))
+        val sql =
+          s"SELECT $incrementColumnName FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? AND ${config.timestampColumnName} < ? ORDER BY $incrementColumnName DESC"
+
+        val statement = client.connection.prepareStatement(sql)
+        try {
+          statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
+          statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
+          val resultSet = statement.executeQuery()
+          try if (resultSet.next()) resultSet.getInt(1)
+          else 0
+          finally Releasable.close(resultSet)
+        } finally {
+          Releasable.close(statement)
+          // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
+          // Confirm this connection ResultSet to update, need to call connection commit function.
+          // Release any database locks currently held by this Connection object
+          client.connection.commit()
+        }
+      }
+
       override protected[source] def tableFirstTimestampValue(timestampColumnName: String): Timestamp = {
         val sql = dbProduct.toUpperCase match {
           case ORACLE.name =>
@@ -214,29 +237,6 @@ object TimestampIncrementQueryHandler {
       private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
         val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
         rdbTables.head.columns
-      }
-
-      private[this] def incrementValue(startTimestamp: Timestamp, stopTimestamp: Timestamp): Int = {
-        val incrementColumnName =
-          config.incrementColumnName.getOrElse(throw new IllegalArgumentException("The increment column not setting"))
-        val sql =
-          s"SELECT $incrementColumnName FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? AND ${config.timestampColumnName} < ? ORDER BY $incrementColumnName DESC"
-
-        val statement = client.connection.prepareStatement(sql)
-        try {
-          statement.setTimestamp(1, startTimestamp, DateTimeUtils.CALENDAR)
-          statement.setTimestamp(2, stopTimestamp, DateTimeUtils.CALENDAR)
-          val resultSet = statement.executeQuery()
-          try if (resultSet.next()) resultSet.getInt(1)
-          else 0
-          finally Releasable.close(resultSet)
-        } finally {
-          Releasable.close(statement)
-          // Use the JDBC fetchSize function, should setting setAutoCommit function to false.
-          // Confirm this connection ResultSet to update, need to call connection commit function.
-          // Release any database locks currently held by this Connection object
-          client.connection.commit()
-        }
       }
 
       private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =

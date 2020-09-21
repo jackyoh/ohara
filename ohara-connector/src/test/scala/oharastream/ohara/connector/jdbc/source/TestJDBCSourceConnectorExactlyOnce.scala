@@ -46,15 +46,15 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
   private[this] val db: Database  = Database.local()
   private[this] val client: DatabaseClient =
     DatabaseClient.builder.url(db.url()).user(db.user()).password(db.password()).build
-  private[this] val tableName           = "table1"
+  private[this] val tableName           = TestJDBCSourceConnectorExactlyOnce.TABLE_NAME
   private[this] val incrementColumnName = TestJDBCSourceConnectorExactlyOnce.INCREMENT_COLUMN_NAME
   private[this] val timestampColumnName = TestJDBCSourceConnectorExactlyOnce.TIMESTAMP_COLUMN_NAME
-  private[this] val queryColumn         = "c1"
+  private[this] val queryColumnName     = TestJDBCSourceConnectorExactlyOnce.QUERY_COLUMN_NAME
   private[this] val columnSize          = 3
   private[this] val columns = Seq(RdbColumn(timestampColumnName, "TIMESTAMP(6)", false)) ++
     (1 to columnSize).map { index =>
-      if (index == 1) RdbColumn(s"c${index}", "VARCHAR(45)", false)
-      else RdbColumn(s"c${index}", "VARCHAR(45)", false)
+      if (index == 1) RdbColumn(s"c$index", "VARCHAR(45)", false)
+      else RdbColumn(s"c$index", "VARCHAR(45)", false)
     }
   private[this] val tableTotalCount: LongAdder = new LongAdder()
   private[this] val connectorAdmin             = ConnectorAdmin(testUtil.workersConnProps)
@@ -125,11 +125,11 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       resultRecords.size shouldBe tableTotalCount.intValue()
 
       // Check the topic data is equals the database table
-      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumnName")
       val tableData: Seq[String] =
-        Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
+        Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(queryColumnName)).toSeq
       val topicData: Seq[String] = resultRecords
-        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .map(record => record.key.get.cell(queryColumnName).value().toString)
         .sorted[String]
         .toSeq
       checkData(tableData, topicData)
@@ -178,12 +178,12 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       resultRecords.size shouldBe tableTotalCount.intValue()
 
       // Check the topic data is equals the database table
-      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumnName")
 
       val tableData: Seq[String] =
-        Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
+        Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(queryColumnName)).toSeq
       val topicData: Seq[String] = resultRecords
-        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .map(record => record.key.get.cell(queryColumnName).value().toString)
         .sorted[String]
         .toSeq
       checkData(tableData, topicData)
@@ -213,31 +213,31 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         .build()
     val statement = client.connection.createStatement()
     try {
-      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumnName")
       val queryResult: (String, String) = Iterator
         .continually(resultSet)
         .takeWhile(_.next())
         .map { x =>
-          (x.getString(timestampColumnName), x.getString(queryColumn))
+          (x.getString(timestampColumnName), x.getString(queryColumnName))
         }
         .toSeq
         .head
 
-      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
+      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumnName='${queryResult._2}'")
       statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), '${queryResult._2}')"
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumnName) VALUES(NOW(), '${queryResult._2}')"
       )
 
       awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
       val topicData: Seq[String] = result
-        .map(record => record.key.get.cell(queryColumn).value().toString)
+        .map(record => record.key.get.cell(queryColumnName).value().toString)
         .sorted[String]
         .toSeq
-      val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+      val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumnName")
       val resultTableData: Seq[String] =
-        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
+        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(queryColumnName)).toSeq
       checkData(resultTableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
@@ -268,13 +268,13 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       awaitInsertDataCompleted(startTestTimestamp) // Finally to wait all data write the database table
 
       statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello1')"
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumnName) VALUES(NOW(), 'hello1')"
       )
       TimeUnit.SECONDS.sleep(5)
       statement.executeUpdate(
-        s"INSERT INTO $tableName($timestampColumnName, $queryColumn) VALUES(NOW(), 'hello2')"
+        s"INSERT INTO $tableName($timestampColumnName, $queryColumnName) VALUES(NOW(), 'hello2')"
       )
-      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName = NOW() WHERE $queryColumn = 'hello2'")
+      statement.executeUpdate(s"UPDATE $tableName SET $timestampColumnName = NOW() WHERE $queryColumnName = 'hello2'")
 
       val expectedRow = tableTotalCount.intValue() + 2
       val result      = consumer.poll(java.time.Duration.ofSeconds(30), expectedRow).asScala
@@ -320,10 +320,9 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
   private[this] def sourceConnectorProps(settings: Map[String, String]) = JDBCSourceConnectorConfig(
     TaskSetting.of(
       (Map(
-        DB_URL_KEY       -> db.url,
-        DB_USERNAME_KEY  -> db.user,
-        DB_PASSWORD_KEY  -> db.password,
-        DB_TABLENAME_KEY -> tableName
+        DB_URL_KEY      -> db.url,
+        DB_USERNAME_KEY -> db.user,
+        DB_PASSWORD_KEY -> db.password
       ) ++ settings).asJava
     )
   )
@@ -365,11 +364,18 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
 }
 
 object TestJDBCSourceConnectorExactlyOnce {
+  private[source] val TABLE_NAME            = "table1"
   private[source] val TIMESTAMP_COLUMN_NAME = "c0"
-  private[source] val INCREMENT_COLUMN_NAME = "c1"
+  private[source] val INCREMENT_COLUMN_NAME = "increment"
+  private[source] val QUERY_COLUMN_NAME     = "c1"
+
   def parameters: java.util.stream.Stream[Arguments] =
     Seq(
-      Map(TIMESTAMP_COLUMN_NAME_KEY -> TIMESTAMP_COLUMN_NAME),
-      Map(TIMESTAMP_COLUMN_NAME_KEY -> TIMESTAMP_COLUMN_NAME, INCREMENT_COLUMN_NAME_KEY -> INCREMENT_COLUMN_NAME)
+      Map(DB_TABLENAME_KEY -> TABLE_NAME, TIMESTAMP_COLUMN_NAME_KEY -> TIMESTAMP_COLUMN_NAME),
+      Map(
+        DB_TABLENAME_KEY          -> TABLE_NAME,
+        TIMESTAMP_COLUMN_NAME_KEY -> TIMESTAMP_COLUMN_NAME,
+        INCREMENT_COLUMN_NAME_KEY -> INCREMENT_COLUMN_NAME
+      )
     ).map(o => Arguments.of(o)).asJava.stream()
 }
