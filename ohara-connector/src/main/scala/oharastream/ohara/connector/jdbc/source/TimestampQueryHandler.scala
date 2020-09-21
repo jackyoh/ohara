@@ -18,14 +18,12 @@ package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
 import java.util.Objects
 
-import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
-import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
+import oharastream.ohara.common.data.{Column, DataType}
 import oharastream.ohara.common.setting.TopicKey
-import oharastream.ohara.common.util.{CommonUtils, Releasable}
-import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
+import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
-import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
+import oharastream.ohara.connector.jdbc.util.DateTimeUtils
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
 trait TimestampQueryHandler extends BaseQueryHandler {
@@ -72,13 +70,12 @@ object TimestampQueryHandler {
       override val topics: Seq[TopicKey]              = Builder.this.topics
       override val schema: Seq[Column]                = Builder.this.schema
 
-      private[this] val client: DatabaseClient = DatabaseClient.builder
+      override protected[source] val client: DatabaseClient = DatabaseClient.builder
         .url(config.dbURL)
         .user(config.dbUserName)
         .password(config.dbPassword)
         .build
       client.connection.setAutoCommit(false)
-      private[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
 
       override protected[source] def queryData(
         key: String,
@@ -155,38 +152,6 @@ object TimestampQueryHandler {
         else offsetIndex == dbCount
       }
 
-      override protected[source] def tableFirstTimestampValue(timestampColumnName: String): Timestamp = {
-        val sql = dbProduct.toUpperCase match {
-          case ORACLE.name =>
-            s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName FETCH FIRST 1 ROWS ONLY"
-          case _ =>
-            s"SELECT $timestampColumnName FROM ${config.dbTableName} ORDER BY $timestampColumnName LIMIT 1"
-        }
-
-        val preparedStatement = client.connection.prepareStatement(sql)
-        try {
-          val resultSet = preparedStatement.executeQuery()
-          try {
-            if (resultSet.next()) resultSet.getTimestamp(timestampColumnName)
-            else new Timestamp(CommonUtils.current())
-          } finally Releasable.close(resultSet)
-        } finally Releasable.close(preparedStatement)
-      }
-
-      override protected[source] def current(): Timestamp = {
-        val query = dbProduct.toUpperCase match {
-          case ORACLE.name => "SELECT CURRENT_TIMESTAMP FROM dual"
-          case _           => "SELECT CURRENT_TIMESTAMP;"
-        }
-        val stmt = client.connection.createStatement()
-        try {
-          val rs = stmt.executeQuery(query)
-          try {
-            if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
-          } finally Releasable.close(rs)
-        } finally Releasable.close(stmt)
-      }
-
       private[this] def count(startTimestamp: Timestamp, stopTimestamp: Timestamp) = {
         val sql =
           s"SELECT COUNT(*) FROM ${config.dbTableName} WHERE ${config.timestampColumnName} >= ? AND ${config.timestampColumnName} < ?"
@@ -207,44 +172,6 @@ object TimestampQueryHandler {
           client.connection.commit()
         }
       }
-
-      private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
-        val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
-        rdbTables.head.columns
-      }
-
-      override def close(): Unit = Releasable.close(client)
     }
-
-    private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =
-      Row.of(
-        schema
-          .sortBy(_.order)
-          .map(s => (s, values(s.name, columns)))
-          .map {
-            case (s, value) =>
-              Cell.of(
-                s.newName,
-                s.dataType match {
-                  case DataType.BOOLEAN                 => value.asInstanceOf[Boolean]
-                  case DataType.SHORT                   => value.asInstanceOf[Short]
-                  case DataType.INT                     => value.asInstanceOf[Int]
-                  case DataType.LONG                    => value.asInstanceOf[Long]
-                  case DataType.FLOAT                   => value.asInstanceOf[Float]
-                  case DataType.DOUBLE                  => value.asInstanceOf[Double]
-                  case DataType.BYTE                    => value.asInstanceOf[Byte]
-                  case DataType.STRING                  => value.asInstanceOf[String]
-                  case DataType.BYTES | DataType.OBJECT => value
-                  case _                                => throw new IllegalArgumentException("Unsupported type...")
-                }
-              )
-          }: _*
-      )
-
-    private[this] def values(schemaColumnName: String, dbColumnInfo: Seq[ColumnInfo[_]]): Any =
-      dbColumnInfo
-        .find(_.columnName == schemaColumnName)
-        .map(_.value)
-        .getOrElse(throw new RuntimeException(s"Database table not have the $schemaColumnName column"))
   }
 }

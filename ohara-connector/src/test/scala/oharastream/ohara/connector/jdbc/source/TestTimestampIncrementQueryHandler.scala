@@ -108,7 +108,7 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
   def testQueryData(): Unit = {
     val key            = s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0"
     val queryHandler   = mockQueryHandler(key, 0)
-    val startTimestamp = queryHandler.tableFirstTimestampValue(timestampColumnName)
+    val startTimestamp = queryHandler.tableFirstTimestampValue(tableName, timestampColumnName)
     val stopTimestamp  = new Timestamp(startTimestamp.getTime + 86400000)
 
     val result: Seq[RowSourceRecord] = queryHandler.queryData(key, startTimestamp, stopTimestamp)
