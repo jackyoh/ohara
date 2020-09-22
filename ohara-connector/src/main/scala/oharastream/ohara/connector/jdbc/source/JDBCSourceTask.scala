@@ -81,6 +81,7 @@ class JDBCSourceTask extends RowSourceTask {
     queryHandler
       .queryData(partitionKey(config.dbTableName, firstTimestampValue, startTimestamp), startTimestamp, stopTimestamp)
       .asJava
+    throw new IllegalArgumentException("JDBC source connector exception test")
   }
 
   override protected[source] def terminate(): Unit = Releasable.close(queryHandler)
