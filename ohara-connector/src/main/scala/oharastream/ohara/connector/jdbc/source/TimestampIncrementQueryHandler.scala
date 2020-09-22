@@ -28,6 +28,10 @@ import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
 import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
+/**
+  * This trait define the timestamp and increment column to query for the
+  * JDBC source connector.
+  */
 trait TimestampIncrementQueryHandler extends BaseQueryHandler {
   def config: JDBCSourceConnectorConfig
   def incrementColumnName: String
@@ -263,7 +267,7 @@ object TimestampIncrementQueryHandler {
         dbColumnInfo
           .find(_.columnName == schemaColumnName)
           .map(_.value)
-          .getOrElse(throw new RuntimeException(s"Database table not have the $schemaColumnName column"))
+          .getOrElse(throw new IllegalArgumentException(s"Database table not have the $schemaColumnName column"))
     }
   }
 }
