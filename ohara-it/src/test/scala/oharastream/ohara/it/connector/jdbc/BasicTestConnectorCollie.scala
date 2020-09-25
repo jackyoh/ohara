@@ -34,7 +34,6 @@ import oharastream.ohara.connector.jdbc.source.{JDBCSourceConnector, JDBCSourceC
 import oharastream.ohara.it.ContainerPlatform.ResourceRef
 import oharastream.ohara.it.{ContainerPlatform, IntegrationTest}
 import oharastream.ohara.kafka.Consumer
-import oharastream.ohara.kafka.connector.TaskSetting
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.{AfterEach, Tag}
 import org.junit.jupiter.params.ParameterizedTest
@@ -51,25 +50,25 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   private[this] val log                    = Logger(classOf[BasicTestConnectorCollie])
   private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
   private[this] val jarFolderPath          = sys.env(JAR_FOLDER_KEY)
-  protected def tableName: String
-  protected def columnPrefixName: String
-  private[this] var timestampColumn: String = _
-  private[this] var queryColumn: String     = _
-
   private[this] var client: DatabaseClient = _
 
-  protected def dbUrl: String
-  protected def dbUserName: String
-  protected def dbPassword: String
-  protected def dbName: String
-  protected def BINARY_TYPE_NAME: String
+  protected[jdbc] def tableName: String
+  protected[jdbc] def columnPrefixName: String
+  protected[jdbc] def dbUrl: String
+  protected[jdbc] def dbUserName: String
+  protected[jdbc] def dbPassword: String
+  protected[jdbc] def dbName: String
+  protected[jdbc] def BINARY_TYPE_NAME: String
+
+  protected[this] def queryColumn: String     = s"${columnPrefixName}2"
+  protected[this] def timestampColumn: String = s"${columnPrefixName}1"
 
   /**
     * This function for setting database JDBC jar file name.
     * from local upload to configurator server for connector worker container to download use.
     * @return JDBC driver file name
     */
-  protected def jdbcDriverJarFileName: String
+  protected[jdbc] def jdbcDriverJarFileName: String
 
   private[this] var inputDataThread: Releasable = _
 
@@ -78,14 +77,14 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
     client = DatabaseClient.builder.url(dbUrl).user(dbUserName).password(dbPassword).build
 
     // Create table
-    val columns = (1 to 4).map(x => s"$columnPrefixName$x")
-    timestampColumn = columns(0)
-    queryColumn = columns(1)
-    val column1 = RdbColumn(columns(0), "TIMESTAMP", false)
-    val column2 = RdbColumn(columns(1), "varchar(45)", true)
-    val column3 = RdbColumn(columns(2), "integer", false)
-    val column4 = RdbColumn(columns(3), BINARY_TYPE_NAME, false)
-    client.createTable(tableName, Seq(column1, column2, column3, column4))
+    val columns = Seq(
+      RdbColumn(s"$timestampColumn", "TIMESTAMP", false),
+      RdbColumn(s"$queryColumn", "varchar(45)", true),
+      RdbColumn(s"${columnPrefixName}3", "integer", false),
+      RdbColumn(s"${columnPrefixName}4", BINARY_TYPE_NAME, false)
+    )
+
+    client.createTable(tableName, columns)
     val tableTotalCount = new LongAdder()
 
     inputDataThread = {
@@ -365,6 +364,8 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
     (brokerClusterInfo, workerClusterInfo)
   }
 
+  protected[jdbc] def props: JDBCSourceConnectorConfig
+
   private[this] def createConnector(
     connectorAdmin: ConnectorAdmin,
     connectorKey: ConnectorKey,
@@ -377,7 +378,7 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
         .connectorClass(classOf[JDBCSourceConnector])
         .topicKey(topicKey)
         .numberOfTasks(1)
-        .settings(props().toMap)
+        .settings(props.toMap)
         .create()
     )
 
@@ -392,20 +393,6 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
             log.info(s"[WORKER] worker cluster:${cluster.name} is starting ... retry", e)
             false
         }
-    )
-
-  private[this] def props(): JDBCSourceConnectorConfig =
-    JDBCSourceConnectorConfig(
-      TaskSetting.of(
-        Map(
-          "source.db.url"                -> dbUrl,
-          "source.db.username"           -> dbUserName,
-          "source.db.password"           -> dbPassword,
-          "source.table.name"            -> tableName,
-          "source.timestamp.column.name" -> timestampColumn,
-          "source.schema.pattern"        -> "TUSER"
-        ).asJava
-      )
     )
 
   private[this] def checkData(tableData: Seq[String], topicData: Seq[String]): Unit =

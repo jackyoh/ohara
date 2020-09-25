@@ -16,28 +16,38 @@
 
 package oharastream.ohara.it.connector.jdbc
 import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.connector.jdbc.source.JDBCSourceConnectorConfig
+import oharastream.ohara.kafka.connector.TaskSetting
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
+import scala.jdk.CollectionConverters._
 
 @EnabledIfEnvironmentVariable(named = "ohara.it.oracle.db.url", matches = ".*")
 @EnabledIfEnvironmentVariable(named = "ohara.it.oracle.db.username", matches = ".*")
 @EnabledIfEnvironmentVariable(named = "ohara.it.oracle.db.password", matches = ".*")
 class TestOracleJDBCSourceConnector extends BasicTestConnectorCollie {
-  private[this] val DB_URL_KEY: String       = "ohara.it.oracle.db.url"
-  private[this] val DB_USER_NAME_KEY: String = "ohara.it.oracle.db.username"
-  private[this] val DB_PASSWORD_KEY: String  = "ohara.it.oracle.db.password"
-  override protected def dbUrl: String       = sys.env(DB_URL_KEY)
+  override protected[jdbc] val dbUrl: String      = sys.env("ohara.it.oracle.db.url")
+  override protected[jdbc] val dbUserName: String = sys.env("ohara.it.oracle.db.username")
+  override protected[jdbc] val dbPassword: String = sys.env("ohara.it.oracle.db.password")
 
-  override protected def dbUserName: String = sys.env(DB_USER_NAME_KEY)
+  override protected[jdbc] val dbName: String = "oracle"
 
-  override protected def dbPassword: String = sys.env(DB_PASSWORD_KEY)
+  override protected[jdbc] val tableName: String = s"TABLE${CommonUtils.randomString(5)}".toUpperCase
 
-  override protected def dbName: String = "oracle"
+  override protected[jdbc] val jdbcDriverJarFileName: String = "ojdbc8.jar"
 
-  override protected val tableName: String = s"TABLE${CommonUtils.randomString(5)}".toUpperCase
+  override protected[jdbc] val columnPrefixName: String = "COLUMN"
 
-  override protected def jdbcDriverJarFileName: String = "ojdbc8.jar"
+  override protected[jdbc] val BINARY_TYPE_NAME: String = "RAW(30)"
 
-  override protected val columnPrefixName: String = "COLUMN"
-
-  override protected val BINARY_TYPE_NAME: String = "RAW(30)"
+  override protected[jdbc] val props: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(
+    TaskSetting.of(
+      Map(
+        "source.db.url"                -> dbUrl,
+        "source.db.username"           -> dbUserName,
+        "source.db.password"           -> dbPassword,
+        "source.table.name"            -> tableName,
+        "source.timestamp.column.name" -> timestampColumn
+      ).asJava
+    )
+  )
 }
