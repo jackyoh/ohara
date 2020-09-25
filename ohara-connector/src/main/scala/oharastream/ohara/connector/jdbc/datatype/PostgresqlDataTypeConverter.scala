@@ -34,13 +34,14 @@ class PostgresqlDataTypeConverter extends RDBDataTypeConverter {
   private[this] val TYPE_NAME_TIMESTAMPTZ = "TIMESTAMP"
   private[this] val TYPE_NAME_BYTEA       = "BYTEA"
   private[this] val TYPE_NAME_BOOL        = "BOOL"
+  private[this] val TYPE_NAME_SERIAL      = "SERIAL"
 
   override protected[datatype] def dataBaseProductName: String = "postgresql"
 
   override protected[datatype] def converterDataType(column: RdbColumn): DataTypeEnum = {
     val typeName: String = column.dataType.toUpperCase
     typeName match {
-      case TYPE_NAME_INT2 | TYPE_NAME_INT4 =>
+      case TYPE_NAME_INT2 | TYPE_NAME_INT4 | TYPE_NAME_SERIAL =>
         DataTypeEnum.INTEGER
       case TYPE_NAME_INT8 =>
         DataTypeEnum.LONG

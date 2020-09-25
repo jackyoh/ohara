@@ -60,6 +60,7 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   protected[jdbc] def dbName: String
   protected[jdbc] def BINARY_TYPE_NAME: String
 
+  protected[this] def incrementColumn: String = s"${columnPrefixName}0"
   protected[this] def queryColumn: String     = s"${columnPrefixName}2"
   protected[this] def timestampColumn: String = s"${columnPrefixName}1"
 
@@ -79,19 +80,20 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
     // Create table
     val columns = Seq(
       RdbColumn(s"$timestampColumn", "TIMESTAMP", false),
-      RdbColumn(s"$queryColumn", "varchar(45)", true),
-      RdbColumn(s"${columnPrefixName}3", "integer", false),
+      RdbColumn(s"$queryColumn", "VARCHAR(45)", false),
+      RdbColumn(s"${columnPrefixName}3", "INTEGER", false),
       RdbColumn(s"${columnPrefixName}4", BINARY_TYPE_NAME, false)
     )
 
-    client.createTable(tableName, columns)
+    client.createTable(tableName, Seq(RdbColumn(s"$incrementColumn", "SERIAL", true)) ++ columns)
     val tableTotalCount = new LongAdder()
 
     inputDataThread = {
       val pool            = Executors.newSingleThreadExecutor()
       val startTime: Long = CommonUtils.current()
       pool.execute { () =>
-        val sql               = s"INSERT INTO $tableName VALUES (${columns.map(_ => "?").mkString(",")})"
+        val sql =
+          s"INSERT INTO $tableName(${columns.map(_.name).mkString(",")}) VALUES (${columns.map(_ => "?").mkString(",")})"
         val preparedStatement = client.connection.prepareStatement(sql)
         try {
           while ((CommonUtils.current() - startTime) <= inputDataTime) {
@@ -146,7 +148,8 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
 
         val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
 
-        val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+        val tableData: Seq[String] =
+          Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
         val topicData: Seq[String] = result
           .map(record => record.key.get.cell(queryColumn).value().toString)
           .sorted[String]
@@ -208,8 +211,9 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
         tableTotalCount.intValue() shouldBe result3.size
 
         // Check the topic data is equals the database table
-        val resultSet              = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-        val tableData: Seq[String] = Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+        val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
+        val tableData: Seq[String] =
+          Iterator.continually(resultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
         val topicData: Seq[String] = result3
           .map(record => record.key.get.cell(queryColumn).value().toString)
           .sorted[String]
@@ -254,7 +258,7 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
           .continually(resultSet)
           .takeWhile(_.next())
           .map { x =>
-            (x.getTimestamp(1), x.getString(2))
+            (x.getTimestamp(timestampColumn), x.getString(queryColumn))
           }
           .toSeq
           .head
@@ -277,7 +281,7 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
           .toSeq
         val tableResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
         val resultTableData: Seq[String] =
-          Iterator.continually(tableResultSet).takeWhile(_.next()).map(_.getString(2)).toSeq
+          Iterator.continually(tableResultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
         checkData(resultTableData, topicData)
 
         // Test update data for the table
