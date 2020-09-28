@@ -25,7 +25,7 @@ import scala.jdk.CollectionConverters._
 @EnabledIfEnvironmentVariable(named = "ohara.it.postgresql.db.url", matches = ".*")
 @EnabledIfEnvironmentVariable(named = "ohara.it.postgresql.db.username", matches = ".*")
 @EnabledIfEnvironmentVariable(named = "ohara.it.postgresql.db.password", matches = ".*")
-class TestPostgresqlJDBCSourceConnector extends BasicTestConnectorCollie {
+class TestPostgresqlTimestampJDBCSourceConnector extends BasicTestConnectorCollie {
   override protected[jdbc] def dbUrl: String      = sys.env("ohara.it.postgresql.db.url")
   override protected[jdbc] def dbUserName: String = sys.env("ohara.it.postgresql.db.username")
   override protected[jdbc] def dbPassword: String = sys.env("ohara.it.postgresql.db.password")

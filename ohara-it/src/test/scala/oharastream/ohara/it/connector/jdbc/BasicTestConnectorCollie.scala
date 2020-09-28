@@ -247,26 +247,31 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
           .keySerializer(Serializer.ROW)
           .valueSerializer(Serializer.BYTES)
           .build()
+
       val insertPreparedStatement =
-        client.connection.prepareStatement(s"INSERT INTO $tableName($timestampColumn, $queryColumn) VALUES(?,?)")
+        client.connection.prepareStatement(
+          s"INSERT INTO $tableName($incrementColumn, $timestampColumn, $queryColumn) VALUES(?, ?,?)"
+        )
       val updatePreparedStatement =
-        client.connection.prepareStatement(s"UPDATE $tableName SET $timestampColumn=? WHERE $queryColumn=?")
+        client.connection.prepareStatement(
+          s"UPDATE $tableName SET $incrementColumn=?, $timestampColumn=? WHERE $queryColumn=?"
+        )
       val statement = client.connection.createStatement()
       try {
         val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-        val queryResult: (Timestamp, String) = Iterator
+        val queryResult: (Int, Timestamp, String) = Iterator
           .continually(resultSet)
           .takeWhile(_.next())
           .map { x =>
-            (x.getTimestamp(timestampColumn), x.getString(queryColumn))
+            (x.getInt(incrementColumn), x.getTimestamp(timestampColumn), x.getString(queryColumn))
           }
           .toSeq
           .head
+        statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._3}'")
 
-        statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._2}'")
-
-        insertPreparedStatement.setTimestamp(1, queryResult._1)
-        insertPreparedStatement.setString(2, queryResult._2)
+        insertPreparedStatement.setInt(1, queryResult._1)
+        insertPreparedStatement.setTimestamp(2, queryResult._2)
+        insertPreparedStatement.setString(3, queryResult._3)
         insertPreparedStatement.executeUpdate()
 
         await(
@@ -285,8 +290,9 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
         checkData(resultTableData, topicData)
 
         // Test update data for the table
-        updatePreparedStatement.setTimestamp(1, queryResult._1)
-        updatePreparedStatement.setString(2, queryResult._2)
+        updatePreparedStatement.setInt(1, queryResult._1)
+        updatePreparedStatement.setTimestamp(2, queryResult._2)
+        updatePreparedStatement.setString(3, queryResult._3)
         updatePreparedStatement.executeUpdate()
         TimeUnit.SECONDS.sleep(5)
         consumer.seekToBeginning()
