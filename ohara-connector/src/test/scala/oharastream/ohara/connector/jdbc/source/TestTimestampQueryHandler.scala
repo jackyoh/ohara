@@ -77,7 +77,7 @@ class TestTimestampQueryHandler extends OharaTest {
   def testRowTimestamp(): Unit = {
     val schema: Seq[Column]                    = Seq(Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Timestamp]] = Seq(ColumnInfo("COLUMN1", "timestamp", new Timestamp(0)))
-    val row0: Row                              = TimestampQueryHandler.builder.row(schema, columnInfo)
+    val row0: Row                              = TimestampQueryHandler.builder.build().row(schema, columnInfo)
     row0.cell("COLUMN1").value.toString shouldBe "1970-01-01 08:00:00.0"
   }
 
@@ -85,7 +85,7 @@ class TestTimestampQueryHandler extends OharaTest {
   def testRowInt(): Unit = {
     val schema: Seq[Column]              = Seq(Column.builder().name("COLUMN1").dataType(DataType.INT).order(0).build())
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = TimestampQueryHandler.builder.row(schema, columnInfo)
+    val row0: Row                        = TimestampQueryHandler.builder.build().row(schema, columnInfo)
     row0.cell("COLUMN1").value shouldBe 100
   }
 
@@ -97,7 +97,7 @@ class TestTimestampQueryHandler extends OharaTest {
     )
     val columnInfo: Seq[ColumnInfo[Int]] =
       Seq(ColumnInfo("c1", "int", Integer.valueOf(100)), ColumnInfo("c0", "int", Integer.valueOf(50)))
-    val cells = TimestampQueryHandler.builder.row(schema, columnInfo).cells().asScala
+    val cells = TimestampQueryHandler.builder.build().row(schema, columnInfo).cells().asScala
     cells.head.name shouldBe "c0"
     cells.head.value shouldBe 50
     cells(1).name shouldBe "c1"
@@ -110,7 +110,7 @@ class TestTimestampQueryHandler extends OharaTest {
       Column.builder().name("COLUMN1").newName("COLUMN100").dataType(DataType.INT).order(0).build()
     )
     val columnInfo: Seq[ColumnInfo[Int]] = Seq(ColumnInfo("COLUMN1", "int", Integer.valueOf(100)))
-    val row0: Row                        = TimestampQueryHandler.builder.row(schema, columnInfo)
+    val row0: Row                        = TimestampQueryHandler.builder.build().row(schema, columnInfo)
     row0.cell("COLUMN100").value shouldBe 100
   }
 

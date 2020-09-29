@@ -18,7 +18,11 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 
+import oharastream.ohara.client.configurator.InspectApi.RdbColumn
+import oharastream.ohara.client.database.DatabaseClient
+import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.util.Releasable
+import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
 trait BaseQueryHandler extends Releasable {
@@ -57,4 +61,38 @@ trait BaseQueryHandler extends Releasable {
     * @return timestamp
     */
   protected[source] def current(): Timestamp
+
+  private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] =
+    client.tableQuery.tableName(tableName).execute().head.columns
+
+  private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =
+    Row.of(
+      schema
+        .sortBy(_.order)
+        .map(s => (s, values(s.name, columns)))
+        .map {
+          case (s, value) =>
+            Cell.of(
+              s.newName,
+              s.dataType match {
+                case DataType.BOOLEAN                 => value.asInstanceOf[Boolean]
+                case DataType.SHORT                   => value.asInstanceOf[Short]
+                case DataType.INT                     => value.asInstanceOf[Int]
+                case DataType.LONG                    => value.asInstanceOf[Long]
+                case DataType.FLOAT                   => value.asInstanceOf[Float]
+                case DataType.DOUBLE                  => value.asInstanceOf[Double]
+                case DataType.BYTE                    => value.asInstanceOf[Byte]
+                case DataType.STRING                  => value.asInstanceOf[String]
+                case DataType.BYTES | DataType.OBJECT => value
+                case _                                => throw new IllegalArgumentException("Unsupported type...")
+              }
+            )
+        }: _*
+    )
+
+  private[this] def values(schemaColumnName: String, dbColumnInfo: Seq[ColumnInfo[_]]): Any =
+    dbColumnInfo
+      .find(_.columnName == schemaColumnName)
+      .map(_.value)
+      .getOrElse(throw new RuntimeException(s"Database table not have the $schemaColumnName column"))
 }

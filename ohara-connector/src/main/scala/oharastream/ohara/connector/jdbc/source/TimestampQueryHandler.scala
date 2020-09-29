@@ -17,15 +17,13 @@
 package oharastream.ohara.connector.jdbc.source
 import java.sql.Timestamp
 import java.util.Objects
-
-import oharastream.ohara.client.configurator.InspectApi.{RdbColumn, RdbTable}
 import oharastream.ohara.client.database.DatabaseClient
-import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
+import oharastream.ohara.common.data.{Column, DataType}
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.connector.jdbc.datatype.RDBDataTypeConverterFactory
-import oharastream.ohara.connector.jdbc.util.{ColumnInfo, DateTimeUtils}
+import oharastream.ohara.connector.jdbc.util.DateTimeUtils
 import oharastream.ohara.kafka.connector.{RowSourceContext, RowSourceRecord}
 
 trait TimestampQueryHandler extends BaseQueryHandler {
@@ -208,43 +206,7 @@ object TimestampQueryHandler {
         }
       }
 
-      private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] = {
-        val rdbTables: Seq[RdbTable] = client.tableQuery.tableName(tableName).execute()
-        rdbTables.head.columns
-      }
-
       override def close(): Unit = Releasable.close(client)
     }
-
-    private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =
-      Row.of(
-        schema
-          .sortBy(_.order)
-          .map(s => (s, values(s.name, columns)))
-          .map {
-            case (s, value) =>
-              Cell.of(
-                s.newName,
-                s.dataType match {
-                  case DataType.BOOLEAN                 => value.asInstanceOf[Boolean]
-                  case DataType.SHORT                   => value.asInstanceOf[Short]
-                  case DataType.INT                     => value.asInstanceOf[Int]
-                  case DataType.LONG                    => value.asInstanceOf[Long]
-                  case DataType.FLOAT                   => value.asInstanceOf[Float]
-                  case DataType.DOUBLE                  => value.asInstanceOf[Double]
-                  case DataType.BYTE                    => value.asInstanceOf[Byte]
-                  case DataType.STRING                  => value.asInstanceOf[String]
-                  case DataType.BYTES | DataType.OBJECT => value
-                  case _                                => throw new IllegalArgumentException("Unsupported type...")
-                }
-              )
-          }: _*
-      )
-
-    private[this] def values(schemaColumnName: String, dbColumnInfo: Seq[ColumnInfo[_]]): Any =
-      dbColumnInfo
-        .find(_.columnName == schemaColumnName)
-        .map(_.value)
-        .getOrElse(throw new RuntimeException(s"Database table not have the $schemaColumnName column"))
   }
 }
