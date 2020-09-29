@@ -47,7 +47,7 @@ class JDBCSourceTask extends RowSourceTask {
           .schema(settings.columns.asScala.toSeq)
           .build()
       }
-    firstTimestampValue = queryHandler.tableFirstTimestampValue(config.timestampColumnName)
+    firstTimestampValue = queryHandler.tableFirstTimestampValue(config)
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {

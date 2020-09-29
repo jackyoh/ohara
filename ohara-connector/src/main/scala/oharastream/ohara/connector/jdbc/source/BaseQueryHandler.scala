@@ -21,11 +21,15 @@ import java.sql.Timestamp
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
-import oharastream.ohara.common.util.Releasable
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
+import oharastream.ohara.connector.jdbc.DatabaseProductName.ORACLE
 import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
 trait BaseQueryHandler extends Releasable {
+  protected[this] def client: DatabaseClient
+  protected[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
+
   /**
     * Query table data from the database
     * @param key split task
@@ -51,16 +55,46 @@ trait BaseQueryHandler extends Releasable {
 
   /**
     * Query first row from the database table
-    * @param timestampColumnName timestamp column name
+    * @param config JDBCSourceConnector setting
     * @return timestamp
     */
-  protected[source] def tableFirstTimestampValue(timestampColumnName: String): Timestamp
+  protected[source] def tableFirstTimestampValue(config: JDBCSourceConnectorConfig): Timestamp = {
+    val sql = dbProduct.toUpperCase match {
+      case ORACLE.name =>
+        s"SELECT ${config.timestampColumnName} FROM ${config.dbTableName} ORDER BY ${config.timestampColumnName} FETCH FIRST 1 ROWS ONLY"
+      case _ =>
+        s"SELECT ${config.timestampColumnName} FROM ${config.dbTableName} ORDER BY ${config.timestampColumnName} LIMIT 1"
+    }
+
+    val preparedStatement = client.connection.prepareStatement(sql)
+    try {
+      val resultSet = preparedStatement.executeQuery()
+      try {
+        if (resultSet.next()) resultSet.getTimestamp(config.timestampColumnName)
+        else new Timestamp(CommonUtils.current())
+      } finally Releasable.close(resultSet)
+    } finally Releasable.close(preparedStatement)
+  }
 
   /**
     * Query current timestamp from the database
     * @return timestamp
     */
-  protected[source] def current(): Timestamp
+  protected[source] def current(): Timestamp = {
+    val query = dbProduct.toUpperCase match {
+      case ORACLE.name => "SELECT CURRENT_TIMESTAMP FROM dual"
+      case _           => "SELECT CURRENT_TIMESTAMP;"
+    }
+    val stmt = client.connection.createStatement()
+    try {
+      val rs = stmt.executeQuery(query)
+      try {
+        if (rs.next()) rs.getTimestamp(1) else new Timestamp(0)
+      } finally Releasable.close(rs)
+    } finally Releasable.close(stmt)
+  }
+
+  override def close(): Unit = Releasable.close(client)
 
   private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] =
     client.tableQuery.tableName(tableName).execute().head.columns
