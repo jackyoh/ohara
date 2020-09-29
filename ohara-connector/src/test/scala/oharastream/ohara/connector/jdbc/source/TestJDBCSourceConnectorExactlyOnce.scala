@@ -229,6 +229,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
       )
       val result = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
       tableTotalCount.intValue() shouldBe result.size
+
       val topicData: Seq[String] = result
         .map(record => record.key.get.cell(queryColumnName).value().toString)
         .sorted[String]
