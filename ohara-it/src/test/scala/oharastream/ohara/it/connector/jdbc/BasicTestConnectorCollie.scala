@@ -48,6 +48,7 @@ import scala.jdk.CollectionConverters._
 @EnabledIfEnvironmentVariable(named = "ohara.it.docker", matches = ".*")
 private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   private[this] val log                    = Logger(classOf[BasicTestConnectorCollie])
+  private[this] val inputDataTime          = 5000L
   private[this] val JAR_FOLDER_KEY: String = "ohara.it.jar.folder"
   private[this] val jarFolderPath          = sys.env(JAR_FOLDER_KEY)
   private[this] var client: DatabaseClient = _
@@ -59,6 +60,7 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   protected[jdbc] def dbPassword: String
   protected[jdbc] def dbName: String
   protected[jdbc] def BINARY_TYPE_NAME: String
+  protected[jdbc] def INCREMENT_TYPE_NAME: String
 
   protected[this] def incrementColumn: String = s"${columnPrefixName}0"
   protected[this] def queryColumn: String     = s"${columnPrefixName}2"
@@ -85,7 +87,7 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
       RdbColumn(s"${columnPrefixName}4", BINARY_TYPE_NAME, false)
     )
 
-    client.createTable(tableName, Seq(RdbColumn(s"$incrementColumn", "SERIAL", true)) ++ columns)
+    client.createTable(tableName, Seq(RdbColumn(s"$incrementColumn", INCREMENT_TYPE_NAME, true)) ++ columns)
     val tableTotalCount = new LongAdder()
 
     inputDataThread = {
@@ -121,7 +123,6 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   def testNormal(platform: ContainerPlatform): Unit =
     close(platform.setup()) { resourceRef =>
       val startTestTimestamp                     = CommonUtils.current()
-      val inputDataTime                          = 3000L
       val tableTotalCount                        = setupDatabase(inputDataTime)
       val (brokerClusterInfo, workerClusterInfo) = startCluster(resourceRef)
       val connectorKey                           = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
@@ -167,7 +168,6 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   def testConnectorStartPauseResumeDelete(platform: ContainerPlatform): Unit =
     close(platform.setup()) { resourceRef =>
       val startTestTimestamp                     = CommonUtils.current()
-      val inputDataTime                          = 30000L
       val tableTotalCount                        = setupDatabase(inputDataTime)
       val (brokerClusterInfo, workerClusterInfo) = startCluster(resourceRef)
       val connectorKey                           = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
@@ -230,7 +230,6 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
   def testTableInsertUpdateDelete(platform: ContainerPlatform): Unit =
     close(platform.setup()) { resourceRef =>
       val startTestTimestamp                     = CommonUtils.current()
-      val inputDataTime                          = 10000L
       val tableTotalCount                        = setupDatabase(inputDataTime)
       val (brokerClusterInfo, workerClusterInfo) = startCluster(resourceRef)
       val connectorKey                           = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
@@ -250,36 +249,38 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
 
       val insertPreparedStatement =
         client.connection.prepareStatement(
-          s"INSERT INTO $tableName($incrementColumn, $timestampColumn, $queryColumn) VALUES(?, ?,?)"
+          s"INSERT INTO $tableName($timestampColumn, $queryColumn) VALUES(?,?)"
         )
       val updatePreparedStatement =
         client.connection.prepareStatement(
-          s"UPDATE $tableName SET $incrementColumn=?, $timestampColumn=? WHERE $queryColumn=?"
+          s"UPDATE $tableName SET $timestampColumn=? WHERE $queryColumn=?"
+        )
+      val deletePreparedStatement =
+        client.connection.prepareStatement(
+          s"DELETE FROM $tableName WHERE $timestampColumn=?"
         )
       val statement = client.connection.createStatement()
       try {
         val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumn")
-        val queryResult: (Int, Timestamp, String) = Iterator
+        val queryResult: (Timestamp, String) = Iterator
           .continually(resultSet)
           .takeWhile(_.next())
           .map { x =>
-            (x.getInt(incrementColumn), x.getTimestamp(timestampColumn), x.getString(queryColumn))
+            (x.getTimestamp(timestampColumn), x.getString(queryColumn))
           }
           .toSeq
           .head
-        statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumn='${queryResult._3}'")
-
-        insertPreparedStatement.setInt(1, queryResult._1)
-        insertPreparedStatement.setTimestamp(2, queryResult._2)
-        insertPreparedStatement.setString(3, queryResult._3)
-        insertPreparedStatement.executeUpdate()
 
         await(
           () => CommonUtils.current() - startTestTimestamp >= inputDataTime && count() == tableTotalCount.intValue()
         )
+        insertPreparedStatement.setTimestamp(1, new Timestamp(queryResult._1.getTime + 86400000)) // 86400000 is a day
+        insertPreparedStatement.setString(2, queryResult._2)
+        insertPreparedStatement.executeUpdate()
 
-        val result = consumer.poll(java.time.Duration.ofSeconds(60), tableTotalCount.intValue()).asScala
-        tableTotalCount.intValue() shouldBe result.size
+        val expectTopicCount = tableTotalCount.intValue() + 1
+        val result           = consumer.poll(java.time.Duration.ofSeconds(60), expectTopicCount).asScala
+        expectTopicCount shouldBe result.size
         val topicData: Seq[String] = result
           .map(record => record.key.get.cell(queryColumn).value().toString)
           .sorted[String]
@@ -289,18 +290,23 @@ private[jdbc] abstract class BasicTestConnectorCollie extends IntegrationTest {
           Iterator.continually(tableResultSet).takeWhile(_.next()).map(_.getString(queryColumn)).toSeq
         checkData(resultTableData, topicData)
 
-        // Test update data for the table
-        updatePreparedStatement.setInt(1, queryResult._1)
-        updatePreparedStatement.setTimestamp(2, queryResult._2)
-        updatePreparedStatement.setString(3, queryResult._3)
-        updatePreparedStatement.executeUpdate()
-        TimeUnit.SECONDS.sleep(5)
+        deletePreparedStatement.setTimestamp(1, queryResult._1)
+        deletePreparedStatement.executeUpdate()
         consumer.seekToBeginning()
-        val updateResult = consumer.poll(java.time.Duration.ofSeconds(30), tableTotalCount.intValue()).asScala
-        updateResult.size shouldBe tableTotalCount.intValue()
+        val deleteResult = consumer.poll(java.time.Duration.ofSeconds(30), expectTopicCount).asScala
+        expectTopicCount shouldBe deleteResult.size
+
+        // Test update data for the table
+        updatePreparedStatement.setTimestamp(1, new Timestamp(queryResult._1.getTime + 172800000)) // 172800000 is 2 day
+        updatePreparedStatement.setString(2, queryResult._2)
+        updatePreparedStatement.executeUpdate()
+        consumer.seekToBeginning()
+        val updateResult = consumer.poll(java.time.Duration.ofSeconds(30), expectTopicCount).asScala
+        expectTopicCount shouldBe updateResult.size
       } finally {
         Releasable.close(insertPreparedStatement)
         Releasable.close(updatePreparedStatement)
+        Releasable.close(deletePreparedStatement)
         Releasable.close(statement)
         Releasable.close(consumer)
       }

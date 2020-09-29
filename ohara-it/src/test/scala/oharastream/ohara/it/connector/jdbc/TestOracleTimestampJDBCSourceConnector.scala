@@ -15,31 +15,31 @@
  */
 
 package oharastream.ohara.it.connector.jdbc
-
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.connector.jdbc.source.JDBCSourceConnectorConfig
 import oharastream.ohara.kafka.connector.TaskSetting
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import scala.jdk.CollectionConverters._
 
-@EnabledIfEnvironmentVariable(named = "ohara.it.postgresql.db.url", matches = ".*")
-@EnabledIfEnvironmentVariable(named = "ohara.it.postgresql.db.username", matches = ".*")
-@EnabledIfEnvironmentVariable(named = "ohara.it.postgresql.db.password", matches = ".*")
-class TestPostgresqlTimestampJDBCSourceConnector extends BasicTestConnectorCollie {
-  override protected[jdbc] def dbUrl: String      = sys.env("ohara.it.postgresql.db.url")
-  override protected[jdbc] def dbUserName: String = sys.env("ohara.it.postgresql.db.username")
-  override protected[jdbc] def dbPassword: String = sys.env("ohara.it.postgresql.db.password")
-  override protected[jdbc] def dbName: String     = "postgresql"
+@EnabledIfEnvironmentVariable(named = "ohara.it.oracle.db.url", matches = ".*")
+@EnabledIfEnvironmentVariable(named = "ohara.it.oracle.db.username", matches = ".*")
+@EnabledIfEnvironmentVariable(named = "ohara.it.oracle.db.password", matches = ".*")
+class TestOracleTimestampJDBCSourceConnector extends BasicTestConnectorCollie {
+  override protected[jdbc] val dbUrl: String      = sys.env("ohara.it.oracle.db.url")
+  override protected[jdbc] val dbUserName: String = sys.env("ohara.it.oracle.db.username")
+  override protected[jdbc] val dbPassword: String = sys.env("ohara.it.oracle.db.password")
 
-  override protected[jdbc] val tableName: String = s"table${CommonUtils.randomString(5)}"
+  override protected[jdbc] val dbName: String = "oracle"
 
-  override protected[jdbc] val jdbcDriverJarFileName: String = "postgresql-42.2.6.jar"
+  override protected[jdbc] val tableName: String = s"TABLE${CommonUtils.randomString(5)}".toUpperCase
 
-  override protected[jdbc] val columnPrefixName: String = "column"
+  override protected[jdbc] val jdbcDriverJarFileName: String = "ojdbc8.jar"
 
-  override protected[jdbc] val BINARY_TYPE_NAME: String = "BYTEA"
+  override protected[jdbc] val columnPrefixName: String = "COLUMN"
 
-  override protected[jdbc] val INCREMENT_TYPE_NAME: String = "SERIAL"
+  override protected[jdbc] val BINARY_TYPE_NAME: String = "RAW(30)"
+
+  override protected[jdbc] val INCREMENT_TYPE_NAME: String = "NUMBER GENERATED ALWAYS AS IDENTITY"
 
   override protected[jdbc] val props: JDBCSourceConnectorConfig = JDBCSourceConnectorConfig(
     TaskSetting.of(
