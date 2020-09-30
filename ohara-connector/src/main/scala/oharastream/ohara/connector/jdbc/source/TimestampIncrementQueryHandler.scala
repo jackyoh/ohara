@@ -234,7 +234,7 @@ object TimestampIncrementQueryHandler {
         rdbTables.head.columns
       }
 
-      private[source] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =
+      private[this] def row(schema: Seq[Column], columns: Seq[ColumnInfo[_]]): Row =
         Row.of(
           schema
             .sortBy(_.order)
@@ -244,16 +244,17 @@ object TimestampIncrementQueryHandler {
                 Cell.of(
                   s.newName,
                   s.dataType match {
-                    case DataType.BOOLEAN                 => value.asInstanceOf[Boolean]
-                    case DataType.SHORT                   => value.asInstanceOf[Short]
-                    case DataType.INT                     => value.asInstanceOf[Int]
-                    case DataType.LONG                    => value.asInstanceOf[Long]
-                    case DataType.FLOAT                   => value.asInstanceOf[Float]
-                    case DataType.DOUBLE                  => value.asInstanceOf[Double]
-                    case DataType.BYTE                    => value.asInstanceOf[Byte]
-                    case DataType.STRING                  => value.asInstanceOf[String]
-                    case DataType.BYTES | DataType.OBJECT => value
-                    case _                                => throw new IllegalArgumentException("Unsupported type...")
+                    case DataType.BOOLEAN => value.asInstanceOf[Boolean]
+                    case DataType.SHORT   => value.asInstanceOf[Short]
+                    case DataType.INT     => value.asInstanceOf[Int]
+                    case DataType.LONG    => value.asInstanceOf[Long]
+                    case DataType.FLOAT   => value.asInstanceOf[Float]
+                    case DataType.DOUBLE  => value.asInstanceOf[Double]
+                    case DataType.BYTE    => value.asInstanceOf[Byte]
+                    case DataType.STRING  => value.asInstanceOf[String]
+                    case DataType.BYTES   => value.asInstanceOf[Array[Byte]]
+                    case DataType.OBJECT  => value.asInstanceOf[Any]
+                    case _                => throw new IllegalArgumentException("Unsupported type...")
                   }
                 )
             }: _*
