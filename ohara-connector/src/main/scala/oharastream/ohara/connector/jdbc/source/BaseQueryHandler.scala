@@ -27,8 +27,8 @@ import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
 trait BaseQueryHandler extends Releasable {
-  protected[this] def client: DatabaseClient
-  protected[this] def dbProduct: String = client.connection.getMetaData.getDatabaseProductName
+  protected[this] var client: DatabaseClient
+  protected[this] var dbProduct: String
 
   /**
     * Query table data from the database
@@ -93,6 +93,8 @@ trait BaseQueryHandler extends Releasable {
       } finally Releasable.close(rs)
     } finally Releasable.close(stmt)
   }
+
+  override def close(): Unit = Releasable.close(client)
 
   private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] =
     client.tableQuery.tableName(tableName).execute().head.columns
