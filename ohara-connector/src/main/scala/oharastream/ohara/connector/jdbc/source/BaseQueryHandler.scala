@@ -94,8 +94,6 @@ trait BaseQueryHandler extends Releasable {
     } finally Releasable.close(stmt)
   }
 
-  override def close(): Unit = Releasable.close(client)
-
   private[source] def columns(client: DatabaseClient, tableName: String): Seq[RdbColumn] =
     client.tableQuery.tableName(tableName).execute().head.columns
 
@@ -118,7 +116,8 @@ trait BaseQueryHandler extends Releasable {
                 case DataType.BYTE                    => value.asInstanceOf[Byte]
                 case DataType.STRING                  => value.asInstanceOf[String]
                 case DataType.BYTES | DataType.OBJECT => value
-                case _                                => throw new IllegalArgumentException("Unsupported type...")
+                case _ =>
+                  throw new IllegalArgumentException(s"${s.newName()} column unsupported the ${s.dataType()} type...")
               }
             )
         }: _*

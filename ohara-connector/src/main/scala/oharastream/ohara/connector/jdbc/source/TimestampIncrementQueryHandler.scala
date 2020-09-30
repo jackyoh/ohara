@@ -190,6 +190,8 @@ object TimestampIncrementQueryHandler {
           client.connection.commit()
         }
       }
+
+      override def close(): Unit = Releasable.close(client)
     }
   }
 }
