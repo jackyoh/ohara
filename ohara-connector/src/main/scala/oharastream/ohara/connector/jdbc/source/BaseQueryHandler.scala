@@ -27,8 +27,8 @@ import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.RowSourceRecord
 
 trait BaseQueryHandler extends Releasable {
-  protected[this] var client: DatabaseClient
-  protected[this] var dbProduct: String
+  protected[this] val client: DatabaseClient
+  protected[this] val dbProduct: String
 
   /**
     * Query table data from the database

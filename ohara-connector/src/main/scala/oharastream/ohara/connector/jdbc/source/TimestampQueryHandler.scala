@@ -69,13 +69,13 @@ object TimestampQueryHandler {
       override val rowSourceContext: RowSourceContext = Builder.this.rowSourceContext
       override val topics: Seq[TopicKey]              = Builder.this.topics
       override val schema: Seq[Column]                = Builder.this.schema
-      override protected[this] var client: DatabaseClient = DatabaseClient.builder
+      override protected[this] val client: DatabaseClient = DatabaseClient.builder
         .url(config.dbURL)
         .user(config.dbUserName)
         .password(config.dbPassword)
         .build
       client.connection.setAutoCommit(false)
-      override protected[this] var dbProduct: String = client.connection.getMetaData.getDatabaseProductName
+      override protected[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
       override protected[source] def queryData(
         key: String,
         startTimestamp: Timestamp,
