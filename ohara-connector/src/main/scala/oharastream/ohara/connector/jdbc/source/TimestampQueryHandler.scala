@@ -75,7 +75,6 @@ object TimestampQueryHandler {
         .password(config.dbPassword)
         .build
       client.connection.setAutoCommit(false)
-      override protected[this] val dbProduct: String = client.connection.getMetaData.getDatabaseProductName
       override protected[source] def queryData(
         key: String,
         startTimestamp: Timestamp,
