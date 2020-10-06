@@ -214,16 +214,16 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
     val statement = client.connection.createStatement()
     try {
       val resultSet = statement.executeQuery(s"select * from $tableName order by $queryColumnName")
-      val queryResult: (String, String) = Iterator
+      val queryResult: (Int, String, String) = Iterator
         .continually(resultSet)
         .takeWhile(_.next())
         .map { x =>
-          (x.getString(timestampColumnName), x.getString(queryColumnName))
+          (x.getInt(incrementColumnName), x.getString(timestampColumnName), x.getString(queryColumnName))
         }
         .toSeq
         .head
       awaitInsertDataCompleted(startTestTimestamp) // Wait data write to the table
-      statement.executeUpdate(s"DELETE FROM $tableName WHERE $queryColumnName='${queryResult._2}'")
+      statement.executeUpdate(s"DELETE FROM $tableName WHERE $incrementColumnName='${queryResult._1}'")
       statement.executeUpdate(
         s"INSERT INTO $tableName($incrementColumnName, $timestampColumnName, $queryColumnName) VALUES(${queryResult._1}, '${queryResult._2}', '${queryResult._3}')"
       )
@@ -235,9 +235,7 @@ class TestJDBCSourceConnectorExactlyOnce extends With3Brokers3Workers {
         .toSeq
       val updateResultSet = statement.executeQuery(s"select * from $tableName order by $queryColumnName")
       val resultTableData: Seq[String] =
-        (Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(queryColumnName)).toSeq ++ Seq(
-          queryResult._2
-        )).sorted[String]
+        Iterator.continually(updateResultSet).takeWhile(_.next()).map(_.getString(queryColumnName)).toSeq
       checkData(resultTableData, topicData)
     } finally {
       result(connectorAdmin.delete(connectorKey)) // Avoid table not forund from the JDBC source connector
