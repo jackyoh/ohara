@@ -17,8 +17,11 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
-import oharastream.ohara.common.util.Releasable
+import java.util.concurrent.TimeUnit
+
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.connector._
+
 import scala.jdk.CollectionConverters._
 
 class JDBCSourceTask extends RowSourceTask {
@@ -26,6 +29,7 @@ class JDBCSourceTask extends RowSourceTask {
   private[this] var firstTimestampValue: Timestamp    = _
   private[this] var config: JDBCSourceConnectorConfig = _
   private[this] var queryHandler: BaseQueryHandler    = _
+  private[this] var lastPoll: Long                    = -1
 
   override protected[source] def run(settings: TaskSetting): Unit = {
     config = JDBCSourceConnectorConfig(settings)
@@ -69,21 +73,30 @@ class JDBCSourceTask extends RowSourceTask {
         startTimestamp = timestampRange._1
         stopTimestamp = timestampRange._2
       } else if (needToRun(currentTimestamp))
-        return queryHandler
-          .queryData(
-            partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp),
-            stopTimestamp,
-            currentTimestamp
-          )
-          .asJava
-      else return Seq.empty.asJava
+        return waitIfNeed(
+          queryHandler
+            .queryData(
+              partitionKey(config.dbTableName, firstTimestampValue, stopTimestamp),
+              stopTimestamp,
+              currentTimestamp
+            )
+        )
+      else return waitIfNeed(Seq.empty)
     }
-    queryHandler
-      .queryData(partitionKey(config.dbTableName, firstTimestampValue, startTimestamp), startTimestamp, stopTimestamp)
-      .asJava
+    waitIfNeed(
+      queryHandler
+        .queryData(partitionKey(config.dbTableName, firstTimestampValue, startTimestamp), startTimestamp, stopTimestamp)
+    )
   }
 
   override protected[source] def terminate(): Unit = Releasable.close(queryHandler)
+
+  private[jdbc] def waitIfNeed(records: Seq[RowSourceRecord]): java.util.List[RowSourceRecord] = {
+    val timeToWait = lastPoll + config.freq.toMillis - CommonUtils.current()
+    if (records.isEmpty && timeToWait > 0) TimeUnit.MILLISECONDS.sleep(timeToWait)
+    lastPoll = CommonUtils.current()
+    records.asJava
+  }
 
   private[this] def replaceToCurrentTimestamp(timestamp: Timestamp): Timestamp = {
     val currentTimestamp = queryHandler.current()

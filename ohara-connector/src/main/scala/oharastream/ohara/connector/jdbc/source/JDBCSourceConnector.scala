@@ -169,6 +169,14 @@ class JDBCSourceConnector extends RowSourceConnector {
         .key(INCREMENT_COLUMN_NAME_KEY)
         .orderInGroup(counter.getAndIncrement())
         .build(),
+      FREQUENCE_KEY -> SettingDef
+        .builder()
+        .displayName("Frequency")
+        .documentation("The frequency of jdbc source")
+        .key(FREQUENCE_KEY)
+        .optional(java.time.Duration.ofMillis(FREQUENCE_DEFAULT.toMillis))
+        .orderInGroup(counter.getAndIncrement())
+        .build(),
       FETCH_DATA_SIZE_KEY -> SettingDef
         .builder()
         .displayName("JDBC fetch size")

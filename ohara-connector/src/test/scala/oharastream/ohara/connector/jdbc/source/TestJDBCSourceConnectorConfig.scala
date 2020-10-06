@@ -20,6 +20,7 @@ import oharastream.ohara.kafka.connector.TaskSetting
 import org.junit.jupiter.api.Test
 import org.scalatest.matchers.should.Matchers._
 
+import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 class TestJDBCSourceConnectorConfig extends OharaTest {
   private[this] def jdbcConfig(settings: Map[String, String]): JDBCSourceConnectorConfig =
@@ -91,6 +92,7 @@ class TestJDBCSourceConnectorConfig extends OharaTest {
       flushDataSize = 1000,
       timestampColumnName = "123",
       incrementColumnName = None,
+      freq = Duration("1 seconds"),
       taskTotal = 0,
       taskHash = 0
     )

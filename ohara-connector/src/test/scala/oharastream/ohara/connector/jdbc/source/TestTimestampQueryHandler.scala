@@ -17,16 +17,18 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
+import java.time.temporal.ChronoUnit
 
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Column, DataType, Row}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.TopicKey
+import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.{RowSourceContext, TaskSetting}
 import oharastream.ohara.testing.service.Database
-import org.junit.jupiter.api.{BeforeEach, Test}
+import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers._
@@ -173,6 +175,8 @@ class TestTimestampQueryHandler extends OharaTest {
     when(taskSetting.stringOption(INCREMENT_COLUMN_NAME_KEY)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.intOption(FETCH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(FLUSH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+    when(taskSetting.durationOption(FREQUENCE_KEY))
+      .thenReturn(java.util.Optional.of(java.time.Duration.of(1, ChronoUnit.SECONDS)))
     when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
     when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
     when(taskSetting.columns).thenReturn(
@@ -184,5 +188,11 @@ class TestTimestampQueryHandler extends OharaTest {
     )
     when(taskSetting.topicKeys()).thenReturn(Set(TopicKey.of("g", "topic1")).asJava)
     taskSetting
+  }
+
+  @AfterEach
+  def afterTest(): Unit = {
+    Releasable.close(client)
+    Releasable.close(db)
   }
 }

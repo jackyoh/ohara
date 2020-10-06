@@ -17,10 +17,11 @@
 package oharastream.ohara.connector.jdbc.source
 
 import java.sql.{Statement, Timestamp}
+import java.time.temporal.ChronoUnit
 
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
-import oharastream.ohara.common.data.{Column, DataType}
+import oharastream.ohara.common.data.{Column, DataType, Row}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.TopicKey
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -234,6 +235,37 @@ class TestJDBCSourceTask extends OharaTest {
     result._2.getTime shouldBe Timestamp.valueOf("2020-08-03 00:00:00").getTime
   }
 
+  @Test
+  def testWaitIfNeedNoData(): Unit = {
+    val startTimestamp = CommonUtils.current()
+    val task           = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
+    task.run(taskSetting())
+    task.waitIfNeed(Seq.empty)
+    task.waitIfNeed(Seq.empty)
+    val stopTimestamp = CommonUtils.current()
+    (stopTimestamp - startTimestamp) >= 5000 shouldBe true
+  }
+
+  @Test
+  def testWaitIfNeedHaveData(): Unit = {
+    val startTimestamp = CommonUtils.current()
+    val task           = new JDBCSourceTask()
+    task.initialize(Mockito.mock(classOf[SourceTaskContext]))
+    task.run(taskSetting())
+    val records = Seq(
+      RowSourceRecord
+        .builder()
+        .row(Row.of())
+        .topicKey(TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5)))
+        .build()
+    )
+    task.waitIfNeed(Seq.empty)
+    task.waitIfNeed(records)
+    val stopTimestamp = CommonUtils.current()
+    (stopTimestamp - startTimestamp) < 5000 shouldBe true
+  }
+
   private[this] def taskSetting(): TaskSetting = {
     val taskSetting: TaskSetting = Mockito.mock(classOf[TaskSetting])
     when(taskSetting.stringValue(DB_URL_KEY)).thenReturn(db.url)
@@ -244,6 +276,8 @@ class TestJDBCSourceTask extends OharaTest {
     when(taskSetting.stringOption(DB_CATALOG_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
     when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME_KEY)).thenReturn(timestampColumnName)
     when(taskSetting.stringOption(INCREMENT_COLUMN_NAME_KEY)).thenReturn(java.util.Optional.empty[String]())
+    when(taskSetting.durationOption(FREQUENCE_KEY))
+      .thenReturn(java.util.Optional.of(java.time.Duration.of(5, ChronoUnit.SECONDS)))
     when(taskSetting.intOption(FETCH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(FLUSH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
     when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
