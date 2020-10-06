@@ -228,23 +228,23 @@ object TimestampQueryHandler {
                 s.dataType match {
                   case DataType.BOOLEAN => value.asInstanceOf[java.lang.Boolean]
                   case DataType.SHORT   => value.asInstanceOf[java.lang.Short]
-                  case DataType.INT     => {
+                  case DataType.INT => {
                     //println(s"VALUE CLASS IS ${value.getClass.getName}")
                     value.asInstanceOf[Int]
                   }
-                  case DataType.LONG    => {
+                  case DataType.LONG => {
                     val value1 = value.asInstanceOf[java.lang.Integer].toInt
                     value1.asInstanceOf[Long].asInstanceOf[java.lang.Long]
                     //value.asInstanceOf[java.lang.Long].toLong
                   }
-                  case DataType.FLOAT   => value.asInstanceOf[java.lang.Float].toFloat
-                  case DataType.DOUBLE  => value.asInstanceOf[java.lang.Double].toDouble
-                  case DataType.BYTE    => value.asInstanceOf[java.lang.Byte].toByte
-                  case DataType.STRING  => value.asInstanceOf[java.lang.String].toString
-                  case DataType.BYTES   => value.asInstanceOf[Array[java.lang.Byte]]
-                  case DataType.OBJECT  => value.asInstanceOf[java.lang.Object]
+                  case DataType.FLOAT  => value.asInstanceOf[java.lang.Float].toFloat
+                  case DataType.DOUBLE => value.asInstanceOf[java.lang.Double].toDouble
+                  case DataType.BYTE   => value.asInstanceOf[java.lang.Byte].toByte
+                  case DataType.STRING => value.asInstanceOf[java.lang.String].toString
+                  case DataType.BYTES  => value.asInstanceOf[Array[java.lang.Byte]]
+                  case DataType.OBJECT => value.asInstanceOf[java.lang.Object]
                   //case DataType.BYTES | DataType.OBJECT => value
-                  case _                => throw new IllegalArgumentException("Unsupported type...")
+                  case _ => throw new IllegalArgumentException("Unsupported type...")
                 }
               )
           }: _*

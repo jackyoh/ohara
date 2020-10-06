@@ -16,8 +16,13 @@
 
 package oharastream.ohara.connector.jdbc.source
 
+import java.util.concurrent.TimeUnit
+
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.kafka.connector.TaskSetting
+
+import scala.compat.java8.OptionConverters._
+import scala.concurrent.duration.Duration
 
 /**
   * This class is getting property value
@@ -33,6 +38,7 @@ case class JDBCSourceConnectorConfig(
   flushDataSize: Int,
   timestampColumnName: String,
   incrementColumnName: Option[String],
+  freq: Duration,
   taskTotal: Int,
   taskHash: Int
 ) {
@@ -45,6 +51,7 @@ case class JDBCSourceConnectorConfig(
       FETCH_DATA_SIZE_KEY       -> fetchDataSize.toString,
       FLUSH_DATA_SIZE_KEY       -> flushDataSize.toString,
       TIMESTAMP_COLUMN_NAME_KEY -> timestampColumnName,
+      FREQUENCE_KEY             -> freq.toString,
       TASK_TOTAL_KEY            -> taskTotal.toString,
       TASK_HASH_KEY             -> taskHash.toString
     ) ++ dbCatalogPattern.map(s => Map(DB_CATALOG_PATTERN_KEY    -> s)).getOrElse(Map.empty) ++
@@ -67,6 +74,11 @@ object JDBCSourceConnectorConfig {
       timestampColumnName = settings.stringValue(TIMESTAMP_COLUMN_NAME_KEY),
       incrementColumnName =
         Option(settings.stringOption(INCREMENT_COLUMN_NAME_KEY).orElse(null)).filterNot(CommonUtils.isEmpty),
+      freq = settings
+        .durationOption(FREQUENCE_KEY)
+        .asScala
+        .map(d => Duration(d.toMillis, TimeUnit.MILLISECONDS))
+        .getOrElse(FREQUENCE_DEFAULT),
       taskTotal = settings.intOption(TASK_TOTAL_KEY).orElse(0),
       taskHash = settings.intOption(TASK_HASH_KEY).orElse(0)
     )
