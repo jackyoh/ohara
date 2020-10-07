@@ -55,15 +55,15 @@ class PerfSourceTask extends RowSourceTask {
           Cell.of(
             c.newName,
             c.dataType match {
-              case DataType.BOOLEAN => false
-              case DataType.BYTE    => ByteUtils.toBytes(value).head
-              case DataType.BYTES   => new Array[Byte](props.cellSize)
-              case DataType.SHORT   => value.toShort
-              case DataType.INT     => value.toInt
-              case DataType.LONG    => value
-              case DataType.FLOAT   => value.toFloat
-              case DataType.DOUBLE  => value.toDouble
-              case DataType.STRING  => CommonUtils.randomString(props.cellSize)
+              case DataType.BOOLEAN => java.lang.Boolean.valueOf(false)
+              case DataType.BYTE    => java.lang.Byte.valueOf(ByteUtils.toBytes(value).head)
+              case DataType.BYTES   => new Array[java.lang.Byte](props.cellSize)
+              case DataType.SHORT   => java.lang.Short.valueOf(value.toShort)
+              case DataType.INT     => java.lang.Integer.valueOf(value.toInt)
+              case DataType.LONG    => java.lang.Long.valueOf(value)
+              case DataType.FLOAT   => java.lang.Float.valueOf(value.toFloat)
+              case DataType.DOUBLE  => java.lang.Double.valueOf(value.toDouble)
+              case DataType.STRING  => java.lang.String.valueOf(CommonUtils.randomString(props.cellSize))
               case _                => value
             }
           )

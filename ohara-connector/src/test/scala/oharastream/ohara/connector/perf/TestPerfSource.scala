@@ -76,7 +76,7 @@ class TestPerfSource extends With3Brokers3Workers {
 
   private[this] def matchType(lhs: Class[_], dataType: DataType): Unit = {
     dataType match {
-      case DataType.STRING  => lhs shouldBe classOf[String]
+      case DataType.STRING  => lhs shouldBe classOf[java.lang.String]
       case DataType.SHORT   => lhs shouldBe classOf[java.lang.Short]
       case DataType.INT     => lhs shouldBe classOf[java.lang.Integer]
       case DataType.LONG    => lhs shouldBe classOf[java.lang.Long]
@@ -84,7 +84,7 @@ class TestPerfSource extends With3Brokers3Workers {
       case DataType.DOUBLE  => lhs shouldBe classOf[java.lang.Double]
       case DataType.BOOLEAN => lhs shouldBe classOf[java.lang.Boolean]
       case DataType.BYTE    => lhs shouldBe classOf[java.lang.Byte]
-      case DataType.BYTES   => lhs shouldBe classOf[Array[Byte]]
+      case DataType.BYTES   => lhs shouldBe classOf[Array[java.lang.Byte]]
       case _                => throw new IllegalArgumentException("unsupported type in testing TestPerfSource")
     }
   }
