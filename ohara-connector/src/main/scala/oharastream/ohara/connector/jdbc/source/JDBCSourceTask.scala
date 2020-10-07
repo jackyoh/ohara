@@ -18,8 +18,7 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 
-import oharastream.ohara.common.util.Releasable
-import oharastream.ohara.connector.jdbc.util.Timer
+import oharastream.ohara.common.util.{Releasable, Timer}
 import oharastream.ohara.kafka.connector._
 
 import scala.jdk.CollectionConverters._
