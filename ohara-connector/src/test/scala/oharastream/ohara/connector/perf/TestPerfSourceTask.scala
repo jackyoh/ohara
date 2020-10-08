@@ -16,7 +16,9 @@
 
 package oharastream.ohara.connector.perf
 
+import oharastream.ohara.common.data.DataType
 import oharastream.ohara.common.rule.OharaTest
+import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.kafka.connector.json.ConnectorDefUtils
 import org.junit.jupiter.api.Test
 import org.scalatest.matchers.should.Matchers._
@@ -47,5 +49,27 @@ class TestPerfSourceTask extends OharaTest {
       row_1.isInstanceOf[Array[Byte]] shouldBe true
       row_0.asInstanceOf[Array[Byte]].hashCode() shouldBe row_1.asInstanceOf[Array[Byte]].hashCode()
     }
+  }
+
+  @Test
+  def testConvertToValue(): Unit = {
+    val perfSourceTask = new PerfSourceTask()
+    val cellSize       = 5
+    Seq(
+      perfSourceTask.convertToValue(DataType.BOOLEAN, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.BYTE, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.SHORT, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.INT, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.LONG, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.FLOAT, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.DOUBLE, CommonUtils.current(), cellSize),
+      perfSourceTask.convertToValue(DataType.STRING, CommonUtils.current(), cellSize)
+    ).foreach(_.getClass.getName.startsWith("java.lang") shouldBe true)
+    perfSourceTask
+      .convertToValue(DataType.BYTES, CommonUtils.current(), cellSize)
+      .asInstanceOf[Array[java.lang.Byte]]
+      .foreach { x =>
+        x.getClass.getName.startsWith("java.lang") shouldBe true
+      }
   }
 }

@@ -54,18 +54,7 @@ class PerfSourceTask extends RowSourceTask {
         schema.sortBy(_.order).map { c =>
           Cell.of(
             c.newName,
-            c.dataType match {
-              case DataType.BOOLEAN => java.lang.Boolean.valueOf(false)
-              case DataType.BYTE    => java.lang.Byte.valueOf(ByteUtils.toBytes(value).head)
-              case DataType.BYTES   => new Array[java.lang.Byte](props.cellSize)
-              case DataType.SHORT   => java.lang.Short.valueOf(value.toShort)
-              case DataType.INT     => java.lang.Integer.valueOf(value.toInt)
-              case DataType.LONG    => java.lang.Long.valueOf(value)
-              case DataType.FLOAT   => java.lang.Float.valueOf(value.toFloat)
-              case DataType.DOUBLE  => java.lang.Double.valueOf(value.toDouble)
-              case DataType.STRING  => java.lang.String.valueOf(CommonUtils.randomString(props.cellSize))
-              case _                => value
-            }
+            convertToValue(c.dataType, value, props.cellSize)
           )
         }: _*
       )
@@ -87,6 +76,21 @@ class PerfSourceTask extends RowSourceTask {
     if (timeToWait > 0) TimeUnit.MILLISECONDS.sleep(timeToWait)
     lastPoll = CommonUtils.current()
     records
+  }
+
+  private[perf] def convertToValue(dataType: DataType, value: Long, cellSize: Int): Any = {
+    dataType match {
+      case DataType.BOOLEAN => java.lang.Boolean.valueOf(false)
+      case DataType.BYTE    => java.lang.Byte.valueOf(ByteUtils.toBytes(value).head)
+      case DataType.BYTES   => BigInt(value).toByteArray.map(x => java.lang.Byte.valueOf(x))
+      case DataType.SHORT   => java.lang.Short.valueOf(value.toShort)
+      case DataType.INT     => java.lang.Integer.valueOf(value.toInt)
+      case DataType.LONG    => java.lang.Long.valueOf(value)
+      case DataType.FLOAT   => java.lang.Float.valueOf(value.toFloat)
+      case DataType.DOUBLE  => java.lang.Double.valueOf(value.toDouble)
+      case DataType.STRING  => java.lang.String.valueOf(CommonUtils.randomString(cellSize))
+      case _                => value
+    }
   }
 }
 
