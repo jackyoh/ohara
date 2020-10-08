@@ -17,25 +17,25 @@
 package oharastream.ohara.common.util;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 public class Timer {
-  private AtomicInteger counter = new AtomicInteger(0);
-  private int BASE_VALUE = 100;
+  private LongAdder sleepTimestamp = new LongAdder();
 
   /**
-   * Is over the wait time, default value is 1 seconds
+   * It should be updated to an new value (multiplied by 2) after sleep.
    *
-   * @return true or false
+   * @return boolean value
    */
-  public boolean overWait() {
-    return BASE_VALUE * Math.pow(2, counter.getAndAdd(1)) > 1000; // 1000 is 1 seconds
-  }
-
-  /** Sleep time is 100 * 2 ^ Wait counter. Unit is MILLISECONDS. */
-  public void sleep() {
+  public boolean timeToSleep() {
+    int DURATION = 100;
     try {
-      TimeUnit.MILLISECONDS.sleep(BASE_VALUE * (long) Math.pow(2, counter.intValue()));
+      TimeUnit.MILLISECONDS.sleep(sleepTimestamp.longValue());
+      sleepTimestamp.add(2 * DURATION);
+      if (sleepTimestamp.longValue() >= 1000) { // 1000 is 1 seconds
+        sleepTimestamp.reset();
+        return false;
+      } else return true;
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

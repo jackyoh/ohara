@@ -16,7 +16,6 @@
 
 package oharastream.ohara.common.util;
 
-import java.util.stream.IntStream;
 import oharastream.ohara.common.rule.OharaTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -24,28 +23,20 @@ import org.junit.jupiter.api.Test;
 public class TestTimer extends OharaTest {
 
   @Test
-  public void testOverWait() {
-    Timer timer = new Timer();
-    IntStream.range(1, 3).forEach(i -> Assertions.assertFalse(timer.overWait()));
-    Assertions.assertTrue(timer.overWait());
-  }
-
-  @Test
-  public void testSleep() {
-    Timer timer = new Timer();
-    long startTimestamp = CommonUtils.current();
-    IntStream.range(0, 4).forEach(i -> timer.overWait());
-    Assertions.assertTrue(CommonUtils.current() - startTimestamp > 1000);
-  }
-
-  @Test
-  public void testLoop() {
+  public void testTimeToSleep() {
     int count = 0;
     Timer timer = new Timer();
     do {
       count++;
-      timer.sleep();
-    } while (!timer.overWait());
-    Assertions.assertTrue(count >= 4);
+    } while (timer.timeToSleep());
+    Assertions.assertEquals(count, 5);
+    do {
+      count++;
+    } while (timer.timeToSleep());
+    Assertions.assertEquals(count, 10);
+    do {
+      count++;
+    } while (timer.timeToSleep());
+    Assertions.assertEquals(count, 15);
   }
 }

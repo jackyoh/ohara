@@ -85,8 +85,7 @@ class JDBCSourceTask extends RowSourceTask {
       val queryResult = queryHandler
         .queryData(partitionKey(config.dbTableName, firstTimestampValue, startTimestamp), startTimestamp, stopTimestamp)
       if (queryResult.nonEmpty) return queryResult.asJava
-      else timer.sleep()
-    } while (!timer.overWait())
+    } while (timer.timeToSleep())
     Seq.empty.asJava
   }
 
