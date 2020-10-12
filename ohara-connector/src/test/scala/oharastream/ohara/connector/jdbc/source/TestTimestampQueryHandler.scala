@@ -163,6 +163,54 @@ class TestTimestampQueryHandler extends OharaTest {
     Releasable.close(db)
   }
 
+  @Test
+  def testConvertToValue(): Unit = {
+    val queryHandler = TimestampQueryHandler.builder.config(JDBCSourceConnectorConfig(taskSetting())).build()
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN1").dataType(DataType.BOOLEAN).build(), true)
+      .isInstanceOf[java.lang.Boolean] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN2").dataType(DataType.SHORT).build(), 1.toShort)
+      .isInstanceOf[java.lang.Short] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN3").dataType(DataType.INT).build(), 2.toInt)
+      .isInstanceOf[java.lang.Integer] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN4").dataType(DataType.LONG).build(), 3.toLong)
+      .isInstanceOf[java.lang.Long] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN5").dataType(DataType.FLOAT).build(), 4.0.toFloat)
+      .isInstanceOf[java.lang.Float] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN6").dataType(DataType.DOUBLE).build(), 5.0.toDouble)
+      .isInstanceOf[java.lang.Double] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN7").dataType(DataType.BYTE).build(), 100.toByte)
+      .isInstanceOf[java.lang.Byte] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN8").dataType(DataType.BYTES).build(), "test".getBytes)
+      .isInstanceOf[Array[java.lang.Byte]] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN9").dataType(DataType.STRING).build(), "test")
+      .isInstanceOf[String] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN10").dataType(DataType.OBJECT).build(), 123)
+      .isInstanceOf[Object] shouldBe true
+
+    queryHandler
+      .convertToValue(Column.builder.name("COLUMN10").dataType(DataType.OBJECT).build(), "test")
+      .isInstanceOf[Object] shouldBe true
+  }
+
   private[this] def mockQueryHandler(key: String, value: Int): TimestampQueryHandler = {
     val rowSourceContext          = Mockito.mock(classOf[RowSourceContext])
     val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> value.toString)
