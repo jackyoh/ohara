@@ -17,10 +17,11 @@
 package oharastream.ohara.common.util;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 
 public class Timer {
-  private LongAdder sleepTimestamp = new LongAdder();
+  private static final long SLEEP_TIMESTAMP_INIT_VALUE = 100;
+  private static final int SLEEP_TIMEOUT = 1000; // 1000 is 1 seconds
+  private long sleepTimestamp = SLEEP_TIMESTAMP_INIT_VALUE;
 
   /**
    * It should be updated to an new value (multiplied by 2) after sleep.
@@ -28,12 +29,11 @@ public class Timer {
    * @return boolean value
    */
   public boolean timeToSleep() {
-    int DURATION = 100;
     try {
-      TimeUnit.MILLISECONDS.sleep(sleepTimestamp.longValue());
-      sleepTimestamp.add(2 * DURATION);
-      if (sleepTimestamp.longValue() >= 1000) { // 1000 is 1 seconds
-        sleepTimestamp.reset();
+      TimeUnit.MILLISECONDS.sleep(sleepTimestamp);
+      sleepTimestamp = sleepTimestamp * 2;
+      if (sleepTimestamp >= SLEEP_TIMEOUT) { // Default is 1 seconds
+        sleepTimestamp = SLEEP_TIMESTAMP_INIT_VALUE;
         return false;
       } else return true;
     } catch (InterruptedException e) {

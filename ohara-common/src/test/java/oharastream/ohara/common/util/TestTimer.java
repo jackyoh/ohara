@@ -29,14 +29,14 @@ public class TestTimer extends OharaTest {
     do {
       count++;
     } while (timer.timeToSleep());
-    Assertions.assertEquals(count, 5);
+    Assertions.assertEquals(count, 4);
     do {
       count++;
     } while (timer.timeToSleep());
-    Assertions.assertEquals(count, 10);
+    Assertions.assertEquals(count, 8);
     do {
       count++;
     } while (timer.timeToSleep());
-    Assertions.assertEquals(count, 15);
+    Assertions.assertEquals(count, 12);
   }
 }
