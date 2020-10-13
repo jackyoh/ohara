@@ -28,15 +28,15 @@ public class TestSleeper extends OharaTest {
     Sleeper sleeper = new Sleeper();
     do {
       count++;
-    } while (sleeper.timeToSleep());
+    } while (sleeper.tryToSleep());
     Assertions.assertEquals(count, 4);
     do {
       count++;
-    } while (sleeper.timeToSleep());
-    Assertions.assertEquals(count, 8);
+    } while (sleeper.tryToSleep());
+    Assertions.assertEquals(count, 5);
     do {
       count++;
-    } while (sleeper.timeToSleep());
-    Assertions.assertEquals(count, 12);
+    } while (sleeper.tryToSleep());
+    Assertions.assertEquals(count, 6);
   }
 }
