@@ -37,7 +37,7 @@ public class Sleeper {
         return false;
       } else return true;
     } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+      return false;
     }
   }
 }
