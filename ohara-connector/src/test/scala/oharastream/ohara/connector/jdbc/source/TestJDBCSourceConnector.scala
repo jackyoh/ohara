@@ -203,6 +203,10 @@ class TestJDBCSourceConnector extends With3Brokers3Workers {
 
   @AfterEach
   def tearDown(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
     Releasable.close(client)
     Releasable.close(db)
   }

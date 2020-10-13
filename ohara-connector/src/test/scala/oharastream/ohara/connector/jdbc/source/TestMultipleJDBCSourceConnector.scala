@@ -162,6 +162,10 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers {
   def tearDown(): Unit = {
     result(connectorAdmin.delete(connectorKey2))
     result(connectorAdmin.delete(connectorKey1))
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
     Releasable.close(client)
     Releasable.close(db)
   }

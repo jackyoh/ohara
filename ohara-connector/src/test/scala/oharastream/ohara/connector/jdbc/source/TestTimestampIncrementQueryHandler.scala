@@ -16,7 +16,7 @@
 
 package oharastream.ohara.connector.jdbc.source
 
-import java.sql.Timestamp
+import java.sql.{Statement, Timestamp}
 
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.client.database.DatabaseClient
@@ -176,6 +176,10 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
 
   @AfterEach
   def afterTest(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
     Releasable.close(client)
     Releasable.close(db)
   }

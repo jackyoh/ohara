@@ -266,6 +266,10 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
 
   @AfterEach
   def tearDown(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
     Releasable.close(client)
     Releasable.close(db)
   }

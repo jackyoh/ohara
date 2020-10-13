@@ -16,7 +16,7 @@
 
 package oharastream.ohara.connector.jdbc.source
 
-import java.sql.{Date, Time, Timestamp}
+import java.sql.{Date, Statement, Time, Timestamp}
 import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.client.database.DatabaseClient
@@ -182,6 +182,10 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
 
   @AfterEach
   def tearDown(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
     Releasable.close(client)
     Releasable.close(db)
   }

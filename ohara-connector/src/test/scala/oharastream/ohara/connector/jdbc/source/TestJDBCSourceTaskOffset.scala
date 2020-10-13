@@ -28,7 +28,7 @@ import oharastream.ohara.kafka.connector.{RowSourceRecord, TaskSetting}
 import oharastream.ohara.testing.service.Database
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
-import org.junit.jupiter.api.{BeforeEach, Test}
+import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers._
@@ -45,6 +45,7 @@ class TestJDBCSourceTaskOffset extends OharaTest {
   private[this] val taskContext: SourceTaskContext           = Mockito.mock(classOf[SourceTaskContext])
   private[this] val taskSetting: TaskSetting                 = Mockito.mock(classOf[TaskSetting])
   private[this] val offsetStorageReader: OffsetStorageReader = Mockito.mock(classOf[OffsetStorageReader])
+
   @BeforeEach
   def setup(): Unit = {
     val column2 = "COLUMN2"
@@ -123,5 +124,15 @@ class TestJDBCSourceTaskOffset extends OharaTest {
       x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
       x._2 shouldBe "8"
     }
+  }
+
+  @AfterEach
+  def afterTest(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
+    Releasable.close(client)
+    Releasable.close(db)
   }
 }

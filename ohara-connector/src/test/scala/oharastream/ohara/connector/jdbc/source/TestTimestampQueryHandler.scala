@@ -23,10 +23,11 @@ import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.common.data.{Column, DataType, Row}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.TopicKey
+import oharastream.ohara.common.util.Releasable
 import oharastream.ohara.connector.jdbc.util.ColumnInfo
 import oharastream.ohara.kafka.connector.{RowSourceContext, TaskSetting}
 import oharastream.ohara.testing.service.Database
-import org.junit.jupiter.api.{BeforeEach, Test}
+import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers._
@@ -148,6 +149,16 @@ class TestTimestampQueryHandler extends OharaTest {
     val stopTimestamp: Timestamp  = Timestamp.valueOf("2018-09-02 00:00:00")
     an[IllegalArgumentException] should be thrownBy
       mockQueryHandler(key, 6).completed(key, startTimestamp, stopTimestamp)
+  }
+
+  @AfterEach
+  def afterTest(): Unit = {
+    if (client != null) {
+      val statement: Statement = client.connection.createStatement()
+      statement.execute(s"drop table $tableName")
+    }
+    Releasable.close(client)
+    Releasable.close(db)
   }
 
   private[this] def mockQueryHandler(key: String, value: Int): TimestampQueryHandler = {
