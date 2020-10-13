@@ -18,9 +18,10 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Statement
 import java.util.concurrent.TimeUnit
+
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
-import oharastream.ohara.common.data.{Row, Serializer}
+import oharastream.ohara.common.data.{Column, DataType, Row, Serializer}
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.Consumer
@@ -70,7 +71,7 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
       val binaryData = "some string data ...".getBytes()
       stmt.setString(1, "2018-10-01 00:00:00")
       stmt.setBytes(2, binaryData)
-      stmt.setByte(3, 1)
+      stmt.setByte(3, 1.toByte)
       stmt.setInt(4, 100)
       stmt.setBoolean(5, false)
       stmt.setLong(6, 1000)
@@ -89,6 +90,21 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
   def testSettingColumns(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val columns = Seq(
+      Column.builder.name(timestampColumnName).newName("c1").dataType(DataType.OBJECT).build(),
+      Column.builder.name("column2").newName("c2").dataType(DataType.BYTES).build(),
+      Column.builder.name("column3").newName("c3").dataType(DataType.BOOLEAN).build(),
+      Column.builder.name("column4").newName("c4").dataType(DataType.INT).build(),
+      Column.builder.name("column5").newName("c5").dataType(DataType.BOOLEAN).build(),
+      Column.builder.name("column6").newName("c6").dataType(DataType.LONG).build(),
+      Column.builder.name("column7").newName("c7").dataType(DataType.FLOAT).build(),
+      Column.builder.name("column8").newName("c8").dataType(DataType.DOUBLE).build(),
+      Column.builder.name("column9").newName("c9").dataType(DataType.OBJECT).build(),
+      Column.builder.name("column10").newName("c10").dataType(DataType.OBJECT).build(),
+      Column.builder.name("column11").newName("c11").dataType(DataType.OBJECT).build(),
+      Column.builder.name("column12").newName("c12").dataType(DataType.STRING).build(),
+      Column.builder.name("column13").newName("c13").dataType(DataType.STRING).build()
+    )
     result(
       connectorAdmin
         .connectorCreator()
@@ -97,8 +113,13 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
         .topicKey(topicKey)
         .numberOfTasks(3)
         .settings(props.toMap)
+        .columns(columns)
         .create()
     )
+    try {
+      val record = pollData(topicKey, Duration(30, TimeUnit.SECONDS), 1)
+      record.size shouldBe 1
+    } finally result(connectorAdmin.delete(connectorKey))
   }
 
   @Test
@@ -154,7 +175,7 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
       row0.cell(7).value.isInstanceOf[java.lang.Double] shouldBe true
       row0.cell(7).value shouldBe 2000.0
 
-      // Test bigdecimal type
+      // Test big decimal type
       row0.cell(8).value.isInstanceOf[java.math.BigDecimal] shouldBe true
       row0.cell(8).value shouldBe java.math.BigDecimal.valueOf(10000)
 

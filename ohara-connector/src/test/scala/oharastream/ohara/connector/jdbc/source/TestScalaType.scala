@@ -46,6 +46,14 @@ class TestScalaType extends OharaTest {
     } finally Releasable.close(statement)
   }
 
+  @Test
+  def test2(): Unit = {
+    val a = Integer.valueOf(1.toInt)
+    println("==========================")
+    println(s"Test type is ${a.getClass.getName}")
+    println("==========================")
+  }
+
   @AfterEach
   def after(): Unit = {
     Releasable.close(client)

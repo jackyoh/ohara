@@ -127,7 +127,7 @@ trait BaseQueryHandler extends Releasable {
       case DataType.FLOAT   => java.lang.Float.valueOf(value.asInstanceOf[Float])
       case DataType.DOUBLE  => java.lang.Double.valueOf(value.asInstanceOf[Double])
       case DataType.BYTE    => java.lang.Byte.valueOf(value.asInstanceOf[Byte])
-      case DataType.BYTES   => value.asInstanceOf[Array[Byte]].map(x => java.lang.Byte.valueOf(x))
+      case DataType.BYTES   => value.asInstanceOf[Array[java.lang.Byte]]
       case DataType.STRING  => java.lang.String.valueOf(value.asInstanceOf[String])
       case DataType.OBJECT  => value
       case _ =>
