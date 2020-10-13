@@ -18,7 +18,7 @@ package oharastream.ohara.connector.jdbc.source
 
 import java.sql.Timestamp
 
-import oharastream.ohara.common.util.{Releasable, Timer}
+import oharastream.ohara.common.util.{Releasable, Sleeper}
 import oharastream.ohara.kafka.connector._
 
 import scala.jdk.CollectionConverters._
@@ -53,7 +53,7 @@ class JDBCSourceTask extends RowSourceTask {
   }
 
   override protected[source] def pollRecords(): java.util.List[RowSourceRecord] = {
-    val timer = new Timer()
+    val sleeper = new Sleeper()
     do {
       val timestampRange = calcTimestampRange(firstTimestampValue, firstTimestampValue)
       var startTimestamp = timestampRange._1
@@ -85,7 +85,7 @@ class JDBCSourceTask extends RowSourceTask {
       val queryResult = queryHandler
         .queryData(partitionKey(config.dbTableName, firstTimestampValue, startTimestamp), startTimestamp, stopTimestamp)
       if (queryResult.nonEmpty) return queryResult.asJava
-    } while (timer.timeToSleep())
+    } while (sleeper.timeToSleep())
     Seq.empty.asJava
   }
 

@@ -20,23 +20,23 @@ import oharastream.ohara.common.rule.OharaTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class TestTimer extends OharaTest {
+public class TestSleeper extends OharaTest {
 
   @Test
   public void testTimeToSleep() {
     int count = 0;
-    Timer timer = new Timer();
+    Sleeper sleeper = new Sleeper();
     do {
       count++;
-    } while (timer.timeToSleep());
+    } while (sleeper.timeToSleep());
     Assertions.assertEquals(count, 4);
     do {
       count++;
-    } while (timer.timeToSleep());
+    } while (sleeper.timeToSleep());
     Assertions.assertEquals(count, 8);
     do {
       count++;
-    } while (timer.timeToSleep());
+    } while (sleeper.timeToSleep());
     Assertions.assertEquals(count, 12);
   }
 }
