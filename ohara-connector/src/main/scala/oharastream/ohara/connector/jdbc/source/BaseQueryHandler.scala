@@ -119,6 +119,7 @@ trait BaseQueryHandler extends Releasable {
     )
 
   private[source] def convertToValue(column: Column, value: Any): Any = {
+    // Confirm all data type is java.lang.*
     column.dataType match {
       case DataType.BOOLEAN => java.lang.Boolean.valueOf(value.asInstanceOf[Boolean])
       case DataType.SHORT   => java.lang.Short.valueOf(value.asInstanceOf[Short])
