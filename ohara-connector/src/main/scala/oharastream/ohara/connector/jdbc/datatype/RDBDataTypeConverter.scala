@@ -57,7 +57,9 @@ trait RDBDataTypeConverter {
           .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
           .orElseGet(() => new Timestamp(0))
       case DataTypeEnum.BYTES =>
-        Optional.ofNullable(resultSet.getBytes(columnName)).orElseGet(() => Array())
+        Optional
+          .ofNullable(resultSet.getBytes(columnName).map(value => java.lang.Byte.valueOf(value)))
+          .orElseGet(() => Array())
       case _ =>
         throw new UnsupportedOperationException(
           s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for ${dataBaseProductName} implement."

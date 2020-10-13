@@ -16,9 +16,8 @@
 
 package oharastream.ohara.connector.jdbc.source
 
-import java.sql.{Date, Statement, Time, Timestamp}
+import java.sql.Statement
 import java.util.concurrent.TimeUnit
-
 import oharastream.ohara.client.database.DatabaseClient
 import oharastream.ohara.client.kafka.ConnectorAdmin
 import oharastream.ohara.common.data.{Row, Serializer}
@@ -78,8 +77,8 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
       stmt.setFloat(7, 200)
       stmt.setDouble(8, 2000)
       stmt.setBigDecimal(9, java.math.BigDecimal.valueOf(10000))
-      stmt.setDate(10, Date.valueOf("2018-10-01"))
-      stmt.setTime(11, Time.valueOf("11:00:00"))
+      stmt.setDate(10, java.sql.Date.valueOf("2018-10-01"))
+      stmt.setTime(11, java.sql.Time.valueOf("11:00:00"))
       stmt.setString(12, "B")
       stmt.setString(13, "aaaaaaaaaa")
       stmt.executeUpdate()
@@ -87,10 +86,25 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
   }
 
   @Test
-  def test(): Unit = {
+  def testSettingColumns(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    result(
+      connectorAdmin
+        .connectorCreator()
+        .connectorKey(connectorKey)
+        .connectorClass(classOf[JDBCSourceConnector])
+        .topicKey(topicKey)
+        .numberOfTasks(3)
+        .settings(props.toMap)
+        .create()
+    )
+  }
 
+  @Test
+  def testDefaultColumns(): Unit = {
+    val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
+    val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
     result(
       connectorAdmin
         .connectorCreator()
@@ -109,35 +123,35 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
       record.size shouldBe 1
 
       // Test timestamp type
-      row0.cell(0).value.isInstanceOf[Timestamp] shouldBe true
+      row0.cell(0).value.isInstanceOf[java.sql.Timestamp] shouldBe true
       row0.cell(0).value.toString shouldBe "2018-10-01 00:00:00.0"
 
       // Test byte array type
-      row0.cell(1).value.isInstanceOf[Array[Byte]] shouldBe true
-      new String(row0.cell(1).value.asInstanceOf[Array[Byte]]) shouldBe "some string data ..."
+      row0.cell(1).value.isInstanceOf[Array[java.lang.Byte]] shouldBe true
+      new String(row0.cell(1).value.asInstanceOf[Array[java.lang.Byte]].map(x => Byte.unbox(x))) shouldBe "some string data ..."
 
       // Test bit type
-      row0.cell(2).value.isInstanceOf[Boolean] shouldBe true
+      row0.cell(2).value.isInstanceOf[java.lang.Boolean] shouldBe true
       row0.cell(2).value shouldBe true
 
       // Test tinyint type
-      row0.cell(3).value.isInstanceOf[Integer] shouldBe true
+      row0.cell(3).value.isInstanceOf[java.lang.Integer] shouldBe true
       row0.cell(3).value shouldBe 100
 
       // Test boolean type
-      row0.cell(4).value.isInstanceOf[Boolean] shouldBe true
+      row0.cell(4).value.isInstanceOf[java.lang.Boolean] shouldBe true
       row0.cell(4).value shouldBe false
 
       // Test long type
-      row0.cell(5).value.isInstanceOf[Long] shouldBe true
+      row0.cell(5).value.isInstanceOf[java.lang.Long] shouldBe true
       row0.cell(5).value shouldBe 1000
 
       // Test float type
-      row0.cell(6).value.isInstanceOf[Float] shouldBe true
+      row0.cell(6).value.isInstanceOf[java.lang.Float] shouldBe true
       row0.cell(6).value shouldBe 200.0
 
       // Test double type
-      row0.cell(7).value.isInstanceOf[Double] shouldBe true
+      row0.cell(7).value.isInstanceOf[java.lang.Double] shouldBe true
       row0.cell(7).value shouldBe 2000.0
 
       // Test bigdecimal type
@@ -145,19 +159,19 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
       row0.cell(8).value shouldBe java.math.BigDecimal.valueOf(10000)
 
       // Test date type
-      row0.cell(9).value.isInstanceOf[Date] shouldBe true
-      row0.cell(9).value shouldBe Date.valueOf("2018-10-01")
+      row0.cell(9).value.isInstanceOf[java.sql.Date] shouldBe true
+      row0.cell(9).value shouldBe java.sql.Date.valueOf("2018-10-01")
 
       // Test time type
-      row0.cell(10).value.isInstanceOf[Time] shouldBe true
-      row0.cell(10).value shouldBe Time.valueOf("11:00:00")
+      row0.cell(10).value.isInstanceOf[java.sql.Time] shouldBe true
+      row0.cell(10).value shouldBe java.sql.Time.valueOf("11:00:00")
 
       // Test enum type
-      row0.cell(11).value.isInstanceOf[String] shouldBe true
+      row0.cell(11).value.isInstanceOf[java.lang.String] shouldBe true
       row0.cell(11).value.toString shouldBe "B"
 
       // Test longtext type
-      row0.cell(12).value.isInstanceOf[String] shouldBe true
+      row0.cell(12).value.isInstanceOf[java.lang.String] shouldBe true
       row0.cell(12).value.toString shouldBe "aaaaaaaaaa"
     } finally result(connectorAdmin.delete(connectorKey))
   }
