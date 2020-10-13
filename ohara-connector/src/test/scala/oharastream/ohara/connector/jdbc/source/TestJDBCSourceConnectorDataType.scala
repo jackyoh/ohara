@@ -90,21 +90,25 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
   def testSettingColumns(): Unit = {
     val connectorKey = ConnectorKey.of(CommonUtils.randomString(5), "JDBC-Source-Connector-Test")
     val topicKey     = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
-    val columns = Seq(
-      Column.builder.name(timestampColumnName).newName("c1").dataType(DataType.OBJECT).build(),
-      Column.builder.name("column2").newName("c2").dataType(DataType.BYTES).build(),
-      Column.builder.name("column3").newName("c3").dataType(DataType.BOOLEAN).build(),
-      Column.builder.name("column4").newName("c4").dataType(DataType.INT).build(),
-      Column.builder.name("column5").newName("c5").dataType(DataType.BOOLEAN).build(),
-      Column.builder.name("column6").newName("c6").dataType(DataType.LONG).build(),
-      Column.builder.name("column7").newName("c7").dataType(DataType.FLOAT).build(),
-      Column.builder.name("column8").newName("c8").dataType(DataType.DOUBLE).build(),
-      Column.builder.name("column9").newName("c9").dataType(DataType.OBJECT).build(),
-      Column.builder.name("column10").newName("c10").dataType(DataType.OBJECT).build(),
-      Column.builder.name("column11").newName("c11").dataType(DataType.OBJECT).build(),
-      Column.builder.name("column12").newName("c12").dataType(DataType.STRING).build(),
-      Column.builder.name("column13").newName("c13").dataType(DataType.STRING).build()
+    val dataTypes = Seq(
+      DataType.OBJECT,
+      DataType.BYTES,
+      DataType.BOOLEAN,
+      DataType.INT,
+      DataType.BOOLEAN,
+      DataType.LONG,
+      DataType.FLOAT,
+      DataType.DOUBLE,
+      DataType.OBJECT,
+      DataType.OBJECT,
+      DataType.OBJECT,
+      DataType.STRING,
+      DataType.STRING
     )
+    val columns = dataTypes.zipWithIndex.map {
+      case (dataType, i) =>
+        Column.builder.name(s"column${i + 1}").newName(s"c${i + 1}").dataType(dataType).build()
+    }
     result(
       connectorAdmin
         .connectorCreator()
@@ -119,6 +123,45 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
     try {
       val record = pollData(topicKey, Duration(30, TimeUnit.SECONDS), 1)
       record.size shouldBe 1
+      val row0 = record.head.key.get
+      row0.cell("c1").value.isInstanceOf[java.sql.Timestamp] shouldBe true
+      row0.cell("c1").value.toString shouldBe "2018-10-01 00:00:00.0"
+
+      row0.cell("c2").value.isInstanceOf[Array[java.lang.Byte]] shouldBe true
+      row0.cell("c2").value shouldBe "some string data ...".getBytes()
+
+      row0.cell("c3").value.isInstanceOf[java.lang.Boolean] shouldBe true
+      row0.cell("c3").value shouldBe true
+
+      row0.cell("c4").value.isInstanceOf[java.lang.Integer] shouldBe true
+      row0.cell("c4").value shouldBe 100
+
+      row0.cell("c5").value.isInstanceOf[java.lang.Boolean] shouldBe true
+      row0.cell("c5").value shouldBe false
+
+      row0.cell("c6").value.isInstanceOf[java.lang.Long] shouldBe true
+      row0.cell("c6").value shouldBe 1000
+
+      row0.cell("c7").value.isInstanceOf[java.lang.Float] shouldBe true
+      row0.cell("c7").value shouldBe 200
+
+      row0.cell("c8").value.isInstanceOf[java.lang.Double] shouldBe true
+      row0.cell("c8").value shouldBe 2000
+
+      row0.cell("c9").value.isInstanceOf[java.math.BigDecimal] shouldBe true
+      row0.cell("c9").value.asInstanceOf[java.math.BigDecimal].intValue() shouldBe 10000
+
+      row0.cell("c10").value.isInstanceOf[java.sql.Date] shouldBe true
+      row0.cell("c10").value shouldBe java.sql.Date.valueOf("2018-10-01")
+
+      row0.cell("c11").value.isInstanceOf[java.sql.Time] shouldBe true
+      row0.cell("c11").value shouldBe java.sql.Time.valueOf("11:00:00")
+
+      row0.cell("c12").value.isInstanceOf[java.lang.String] shouldBe true
+      row0.cell("c12").value shouldBe "B"
+
+      row0.cell("c13").value.isInstanceOf[java.lang.String] shouldBe true
+      row0.cell("c13").value shouldBe "aaaaaaaaaa"
     } finally result(connectorAdmin.delete(connectorKey))
   }
 
