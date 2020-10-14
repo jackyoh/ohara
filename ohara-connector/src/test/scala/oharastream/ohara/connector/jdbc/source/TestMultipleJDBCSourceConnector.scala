@@ -55,30 +55,31 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers {
 
     client.createTable(tableName, Seq(column1, column2, column3, column4))
     val statement: Statement = db.connection.createStatement()
+    try {
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:01', 'a21', 'a22', 2)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:02', 'a31', 'a32', 3)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:03.123456', 'a61', 'a62', 6)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:04.123', 'a71', 'a72', 7)"
+      )
+      statement.executeUpdate(s"INSERT INTO $tableName(column1) VALUES('2018-09-01 00:00:05')")
 
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:01', 'a21', 'a22', 2)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:02', 'a31', 'a32', 3)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:03.123456', 'a61', 'a62', 6)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 00:00:04.123', 'a71', 'a72', 7)"
-    )
-    statement.executeUpdate(s"INSERT INTO $tableName(column1) VALUES('2018-09-01 00:00:05')")
-
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 MINUTE, 'a41', 'a42', 4)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
-    )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 3 MINUTE, 'a41', 'a42', 4)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
+      )
+    } finally Releasable.close(statement)
   }
 
   @Test
@@ -165,6 +166,7 @@ class TestMultipleJDBCSourceConnector extends With3Brokers3Workers {
     if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table $tableName")
+      Releasable.close(statement)
     }
     Releasable.close(client)
     Releasable.close(db)

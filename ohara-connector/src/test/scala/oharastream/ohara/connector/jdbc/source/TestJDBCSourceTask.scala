@@ -50,28 +50,29 @@ class TestJDBCSourceTask extends OharaTest {
 
     client.createTable(tableName, Seq(column1, column2, column3, column4))
     val statement: Statement = db.connection.createStatement()
-
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:01', 'a21', 'a22', 2)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:02', 'a31', 'a32', 3)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:03.12', 'a41', 'a42', 4)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:04.123456', 'a51', 'a52', 5)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
-    )
+    try {
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:01', 'a21', 'a22', 2)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:02', 'a31', 'a32', 3)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:03.12', 'a41', 'a42', 4)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:04.123456', 'a51', 'a52', 5)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(COLUMN1,COLUMN2,COLUMN3,COLUMN4) VALUES(NOW() + INTERVAL 3 DAY, 'a41', 'a42', 4)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES(NOW() + INTERVAL 1 DAY, 'a51', 'a52', 5)"
+      )
+    } finally Releasable.close(statement)
   }
 
   @Test
@@ -116,25 +117,27 @@ class TestJDBCSourceTask extends OharaTest {
     rows1.size shouldBe 5
 
     val statement: Statement = db.connection.createStatement()
-    statement.executeUpdate(
-      s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 23:00:00.0', 'a81', 'a82', 8)"
-    )
-    task.stop()
-
-    val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "5")
-    when(
-      offsetStorageReader.offset(
-        Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+    try {
+      statement.executeUpdate(
+        s"INSERT INTO $tableName(column1,column2,column3,column4) VALUES('2018-09-01 23:00:00.0', 'a81', 'a82', 8)"
       )
-    ).thenReturn(maps.asJava)
+      task.stop()
 
-    task.run(taskSetting())
-    val rows2: Seq[RowSourceRecord] = task.pollRecords().asScala.toSeq
-    rows2.size shouldBe 1
-    rows2.head.sourceOffset.asScala.foreach(x => {
-      x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
-      x._2 shouldBe "6"
-    })
+      val maps: Map[String, Object] = Map(JDBCOffsetCache.TABLE_OFFSET_KEY -> "5")
+      when(
+        offsetStorageReader.offset(
+          Map(JDBCOffsetCache.TABLE_PARTITION_KEY -> s"$tableName:2018-09-01 00:00:00.0~2018-09-02 00:00:00.0").asJava
+        )
+      ).thenReturn(maps.asJava)
+
+      task.run(taskSetting())
+      val rows2: Seq[RowSourceRecord] = task.pollRecords().asScala.toSeq
+      rows2.size shouldBe 1
+      rows2.head.sourceOffset.asScala.foreach(x => {
+        x._1 shouldBe JDBCOffsetCache.TABLE_OFFSET_KEY
+        x._2 shouldBe "6"
+      })
+    } finally Releasable.close(statement)
   }
 
   @Test

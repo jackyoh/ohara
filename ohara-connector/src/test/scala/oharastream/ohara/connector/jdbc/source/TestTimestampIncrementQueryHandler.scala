@@ -179,6 +179,7 @@ class TestTimestampIncrementQueryHandler extends OharaTest {
     if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table $tableName")
+      Releasable.close(statement)
     }
     Releasable.close(client)
     Releasable.close(db)

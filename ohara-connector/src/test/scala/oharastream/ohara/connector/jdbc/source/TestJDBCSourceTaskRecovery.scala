@@ -53,54 +53,57 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
 
     client.createTable(tableName, Seq(column1, column2, column3, column4))
     val statement: Statement = db.connection.createStatement()
+    try {
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a21', 'a22', 2)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a31', 'a32', 3)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a41', 'a42', 4)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:02', 'a51', 'a52', 5)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:03.12', 'a61', 'a62', 6)"
+      )
+      statement.executeUpdate(
+        s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-02 00:00:04', 'a71', 'a72', 7)"
+      )
 
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a11', 'a12', 1)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a21', 'a22', 2)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a31', 'a32', 3)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:00', 'a41', 'a42', 4)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:02', 'a51', 'a52', 5)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-01 00:00:03.12', 'a61', 'a62', 6)"
-    )
-    statement.executeUpdate(
-      s"INSERT INTO $tableName($timestampColumnName,COLUMN2,COLUMN3,COLUMN4) VALUES('2018-09-02 00:00:04', 'a71', 'a72', 7)"
-    )
+      // Mock JDBC Source Task
+      when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
+      jdbcSourceTask.initialize(taskContext.asInstanceOf[SourceTaskContext])
 
-    // Mock JDBC Source Task
-    when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader)
-    jdbcSourceTask.initialize(taskContext.asInstanceOf[SourceTaskContext])
+      when(taskSetting.stringValue(DB_URL_KEY)).thenReturn(db.url)
+      when(taskSetting.stringValue(DB_USERNAME_KEY)).thenReturn(db.user)
+      when(taskSetting.stringValue(DB_PASSWORD_KEY)).thenReturn(db.password)
+      when(taskSetting.stringValue(DB_TABLENAME_KEY)).thenReturn(tableName)
+      when(taskSetting.stringOption(DB_SCHEMA_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
+      when(taskSetting.stringOption(DB_CATALOG_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
+      when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME_KEY)).thenReturn(timestampColumnName)
+      when(taskSetting.stringOption(INCREMENT_COLUMN_NAME_KEY)).thenReturn(java.util.Optional.empty[String]())
+      when(taskSetting.intOption(FETCH_DATA_SIZE_KEY))
+        .thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+      when(taskSetting.intOption(FLUSH_DATA_SIZE_KEY))
+        .thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
+      when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
+      when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
 
-    when(taskSetting.stringValue(DB_URL_KEY)).thenReturn(db.url)
-    when(taskSetting.stringValue(DB_USERNAME_KEY)).thenReturn(db.user)
-    when(taskSetting.stringValue(DB_PASSWORD_KEY)).thenReturn(db.password)
-    when(taskSetting.stringValue(DB_TABLENAME_KEY)).thenReturn(tableName)
-    when(taskSetting.stringOption(DB_SCHEMA_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
-    when(taskSetting.stringOption(DB_CATALOG_PATTERN_KEY)).thenReturn(java.util.Optional.empty[String]())
-    when(taskSetting.stringValue(TIMESTAMP_COLUMN_NAME_KEY)).thenReturn(timestampColumnName)
-    when(taskSetting.stringOption(INCREMENT_COLUMN_NAME_KEY)).thenReturn(java.util.Optional.empty[String]())
-    when(taskSetting.intOption(FETCH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
-    when(taskSetting.intOption(FLUSH_DATA_SIZE_KEY)).thenReturn(java.util.Optional.of(java.lang.Integer.valueOf(2000)))
-    when(taskSetting.intOption(TASK_HASH_KEY)).thenReturn(java.util.Optional.of(0))
-    when(taskSetting.intOption(TASK_TOTAL_KEY)).thenReturn(java.util.Optional.of(1))
+      val columns: Seq[Column] = Seq(
+        Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build(),
+        Column.builder().name("COLUMN2").dataType(DataType.STRING).order(1).build(),
+        Column.builder().name("COLUMN4").dataType(DataType.INT).order(3).build()
+      )
 
-    val columns: Seq[Column] = Seq(
-      Column.builder().name("COLUMN1").dataType(DataType.OBJECT).order(0).build(),
-      Column.builder().name("COLUMN2").dataType(DataType.STRING).order(1).build(),
-      Column.builder().name("COLUMN4").dataType(DataType.INT).order(3).build()
-    )
-
-    when(taskSetting.columns).thenReturn(columns.asJava)
-    when(taskSetting.topicKeys()).thenReturn(Set(TopicKey.of("g", "topic1")).asJava)
+      when(taskSetting.columns).thenReturn(columns.asJava)
+      when(taskSetting.topicKeys()).thenReturn(Set(TopicKey.of("g", "topic1")).asJava)
+    } finally Releasable.close(statement)
   }
 
   @Test
@@ -269,6 +272,7 @@ class TestJDBCSourceTaskRecovery extends OharaTest {
     if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table $tableName")
+      Releasable.close(statement)
     }
     Releasable.close(client)
     Releasable.close(db)

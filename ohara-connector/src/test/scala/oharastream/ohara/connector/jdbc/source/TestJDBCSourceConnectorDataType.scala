@@ -65,24 +65,25 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
         "column13 LONGTEXT)"
     )
 
-    val sql   = s"INSERT INTO table1 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    val pstmt = connection.prepareStatement(sql)
-
-    val binaryData = "some string data ...".getBytes()
-    pstmt.setString(1, "2018-10-01 00:00:00")
-    pstmt.setBytes(2, binaryData)
-    pstmt.setByte(3, 1)
-    pstmt.setInt(4, 100)
-    pstmt.setBoolean(5, false)
-    pstmt.setLong(6, 1000)
-    pstmt.setFloat(7, 200)
-    pstmt.setDouble(8, 2000)
-    pstmt.setBigDecimal(9, java.math.BigDecimal.valueOf(10000))
-    pstmt.setDate(10, Date.valueOf("2018-10-01"))
-    pstmt.setTime(11, Time.valueOf("11:00:00"))
-    pstmt.setString(12, "B")
-    pstmt.setString(13, "aaaaaaaaaa")
-    pstmt.executeUpdate()
+    val sql  = s"INSERT INTO table1 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    val stmt = connection.prepareStatement(sql)
+    try {
+      val binaryData = "some string data ...".getBytes()
+      stmt.setString(1, "2018-10-01 00:00:00")
+      stmt.setBytes(2, binaryData)
+      stmt.setByte(3, 1)
+      stmt.setInt(4, 100)
+      stmt.setBoolean(5, false)
+      stmt.setLong(6, 1000)
+      stmt.setFloat(7, 200)
+      stmt.setDouble(8, 2000)
+      stmt.setBigDecimal(9, java.math.BigDecimal.valueOf(10000))
+      stmt.setDate(10, Date.valueOf("2018-10-01"))
+      stmt.setTime(11, Time.valueOf("11:00:00"))
+      stmt.setString(12, "B")
+      stmt.setString(13, "aaaaaaaaaa")
+      stmt.executeUpdate()
+    } finally Releasable.close(stmt)
   }
 
   @Test
@@ -185,6 +186,7 @@ class TestJDBCSourceConnectorDataType extends With3Brokers3Workers {
     if (client != null) {
       val statement: Statement = client.connection.createStatement()
       statement.execute(s"drop table $tableName")
+      Releasable.close(statement)
     }
     Releasable.close(client)
     Releasable.close(db)
