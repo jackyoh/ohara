@@ -54,7 +54,7 @@ class PerfSourceTask extends RowSourceTask {
         schema.sortBy(_.order).map { c =>
           Cell.of(
             c.newName,
-            convertToValue(c.dataType, value, props.cellSize)
+            convertToValue(c.dataType, value)
           )
         }: _*
       )
@@ -78,7 +78,7 @@ class PerfSourceTask extends RowSourceTask {
     records
   }
 
-  private[perf] def convertToValue(dataType: DataType, value: Long, cellSize: Int): Any = {
+  private[perf] def convertToValue(dataType: DataType, value: Long): Any = {
     dataType match {
       case DataType.BOOLEAN => java.lang.Boolean.valueOf(false)
       case DataType.BYTE    => java.lang.Byte.valueOf(ByteUtils.toBytes(value).head)
@@ -88,7 +88,7 @@ class PerfSourceTask extends RowSourceTask {
       case DataType.LONG    => java.lang.Long.valueOf(value)
       case DataType.FLOAT   => java.lang.Float.valueOf(value.toFloat)
       case DataType.DOUBLE  => java.lang.Double.valueOf(value.toDouble)
-      case DataType.STRING  => java.lang.String.valueOf(CommonUtils.randomString(cellSize))
+      case DataType.STRING  => java.lang.String.valueOf(CommonUtils.randomString(props.cellSize))
       case _                => value
     }
   }
