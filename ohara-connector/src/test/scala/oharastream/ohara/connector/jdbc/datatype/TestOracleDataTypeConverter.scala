@@ -44,8 +44,8 @@ class TestOracleDataTypeConverter extends OharaTest {
     val column                  = RdbColumn("column1", "RAW", false)
     val oracleDataTypeConverter = new OracleDataTypeConverter()
     val result                  = oracleDataTypeConverter.converterValue(resultSet, column)
-    result.isInstanceOf[Array[Byte]] shouldBe true
-    new String(result.asInstanceOf[Array[Byte]]) shouldBe "aaaa"
+    result.isInstanceOf[Array[java.lang.Byte]] shouldBe true
+    new String(result.asInstanceOf[Array[java.lang.Byte]].map(x => Byte.unbox(x))) shouldBe "aaaa"
   }
 
   @Test
@@ -55,8 +55,8 @@ class TestOracleDataTypeConverter extends OharaTest {
     val column                  = RdbColumn("column1", "RAW", false)
     val oracleDataTypeConverter = new OracleDataTypeConverter()
     val result                  = oracleDataTypeConverter.converterValue(resultSet, column)
-    result.isInstanceOf[Array[Byte]] shouldBe true
-    result.asInstanceOf[Array[Byte]].length shouldBe 0
+    result.isInstanceOf[Array[java.lang.Byte]] shouldBe true
+    result.asInstanceOf[Array[java.lang.Byte]].length shouldBe 0
   }
 
   @Test

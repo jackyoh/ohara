@@ -122,8 +122,8 @@ class TestMySQLDataTypeConverter extends OharaTest {
     val mySQLDataTypeConverter = new MySQLDataTypeConverter()
     val result                 = mySQLDataTypeConverter.converterValue(resultSet, column)
 
-    new String(result.asInstanceOf[Array[Byte]]) shouldBe "aaaa"
-    result.isInstanceOf[Array[Byte]] shouldBe true
+    new String(result.asInstanceOf[Array[java.lang.Byte]].map(x => Byte.unbox(x))) shouldBe "aaaa"
+    result.isInstanceOf[Array[java.lang.Byte]] shouldBe true
   }
 
   @Test
@@ -134,7 +134,7 @@ class TestMySQLDataTypeConverter extends OharaTest {
     val mySQLDataTypeConverter = new MySQLDataTypeConverter()
     val result                 = mySQLDataTypeConverter.converterValue(resultSet, column)
 
-    new String(result.asInstanceOf[Array[Byte]]) shouldBe ""
-    result.isInstanceOf[Array[Byte]] shouldBe true
+    new String(result.asInstanceOf[Array[java.lang.Byte]].map(x => Byte.unbox(x))) shouldBe ""
+    result.isInstanceOf[Array[java.lang.Byte]] shouldBe true
   }
 }

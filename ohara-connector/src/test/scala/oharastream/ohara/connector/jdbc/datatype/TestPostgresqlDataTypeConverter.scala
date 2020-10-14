@@ -114,8 +114,8 @@ class TestPostgresqlDataTypeConverter extends OharaTest {
     val column                                     = RdbColumn("column1", "BYTEA", false)
     val rdbDataTypeConverter: RDBDataTypeConverter = new PostgresqlDataTypeConverter()
     val result: Any                                = rdbDataTypeConverter.converterValue(resultSet, column)
-    result.isInstanceOf[Array[Byte]] shouldBe true
-    new String(result.asInstanceOf[Array[Byte]]) shouldBe "aaa"
+    result.isInstanceOf[Array[java.lang.Byte]] shouldBe true
+    new String(result.asInstanceOf[Array[java.lang.Byte]].map(x => Byte.unbox(x))) shouldBe "aaa"
   }
 
   @Test

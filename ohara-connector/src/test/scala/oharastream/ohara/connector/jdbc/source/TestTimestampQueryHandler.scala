@@ -195,7 +195,10 @@ class TestTimestampQueryHandler extends OharaTest {
       .isInstanceOf[java.lang.Byte] shouldBe true
 
     queryHandler
-      .convertToValue(Column.builder.name("COLUMN8").dataType(DataType.BYTES).build(), "test".getBytes)
+      .convertToValue(
+        Column.builder.name("COLUMN8").dataType(DataType.BYTES).build(),
+        "test".getBytes.map(x => java.lang.Byte.valueOf(x))
+      )
       .isInstanceOf[Array[java.lang.Byte]] shouldBe true
 
     queryHandler

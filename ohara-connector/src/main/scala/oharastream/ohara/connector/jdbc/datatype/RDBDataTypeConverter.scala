@@ -58,7 +58,10 @@ trait RDBDataTypeConverter {
           .orElseGet(() => new Timestamp(0))
       case DataTypeEnum.BYTES =>
         Optional
-          .ofNullable(resultSet.getBytes(columnName).map(value => java.lang.Byte.valueOf(value)))
+          .ofNullable(resultSet.getBytes(columnName))
+          .map { value =>
+            value.map(x => java.lang.Byte.valueOf(x))
+          }
           .orElseGet(() => Array())
       case _ =>
         throw new UnsupportedOperationException(
