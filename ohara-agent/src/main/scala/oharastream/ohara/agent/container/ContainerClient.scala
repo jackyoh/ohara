@@ -191,7 +191,7 @@ object ContainerClient {
 
     final override def create(): Future[Unit] = doCreate(
       nodeName = CommonUtils.requireNonEmpty(nodeName),
-      name = CommonUtils.requireNonEmpty(name),
+      name = s"${CommonUtils.requireNonEmpty(name)}-${CommonUtils.randomString(5)}",
       path = CommonUtils.requireNonEmpty(path),
       executionContext = Objects.requireNonNull(executionContext)
     )
