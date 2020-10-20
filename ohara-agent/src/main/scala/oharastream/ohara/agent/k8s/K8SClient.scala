@@ -317,59 +317,44 @@ object K8SClient {
               CommonUtils.requireNonEmpty(domainName)
               CommonUtils.requireNonEmpty(labelName)
               implicit val pool: ExecutionContext = executionContext
-
-              val newVolumeMaps: Future[Map[String, String]] = volumes()
-                .map { volumeInfo =>
-                  volumeInfo.filter(_.nodeName == nodeName).map(_.name)
-                }
-                .map { volumeName =>
-                  volumeMaps
-                    .filter {
-                      case (key, _) => volumeName.contains(key)
-                    }
-                    .map {
-                      case (_, value) => (volumeName.head, value)
-                    }
-                }
-
               nodeNameIPInfo()
-                .flatMap { ipInfo =>
-                  newVolumeMaps.map { newVolumes =>
-                    PodSpec(
-                      nodeSelector = Some(NodeSelector(nodeName)),
-                      hostname = hostname, //hostname is container name
-                      subdomain = Some(domainName),
-                      hostAliases = Some(ipInfo ++ routes.map { case (host, ip) => HostAliases(ip, Seq(host)) }),
-                      containers = Seq(
-                        Container(
-                          name = labelName,
-                          image = imageName,
-                          volumeMounts =
-                            if (newVolumes.isEmpty) None
-                            else Some(newVolumes.map(v => VolumeMount(v._1, v._2)).toSeq),
-                          /*volumeMounts =
+                .map { ipInfo =>
+                  PodSpec(
+                    nodeSelector = Some(NodeSelector(nodeName)),
+                    hostname = hostname, //hostname is container name
+                    subdomain = Some(domainName),
+                    hostAliases = Some(ipInfo ++ routes.map { case (host, ip) => HostAliases(ip, Seq(host)) }),
+                    containers = Seq(
+                      Container(
+                        name = labelName,
+                        image = imageName,
+                        volumeMounts =
                           if (volumeMaps.isEmpty) None
                           else
-                            Some(volumeMaps.map(v => VolumeMount(v._1, v._2)).toSeq),*/
-                          env = if (envs.isEmpty) None else Some(envs.map(x => EnvVar(x._1, Some(x._2))).toSeq),
-                          ports = if (ports.isEmpty) None else Some(ports.map(x => ContainerPort(x._1, x._2)).toSeq),
-                          imagePullPolicy = Some(imagePullPolicy),
-                          command = command.map(Seq(_)),
-                          args = if (arguments.isEmpty) None else Some(arguments)
+                            Some(volumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
+                        env =
+                          if (envs.isEmpty) None
+                          else Some(envs.map { case (key, value) => EnvVar(key, Some(value)) }.toSet.toSeq),
+                        ports =
+                          if (ports.isEmpty) None
+                          else Some(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
+                        imagePullPolicy = Some(imagePullPolicy),
+                        command = command.map(Seq(_)),
+                        args = if (arguments.isEmpty) None else Some(arguments)
+                      )
+                    ),
+                    restartPolicy = Some(restartPolicy),
+                    nodeName = None,
+                    volumes =
+                      if (volumeMaps.isEmpty) None
+                      else
+                        Some(
+                          volumeMaps
+                            .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
+                            .toSet
+                            .toSeq
                         )
-                      ),
-                      restartPolicy = Some(restartPolicy),
-                      nodeName = None,
-                      volumes =
-                        if (volumeMaps.isEmpty) None
-                        else
-                          Some(
-                            volumeMaps
-                              .map(v => K8SVolume(v._1, Some(MountPersistentVolumeClaim(v._1))))
-                              .toSeq
-                          )
-                    )
-                  }
+                  )
                 }
                 .flatMap(
                   podSpec =>
