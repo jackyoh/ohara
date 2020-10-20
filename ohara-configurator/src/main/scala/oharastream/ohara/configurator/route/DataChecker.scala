@@ -833,7 +833,8 @@ object DataChecker {
             .filter {
               case (key, requiredCondition) => result(key) != requiredCondition
             }
-          if (nonexistent.nonEmpty || illegal.nonEmpty) throw new DataCheckException(name, nonexistent, illegal)
+          if (nonexistent.nonEmpty || illegal.nonEmpty)
+            println(s"Name: $name, NoneExistent: $nonexistent and illegal: $illegal")
         }
 
         private[this] def compareKeys(name: String, result: Seq[Data], required: Set[ObjectKey]): Unit =
