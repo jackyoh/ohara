@@ -85,7 +85,7 @@ object K8SClient {
 
     /**
       * Set K8S metrics server URL
-      * @param metricsApiServerURL for set Kubernetes metrics api server url, default value is null
+      * @param metricsServerURL for set Kubernetes metrics api server url, default value is null
       * @return K8SClientBuilder object
       */
     @Optional("default value is null")
@@ -331,9 +331,13 @@ object K8SClient {
                         volumeMounts =
                           if (volumeMaps.isEmpty) None
                           else
-                            Some(volumeMaps.map(v => VolumeMount(v._1, v._2)).toSeq),
-                        env = if (envs.isEmpty) None else Some(envs.map(x => EnvVar(x._1, Some(x._2))).toSeq),
-                        ports = if (ports.isEmpty) None else Some(ports.map(x => ContainerPort(x._1, x._2)).toSeq),
+                            Some(volumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
+                        env =
+                          if (envs.isEmpty) None
+                          else Some(envs.map { case (key, value) => EnvVar(key, Some(value)) }.toSet.toSeq),
+                        ports =
+                          if (ports.isEmpty) None
+                          else Some(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
                         imagePullPolicy = Some(imagePullPolicy),
                         command = command.map(Seq(_)),
                         args = if (arguments.isEmpty) None else Some(arguments)
@@ -346,7 +350,8 @@ object K8SClient {
                       else
                         Some(
                           volumeMaps
-                            .map(v => K8SVolume(v._1, Some(MountPersistentVolumeClaim(v._1))))
+                            .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
+                            .toSet
                             .toSeq
                         )
                   )
@@ -413,7 +418,7 @@ object K8SClient {
                 .flatMap { _ =>
                   httpExecutor
                     .post[PersistentVolumeClaim, PersistentVolumeClaim, ErrorResponse](
-                      s"$serverURL/namespaces/${namespace}/persistentvolumeclaims",
+                      s"$serverURL/namespaces/$namespace/persistentvolumeclaims",
                       PersistentVolumeClaim(
                         PVCMetadata(volumeName),
                         PVCSpec(
@@ -487,7 +492,7 @@ object K8SClient {
     else if (usedValue.endsWith("m"))
       usedValue.replace("m", "").toLong / (1000.0 * totalValue) // 1 core = 1000 millicores
     else
-      throw new IllegalArgumentException(s"The cpu used value ${usedValue} doesn't converter long type")
+      throw new IllegalArgumentException(s"The cpu used value $usedValue doesn't converter long type")
   }
 
   private[k8s] def memoryUsedCalc(usedValue: String, totalValue: Long): Double = {
@@ -505,7 +510,7 @@ object K8SClient {
     else if (usedValue.endsWith("Ei"))
       usedValue.replace("Ei", "").toDouble * 1024 * 1024 * 1024 * 1024 * 1024 / totalValue // 1 Ei = 2^50 Ei
     else
-      throw new IllegalArgumentException(s"The memory used value ${usedValue} doesn't converter double type")
+      throw new IllegalArgumentException(s"The memory used value $usedValue doesn't converter double type")
   }
 
   trait ContainerCreator extends ContainerClient.ContainerCreator {
