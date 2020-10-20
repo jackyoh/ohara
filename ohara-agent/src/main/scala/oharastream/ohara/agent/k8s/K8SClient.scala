@@ -317,13 +317,17 @@ object K8SClient {
               CommonUtils.requireNonEmpty(domainName)
               CommonUtils.requireNonEmpty(labelName)
               implicit val pool: ExecutionContext = executionContext
-              volumes()
+
+              volumes
+                .map { volumes =>
+                  volumes.filter(volume => volume.nodeName == nodeName)
+                }
                 .flatMap { volumes =>
-                  volumes.foreach { volume =>
-                    println(s"VOLUME NAME: ${volume.name}, NODE NAME: ${volume.nodeName} and PATH: ${volume.path}")
-                  }
                   nodeNameIPInfo()
                     .map { ipInfo =>
+                      volumes.foreach { volume =>
+                        println(s"VOLUME NAME: ${volume.name}, NODE NAME: ${volume.nodeName} and PATH: ${volume.path}")
+                      }
                       PodSpec(
                         nodeSelector = Some(NodeSelector(nodeName)),
                         hostname = hostname, //hostname is container name
