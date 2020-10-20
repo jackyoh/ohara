@@ -318,7 +318,7 @@ object K8SClient {
               CommonUtils.requireNonEmpty(labelName)
               implicit val pool: ExecutionContext = executionContext
 
-              volumes
+              volumes()
                 .map { volumes =>
                   volumes.filter(volume => volume.nodeName == nodeName)
                 }
