@@ -323,11 +323,13 @@ object K8SClient {
                   volumeInfo.filter(_.nodeName == nodeName).map(_.name)
                 }
                 .map { volumeName =>
-                  volumeMaps.map {
-                    case (key, value) =>
-                      if (volumeName.contains(key)) (volumeName.head, value)
-                      else throw new IllegalArgumentException(s"The $volumeName is not found in the $nodeName node")
-                  }
+                  volumeMaps
+                    .filter {
+                      case (key, _) => volumeName.contains(key)
+                    }
+                    .map {
+                      case (_, value) => (volumeName.head, value)
+                    }
                 }
 
               nodeNameIPInfo()
