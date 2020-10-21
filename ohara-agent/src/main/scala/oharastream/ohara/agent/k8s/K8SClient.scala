@@ -340,8 +340,15 @@ object K8SClient {
                             image = imageName,
                             volumeMounts =
                               if (newVolumeMaps.isEmpty) None
-                              else
-                                Some(newVolumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
+                              else {
+                                println(s"NEW VOLUME MAP SIZE IS ${newVolumeMaps.size}")
+                                println("---------------------------------------------")
+                                newVolumeMaps.foreach {
+                                  case (key, value) =>
+                                    println(s"KEY: $key    VALUE: $value")
+                                }
+                                Some(newVolumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq)
+                              },
                             env =
                               if (envs.isEmpty) None
                               else Some(envs.map { case (key, value) => EnvVar(key, Some(value)) }.toSet.toSeq),
