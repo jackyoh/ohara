@@ -322,15 +322,27 @@ object K8SClient {
                 .flatMap { volumes =>
                   nodeNameIPInfo()
                     .map { ipInfo =>
-                      println("==========[VOLUME INFO]===========")
-                      volumes.foreach { volume =>
-                        println(s"VOLUME NAME: ${volume.name}, NODE NAME: ${volume.nodeName} and PATH: ${volume.path}")
+                      println("=======[OLDER VOLUME MAP]=======")
+                      volumeMaps.foreach {
+                        case (key, value) =>
+                          println(s"KEY: $key, VALUE: $value")
+                      }
+                      println("================================")
+                      val newVolumeMaps: Map[String, String] = volumeMaps.map {
+                        case (key, value) =>
+                          volumes
+                            .find(_.name.contains(key))
+                            .map(x => (x.name, value))
+                            .getOrElse(throw new IllegalArgumentException("Volume Not found"))
+                      }
+
+                      println("=======[NEW VOLUME MAP]==========")
+                      newVolumeMaps.foreach {
+                        case (key, value) =>
+                          println(s"KEY: $key, VALUE: $value")
                       }
                       println("==================================")
-                      volumeMaps.foreach {
-                        case (key, value) => println(s"VOLUME MAP KEY=$key, VALUE=$value")
-                      }
-                      println("===================================")
+
                       PodSpec(
                         nodeSelector = Some(NodeSelector(nodeName)),
                         hostname = hostname, //hostname is container name
