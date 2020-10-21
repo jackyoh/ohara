@@ -329,31 +329,22 @@ object K8SClient {
                         name = labelName,
                         image = imageName,
                         volumeMounts =
-                          if (volumeMaps.isEmpty) None
-                          else
-                            Some(volumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
-                        env =
-                          if (envs.isEmpty) None
-                          else Some(envs.map { case (key, value) => EnvVar(key, Some(value)) }.toSet.toSeq),
-                        ports =
-                          if (ports.isEmpty) None
-                          else Some(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
+                          Option(volumeMaps.map { case (key, value)  => VolumeMount(key, value) }.toSet.toSeq),
+                        env = Option(envs.map { case (key, value)    => EnvVar(key, Some(value)) }.toSet.toSeq),
+                        ports = Option(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
                         imagePullPolicy = Some(imagePullPolicy),
                         command = command.map(Seq(_)),
-                        args = if (arguments.isEmpty) None else Some(arguments)
+                        args = Option(arguments)
                       )
                     ),
                     restartPolicy = Some(restartPolicy),
                     nodeName = None,
-                    volumes =
-                      if (volumeMaps.isEmpty) None
-                      else
-                        Some(
-                          volumeMaps
-                            .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
-                            .toSet
-                            .toSeq
-                        )
+                    volumes = Option(
+                      volumeMaps
+                        .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
+                        .toSet
+                        .toSeq
+                    )
                   )
                 }
                 .flatMap(
