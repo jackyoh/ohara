@@ -357,7 +357,8 @@ object K8SClient {
                         ),
                         restartPolicy = Some(restartPolicy),
                         nodeName = None,
-                        volumes =
+                        volumes = Option.empty
+                        /*volumes =
                           if (volumeMaps.isEmpty) None
                           else
                             Some(
@@ -365,7 +366,7 @@ object K8SClient {
                                 .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
                                 .toSet
                                 .toSeq
-                            )
+                            )*/
                       )
                     }
                 }
