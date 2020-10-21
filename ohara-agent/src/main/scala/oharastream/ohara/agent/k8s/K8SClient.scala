@@ -340,10 +340,11 @@ object K8SClient {
                           Container(
                             name = labelName,
                             image = imageName,
-                            volumeMounts =
+                            /*volumeMounts =
                               if (volumeMaps.isEmpty) None
                               else
-                                Some(volumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
+                                Some(volumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),*/
+                            volumeMounts = None,
                             env =
                               if (envs.isEmpty) None
                               else Some(envs.map { case (key, value) => EnvVar(key, Some(value)) }.toSet.toSeq),
