@@ -322,12 +322,6 @@ object K8SClient {
                 .flatMap { volumes =>
                   nodeNameIPInfo()
                     .map { ipInfo =>
-                      println("=======[OLDER VOLUME MAP]=======")
-                      volumeMaps.foreach {
-                        case (key, value) =>
-                          println(s"KEY: $key, VALUE: $value")
-                      }
-                      println("================================")
                       val newVolumeMaps: Map[String, String] = volumeMaps.map {
                         case (key, value) =>
                           volumes
@@ -335,14 +329,6 @@ object K8SClient {
                             .map(x => (x.name, value))
                             .getOrElse(throw new IllegalArgumentException("Volume Not found"))
                       }
-
-                      println("=======[NEW VOLUME MAP]==========")
-                      newVolumeMaps.foreach {
-                        case (key, value) =>
-                          println(s"KEY: $key, VALUE: $value")
-                      }
-                      println("==================================")
-
                       PodSpec(
                         nodeSelector = Some(NodeSelector(nodeName)),
                         hostname = hostname, //hostname is container name
@@ -352,11 +338,10 @@ object K8SClient {
                           Container(
                             name = labelName,
                             image = imageName,
-                            /*volumeMounts =
-                              if (volumeMaps.isEmpty) None
+                            volumeMounts =
+                              if (newVolumeMaps.isEmpty) None
                               else
-                                Some(volumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),*/
-                            volumeMounts = None,
+                                Some(newVolumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
                             env =
                               if (envs.isEmpty) None
                               else Some(envs.map { case (key, value) => EnvVar(key, Some(value)) }.toSet.toSeq),
@@ -370,16 +355,15 @@ object K8SClient {
                         ),
                         restartPolicy = Some(restartPolicy),
                         nodeName = None,
-                        volumes = Option.empty
-                        /*volumes =
-                          if (volumeMaps.isEmpty) None
+                        volumes =
+                          if (newVolumeMaps.isEmpty) None
                           else
                             Some(
-                              volumeMaps
+                              newVolumeMaps
                                 .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
                                 .toSet
                                 .toSeq
-                            )*/
+                            )
                       )
                     }
                 }
