@@ -421,7 +421,7 @@ object DockerClient {
         .map(_.toMap)
 
     override def volumeCreator: VolumeCreator =
-      (nodeName: String, prefixVolumeName: String, name: String, path: String, executionContext: ExecutionContext) => {
+      (prefixVolumeName: String, nodeName: String, name: String, path: String, executionContext: ExecutionContext) => {
         implicit val pool: ExecutionContext = executionContext
         remoteFolderHandler
           .create(nodeName, path)

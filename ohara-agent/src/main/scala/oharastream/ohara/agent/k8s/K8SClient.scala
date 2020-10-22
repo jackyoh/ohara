@@ -382,8 +382,8 @@ object K8SClient {
 
         override def volumeCreator: VolumeCreator =
           (
-            nodeName: String,
             prefixVolumeName: String,
+            nodeName: String,
             volumeName: String,
             path: String,
             executionContext: ExecutionContext
