@@ -179,13 +179,9 @@ object RemoteFolderHandler {
     private[this] def agent[T](
       hostname: String
     )(f: Agent => T)(implicit executionContext: ExecutionContext): Future[T] = {
-      println(s"HostName: $hostname")
       dataCollie
         .value[Node](hostname)
         .map { node =>
-          println(
-            s"NodeHostname: ${node.hostname}, NodeUser: ${node.user}, NodePassword: ${node.password} and NodePort: ${node.port}"
-          )
           Agent.builder
             .hostname(node.hostname)
             .user(node.user)
