@@ -421,7 +421,7 @@ object DockerClient {
         .map(_.toMap)
 
     override def volumeCreator: VolumeCreator =
-      (nodeName: String, name: String, path: String, executionContext: ExecutionContext) => {
+      (nodeName: String, prefixVolumeName: String, name: String, path: String, executionContext: ExecutionContext) => {
         implicit val pool: ExecutionContext = executionContext
         remoteFolderHandler
           .create(nodeName, path)
@@ -431,7 +431,7 @@ object DockerClient {
                 .map(
                   _.execute(
                     s"docker volume create --name $name" +
-                      s" --label $LABEL_KEY=$LABEL_VALUE --label $PATH_KEY=$path" +
+                      s"--label prefixVolumeName=$prefixVolumeName --label $LABEL_KEY=$LABEL_VALUE --label $PATH_KEY=$path" +
                       s" --opt type=none --opt device=$path --opt o=bind"
                   )
                 )
@@ -453,7 +453,8 @@ object DockerClient {
                     name = info.Name,
                     driver = info.Driver,
                     path = info.path,
-                    nodeName = agent.hostname
+                    nodeName = agent.hostname,
+                    prefixVolumeName = info.Name
                   )
                 }
                 .toSeq

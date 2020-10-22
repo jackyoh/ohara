@@ -162,14 +162,20 @@ trait ContainerClient extends Releasable {
 
 object ContainerClient {
   trait VolumeCreator extends oharastream.ohara.common.pattern.Creator[Future[Unit]] {
+    private[this] var prefixVolumeName: String                    = _
     private[this] var name: String                                = CommonUtils.randomString()
     private[this] var path: String                                = _
     private[this] var nodeName: String                            = _
     private[this] implicit var executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
+    def prefixVolumeName(prefixVolumeName: String): VolumeCreator.this.type = {
+      this.prefixVolumeName = CommonUtils.requireNonEmpty(prefixVolumeName)
+      this
+    }
+
     @Optional("default is random string")
     def name(name: String): VolumeCreator.this.type = {
-      this.name = CommonUtils.requireNonEmpty(name)
+      this.name = s"${CommonUtils.requireNonEmpty(name)}-${CommonUtils.randomString(5)}"
       this
     }
 
@@ -190,6 +196,7 @@ object ContainerClient {
     }
 
     final override def create(): Future[Unit] = doCreate(
+      prefixName = CommonUtils.requireNonEmpty(prefixVolumeName),
       nodeName = CommonUtils.requireNonEmpty(nodeName),
       name = CommonUtils.requireNonEmpty(name),
       path = CommonUtils.requireNonEmpty(path),
@@ -197,6 +204,7 @@ object ContainerClient {
     )
 
     protected def doCreate(
+      prefixName: String,
       nodeName: String,
       name: String,
       path: String,

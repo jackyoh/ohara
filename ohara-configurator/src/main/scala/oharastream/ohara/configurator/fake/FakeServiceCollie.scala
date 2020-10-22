@@ -67,12 +67,13 @@ private[configurator] class FakeServiceCollie(
     private[this] val existentVolumes = new ConcurrentHashMap[String, ConcurrentHashMap[String, ContainerVolume]]()
 
     override def volumeCreator: ContainerClient.VolumeCreator =
-      (nodeName: String, name: String, path: String, _: ExecutionContext) => {
+      (nodeName: String, prefixVolumeName: String, name: String, path: String, _: ExecutionContext) => {
         val volume = ContainerVolume(
           name = name,
           driver = "fake",
           path = path,
-          nodeName = nodeName
+          nodeName = nodeName,
+          prefixVolumeName = prefixVolumeName
         )
 
         val updated = existentVolumes

@@ -21,5 +21,6 @@ package oharastream.ohara.agent.container
   * @param driver volume driver. For example, local, nfs or tmpFs.
   * @param path the path on the driver.
   * @param nodeName the node hosting this volume
+  * @param prefixVolumeName the volume name prefix
   */
-case class ContainerVolume(name: String, driver: String, path: String, nodeName: String)
+case class ContainerVolume(name: String, driver: String, path: String, nodeName: String, prefixVolumeName: String)

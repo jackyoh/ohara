@@ -188,8 +188,8 @@ object K8SJson {
   implicit val METRICS_FORMAT: RootJsonFormat[Metrics] = jsonFormat1(Metrics)
 
   //for create persistent volume
-  final case class PVMetadata(name: String)
-  implicit val PVMETADATA_FORMAT: RootJsonFormat[PVMetadata] = jsonFormat1(PVMetadata)
+  final case class PVMetadata(name: String, labels: Option[Map[String, String]])
+  implicit val PVMETADATA_FORMAT: RootJsonFormat[PVMetadata] = jsonFormat2(PVMetadata)
 
   final case class PVCapacity(storage: String)
   implicit val PVCAPACITY_FORMAT: RootJsonFormat[PVCapacity] = jsonFormat1(PVCapacity)
@@ -249,8 +249,8 @@ object K8SJson {
   final case class PVCSpec(storageClassName: String, accessModes: Seq[String], resources: PVCResources)
   implicit val PVCSPEC_FORMAT: RootJsonFormat[PVCSpec] = jsonFormat3(PVCSpec)
 
-  final case class PVCMetadata(name: String)
-  implicit val PVCMETADATA_FORMAT: RootJsonFormat[PVCMetadata] = jsonFormat1(PVCMetadata)
+  final case class PVCMetadata(name: String, labels: Option[Map[String, String]])
+  implicit val PVCMETADATA_FORMAT: RootJsonFormat[PVCMetadata] = jsonFormat2(PVCMetadata)
 
   final case class PersistentVolumeClaim(metadata: PVCMetadata, spec: PVCSpec)
   implicit val PERSISTENTVOLUMECLAIM_FORMAT: RootJsonFormat[PersistentVolumeClaim] = jsonFormat2(

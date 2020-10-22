@@ -210,6 +210,7 @@ abstract class ServiceCollie extends Releasable {
           containerClient.volumeCreator
             .nodeName(nodeName)
             .path(path)
+            .prefixVolumeName(key.toPlain)
             .name(key.toPlain)
             .create()
       )

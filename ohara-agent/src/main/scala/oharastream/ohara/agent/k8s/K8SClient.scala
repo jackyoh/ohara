@@ -52,6 +52,7 @@ object K8SClient {
   private[this] val LABEL_VALUE = "k8s"
   @VisibleForTesting
   private[k8s] val NAMESPACE_DEFAULT_VALUE = "default"
+  private[this] val PREFIX_VOLUME_NAME_KEY = "prefixVolumeName"
 
   def builder: Builder = new Builder()
 
@@ -85,7 +86,7 @@ object K8SClient {
 
     /**
       * Set K8S metrics server URL
-      * @param metricsApiServerURL for set Kubernetes metrics api server url, default value is null
+      * @param metricsServerURL for set Kubernetes metrics api server url, default value is null
       * @return K8SClientBuilder object
       */
     @Optional("default value is null")
@@ -329,11 +330,9 @@ object K8SClient {
                         name = labelName,
                         image = imageName,
                         volumeMounts =
-                          if (volumeMaps.isEmpty) None
-                          else
-                            Some(volumeMaps.map(v => VolumeMount(v._1, v._2)).toSeq),
-                        env = if (envs.isEmpty) None else Some(envs.map(x => EnvVar(x._1, Some(x._2))).toSeq),
-                        ports = if (ports.isEmpty) None else Some(ports.map(x => ContainerPort(x._1, x._2)).toSeq),
+                          Option(volumeMaps.map { case (key, value)  => VolumeMount(key, value) }.toSet.toSeq),
+                        env = Option(envs.map { case (key, value)    => EnvVar(key, Some(value)) }.toSet.toSeq),
+                        ports = Option(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
                         imagePullPolicy = Some(imagePullPolicy),
                         command = command.map(Seq(_)),
                         args = if (arguments.isEmpty) None else Some(arguments)
@@ -341,14 +340,12 @@ object K8SClient {
                     ),
                     restartPolicy = Some(restartPolicy),
                     nodeName = None,
-                    volumes =
-                      if (volumeMaps.isEmpty) None
-                      else
-                        Some(
-                          volumeMaps
-                            .map(v => K8SVolume(v._1, Some(MountPersistentVolumeClaim(v._1))))
-                            .toSeq
-                        )
+                    volumes = Option(
+                      volumeMaps
+                        .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
+                        .toSet
+                        .toSeq
+                    )
                   )
                 }
                 .flatMap(
@@ -384,14 +381,20 @@ object K8SClient {
         }
 
         override def volumeCreator: VolumeCreator =
-          (nodeName: String, volumeName: String, path: String, executionContext: ExecutionContext) => {
+          (
+            nodeName: String,
+            prefixVolumeName: String,
+            volumeName: String,
+            path: String,
+            executionContext: ExecutionContext
+          ) => {
             implicit val pool: ExecutionContext = executionContext
             def doCreate() =
               httpExecutor
                 .post[PersistentVolume, PersistentVolume, ErrorResponse](
                   s"$serverURL/persistentvolumes",
                   PersistentVolume(
-                    PVMetadata(volumeName),
+                    PVMetadata(volumeName, Option(Map(PREFIX_VOLUME_NAME_KEY -> prefixVolumeName))),
                     PVSpec(
                       capacity = PVCapacity("500Gi"),
                       accessModes = Seq("ReadWriteOnce"),
@@ -415,7 +418,7 @@ object K8SClient {
                     .post[PersistentVolumeClaim, PersistentVolumeClaim, ErrorResponse](
                       s"$serverURL/namespaces/${namespace}/persistentvolumeclaims",
                       PersistentVolumeClaim(
-                        PVCMetadata(volumeName),
+                        PVCMetadata(volumeName, Option(Map(PREFIX_VOLUME_NAME_KEY -> prefixVolumeName))),
                         PVCSpec(
                           storageClassName = volumeName,
                           accessModes = Seq("ReadWriteOnce"),
@@ -465,7 +468,8 @@ object K8SClient {
                   path = item.spec.hostPath.path,
                   nodeName = item.spec.nodeAffinity
                     .map(_.required.nodeSelectorTerms.head.matchExpressions.head.values.head)
-                    .getOrElse("Unknown")
+                    .getOrElse("Unknown"),
+                  prefixVolumeName = item.metadata.labels.get(PREFIX_VOLUME_NAME_KEY)
                 )
               }
             }
