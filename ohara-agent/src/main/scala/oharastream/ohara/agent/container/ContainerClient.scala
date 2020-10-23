@@ -150,7 +150,7 @@ trait ContainerClient extends Releasable {
     * @return all ohara volumes across all hosted nodes
     */
   def volumes(name: String)(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] =
-    volumes().map(_.filter(_.name == name))
+    volumes().map(_.filter(_.fullName.startsWith(name)))
 
   /**
     * remove volumes having same name
