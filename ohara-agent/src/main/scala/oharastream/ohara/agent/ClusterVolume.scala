@@ -30,6 +30,7 @@ import oharastream.ohara.common.setting.ObjectKey
   */
 case class ClusterVolume(
   group: String,
+  prefixVolumeName: String,
   name: String,
   driver: String,
   path: String,

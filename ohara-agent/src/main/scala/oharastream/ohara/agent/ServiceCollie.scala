@@ -231,6 +231,7 @@ abstract class ServiceCollie extends Releasable {
             Some(
               ClusterVolume(
                 group = key.group(),
+                prefixVolumeName = volume.prefixVolumeName,
                 name = key.name(),
                 path = volume.path,
                 driver = volume.driver,
@@ -243,6 +244,9 @@ abstract class ServiceCollie extends Releasable {
       })
       .map(_.groupBy(_.key).map {
         case (key, volumes) =>
+          println("==================")
+          println(volumes)
+          println("==================")
           val drivers = volumes.map(_.driver).toSet
           val paths   = volumes.map(_.driver).toSet
           val error =
@@ -253,6 +257,7 @@ abstract class ServiceCollie extends Releasable {
             else None
           ClusterVolume(
             group = key.group(),
+            prefixVolumeName = "",
             name = key.name(),
             path = paths.head,
             driver = drivers.head,
