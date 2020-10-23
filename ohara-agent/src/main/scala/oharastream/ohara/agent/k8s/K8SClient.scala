@@ -326,8 +326,8 @@ object K8SClient {
                       val newVolumeMaps: Map[String, String] = volumeMaps.map {
                         case (key, value) =>
                           volumes
-                            .find(_.name.contains(key))
-                            .map(x => (x.name, value))
+                            .find(_.fullName.contains(key))
+                            .map(x => (x.fullName, value))
                             .getOrElse(throw new IllegalArgumentException("Volume Not found"))
                       }
                       PodSpec(
@@ -473,6 +473,7 @@ object K8SClient {
                   name = item.metadata.labels
                     .map(map => map(VOLUME_NAME_PREFIX_KEY))
                     .getOrElse(throw new IllegalArgumentException(s"${item.metadata.name} volume label is not found")),
+                  fullName = item.metadata.name,
                   driver = item.spec.volumeMode,
                   path = item.spec.hostPath.path,
                   nodeName = item.spec.nodeAffinity

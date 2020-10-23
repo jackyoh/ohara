@@ -451,6 +451,7 @@ object DockerClient {
                 .map { info =>
                   ContainerVolume(
                     name = info.Name,
+                    fullName = info.Name,
                     driver = info.Driver,
                     path = info.path,
                     nodeName = agent.hostname
