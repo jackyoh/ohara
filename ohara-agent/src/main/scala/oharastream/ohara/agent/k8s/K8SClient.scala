@@ -318,35 +318,46 @@ object K8SClient {
               CommonUtils.requireNonEmpty(domainName)
               CommonUtils.requireNonEmpty(labelName)
               implicit val pool: ExecutionContext = executionContext
-              nodeNameIPInfo()
-                .map { ipInfo =>
-                  PodSpec(
-                    nodeSelector = Some(NodeSelector(nodeName)),
-                    hostname = hostname, //hostname is container name
-                    subdomain = Some(domainName),
-                    hostAliases = Some(ipInfo ++ routes.map { case (host, ip) => HostAliases(ip, Seq(host)) }),
-                    containers = Seq(
-                      Container(
-                        name = labelName,
-                        image = imageName,
-                        volumeMounts =
-                          Option(volumeMaps.map { case (key, value)  => VolumeMount(key, value) }.toSet.toSeq),
-                        env = Option(envs.map { case (key, value)    => EnvVar(key, Some(value)) }.toSet.toSeq),
-                        ports = Option(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
-                        imagePullPolicy = Some(imagePullPolicy),
-                        command = command.map(Seq(_)),
-                        args = Option(arguments)
+              volumes()
+                .map(volumes => volumes.filter(_.nodeName == nodeName))
+                .flatMap { volumes =>
+                  nodeNameIPInfo()
+                    .map { ipInfo =>
+                      val newVolumeMaps: Map[String, String] = volumeMaps.map {
+                        case (key, value) =>
+                          volumes
+                            .find(_.name.contains(key))
+                            .map(x => (x.name, value))
+                            .getOrElse(throw new IllegalArgumentException("Volume Not found"))
+                      }
+                      PodSpec(
+                        nodeSelector = Some(NodeSelector(nodeName)),
+                        hostname = hostname, //hostname is container name
+                        subdomain = Some(domainName),
+                        hostAliases = Some(ipInfo ++ routes.map { case (host, ip) => HostAliases(ip, Seq(host)) }),
+                        containers = Seq(
+                          Container(
+                            name = labelName,
+                            image = imageName,
+                            volumeMounts =
+                              Option(newVolumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
+                            env = Option(envs.map { case (key, value)      => EnvVar(key, Some(value)) }.toSet.toSeq),
+                            ports = Option(ports.map { case (key, value)   => ContainerPort(key, value) }.toSet.toSeq),
+                            imagePullPolicy = Some(imagePullPolicy),
+                            command = command.map(Seq(_)),
+                            args = if (arguments.isEmpty) None else Some(arguments)
+                          )
+                        ),
+                        restartPolicy = Some(restartPolicy),
+                        nodeName = None,
+                        volumes = Option(
+                          newVolumeMaps
+                            .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
+                            .toSet
+                            .toSeq
+                        )
                       )
-                    ),
-                    restartPolicy = Some(restartPolicy),
-                    nodeName = None,
-                    volumes = Option(
-                      volumeMaps
-                        .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
-                        .toSet
-                        .toSeq
-                    )
-                  )
+                    }
                 }
                 .flatMap(
                   podSpec =>
