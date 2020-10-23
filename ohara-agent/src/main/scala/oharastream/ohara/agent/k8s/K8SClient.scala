@@ -469,6 +469,7 @@ object K8SClient {
               })
             }
             .map { volumeFullNames =>
+              println(s"VOLUME FULL NAMES: $volumeFullNames")
               volumeFullNames.map { volumeFullName =>
                 doRemove(volumeFullName)
               }
