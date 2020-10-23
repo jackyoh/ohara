@@ -243,6 +243,9 @@ abstract class ServiceCollie extends Releasable {
       })
       .map(_.groupBy(_.key).map {
         case (key, volumes) =>
+          println("====================")
+          println(s"VOLUME NAME IS ${key.name()}")
+          println("====================")
           val drivers = volumes.map(_.driver).toSet
           val paths   = volumes.map(_.driver).toSet
           val error =
