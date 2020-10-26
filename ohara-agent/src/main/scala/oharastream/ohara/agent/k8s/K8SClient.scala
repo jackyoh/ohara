@@ -468,7 +468,7 @@ object K8SClient {
                     remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.fullName)
                   })
             )
-            .map(volumeNames => volumeNames.map(name => doRemove(name)))
+            .flatMap(volumeNames => Future.sequence(volumeNames.map(name => doRemove(name))))
             .map(_ => ())
         }
 
