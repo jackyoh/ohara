@@ -460,6 +460,7 @@ object K8SClient {
               }
           }
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
+          println(s"Remove volume name is $name")
           val filterVolumes = volumes(name)
           filterVolumes
             .flatMap(
