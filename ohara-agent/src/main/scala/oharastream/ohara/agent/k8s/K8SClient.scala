@@ -465,7 +465,12 @@ object K8SClient {
               vs =>
                 Future
                   .sequence(vs.map { v =>
-                    remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.fullName)
+                    remoteFolderHandler
+                      .delete(v.nodeName, v.path)
+                      .map(_ => {
+                        println(s"FULL NAME TEST ${v.fullName}")
+                        v.fullName
+                      })
                   })
             )
             .flatMap(volumeNames => Future.sequence(volumeNames.map(name => doRemove(name))))
