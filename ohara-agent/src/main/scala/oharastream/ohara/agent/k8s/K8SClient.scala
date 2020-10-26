@@ -461,6 +461,15 @@ object K8SClient {
           }
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
           volumes(name)
+            .map { vs =>
+              vs.map { v =>
+                v.fullName
+              }
+            }
+            .foreach { x =>
+              println(s"Container Full name is $x")
+            }
+          /*volumes(name)
             .flatMap(
               vs =>
                 Future
@@ -474,7 +483,8 @@ object K8SClient {
                   })
             )
             .flatMap(volumeNames => Future.sequence(volumeNames.map(name => doRemove(name))))
-            .map(_ => ())
+            .map(_ => ())*/
+          null
         }
 
         override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
