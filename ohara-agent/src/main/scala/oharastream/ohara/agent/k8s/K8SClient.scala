@@ -444,7 +444,7 @@ object K8SClient {
           }
 
         override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
-          def doRemove(volumeFullName: String) = {
+          /*def doRemove(volumeFullName: String) = {
             println("============================")
             println(s"RUN DO REMOVE $volumeFullName")
             println("============================")
@@ -458,7 +458,7 @@ object K8SClient {
                     s"$serverURL/persistentvolumes/$volumeFullName?gracePeriodSeconds=0"
                   )
               }
-          }
+          }*/
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
           volumes(name)
             .map { vs =>
