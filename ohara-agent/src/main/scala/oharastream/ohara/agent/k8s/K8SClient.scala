@@ -461,9 +461,17 @@ object K8SClient {
           }
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
           volumes(name)
-            .flatMap(vs => Future.sequence(vs.map(v => remoteFolderHandler.delete(v.nodeName, v.path))))
-            .flatMap(_ => doRemove("test"))
-            .map(_ => ())
+            .flatMap(
+              vs =>
+                Future
+                  .sequence(vs.map { v =>
+                    remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.fullName)
+                  })
+                  .map(volumeNames => volumeNames.map(name => doRemove(name)))
+                  .map(_ => ())
+            )
+
+          null
         }
 
         override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
