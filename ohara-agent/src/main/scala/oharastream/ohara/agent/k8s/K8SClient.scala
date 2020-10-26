@@ -460,7 +460,8 @@ object K8SClient {
               }
           }
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
-          volumes(name)
+          val filterVolumes = volumes(name)
+          filterVolumes
             .flatMap(
               vs =>
                 Future
