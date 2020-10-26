@@ -467,11 +467,9 @@ object K8SClient {
                   .sequence(vs.map { v =>
                     remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.fullName)
                   })
-                  .map(volumeNames => volumeNames.map(name => doRemove(name)))
-                  .map(_ => ())
             )
-
-          null
+            .map(volumeNames => volumeNames.map(name => doRemove(name)))
+            .map(_ => ())
         }
 
         override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
