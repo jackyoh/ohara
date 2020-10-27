@@ -24,6 +24,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusC
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.{Http, server}
 import oharastream.ohara.agent.k8s.K8SJson._
+import oharastream.ohara.client.configurator.NodeApi.Resource
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.util.{CommonUtils, VersionUtils}
 import org.junit.jupiter.api.Test
@@ -333,13 +334,11 @@ class TestK8SClient extends OharaTest {
       val nodes: Seq[String] = resource.keys.toSeq
       nodes(0) shouldBe "ohara-jenkins-it-00"
 
-      val node1Resource = resource
-        .map { x =>
-          (x._1, x._2)
-        }
-        .filter(_._1 == "ohara-jenkins-it-00")
-        .map(_._2)
-        .head
+      val node1Resource: Seq[Resource] = resource
+        .filter { case (key, _) => key == nodes.head }
+        .flatMap { case (_, value) => value }
+        .toSet
+        .toSeq
       node1Resource(0).name shouldBe "CPU"
       node1Resource(0).unit shouldBe "cores"
       node1Resource(0).value shouldBe 8.0
@@ -360,7 +359,13 @@ class TestK8SClient extends OharaTest {
       val nodes: Seq[String] = resource.keys.toSeq
       nodes(0) shouldBe "ohara-jenkins-it-00"
 
-      val node1Resource = resource.map(x => (x._1, x._2)).filter(_._1 == "ohara-jenkins-it-00").map(_._2).head
+      val node1Resource: Seq[Resource] = resource
+        .filter {
+          case (key, _) => key == nodes.head
+        }
+        .flatMap { case (_, value) => value }
+        .toSet
+        .toSeq
       node1Resource.size shouldBe 0
     } finally s.close()
   }
