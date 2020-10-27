@@ -133,7 +133,6 @@ class TestMySQLDataTypeConverter extends OharaTest {
     val column                 = RdbColumn("column1", "BINARY", false)
     val mySQLDataTypeConverter = new MySQLDataTypeConverter()
     val result                 = mySQLDataTypeConverter.converterValue(resultSet, column)
-
     new String(result.asInstanceOf[Array[java.lang.Byte]].map(x => Byte.unbox(x))) shouldBe ""
     result.isInstanceOf[Array[java.lang.Byte]] shouldBe true
   }

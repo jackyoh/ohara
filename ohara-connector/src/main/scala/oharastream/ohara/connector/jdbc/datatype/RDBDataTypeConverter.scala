@@ -17,16 +17,14 @@
 package oharastream.ohara.connector.jdbc.datatype
 
 import java.sql.{Date, ResultSet, Time, Timestamp}
-import java.util.Optional
-
 import oharastream.ohara.client.configurator.InspectApi.RdbColumn
 import oharastream.ohara.connector.jdbc.util.DateTimeUtils
 
 trait RDBDataTypeConverter {
   /**
     * Converter result data type to Java object
-    * @param resultSet
-    * @param column
+    * @param resultSet JDBC query the ResultSet
+    * @param column column info
     * @return data type object
     */
   def converterValue(resultSet: ResultSet, column: RdbColumn): Any = {
@@ -45,27 +43,23 @@ trait RDBDataTypeConverter {
       case DataTypeEnum.DOUBLE =>
         java.lang.Double.valueOf(resultSet.getDouble(columnName))
       case DataTypeEnum.BIGDECIMAL =>
-        Optional.ofNullable(resultSet.getBigDecimal(columnName)).orElseGet(() => new java.math.BigDecimal(0L))
+        Option(resultSet.getBigDecimal(columnName)).getOrElse(new java.math.BigDecimal(0L))
       case DataTypeEnum.STRING =>
-        Optional.ofNullable(resultSet.getString(columnName)).orElseGet(() => "null")
+        Option(resultSet.getString(columnName)).getOrElse("null")
       case DataTypeEnum.DATE =>
-        Optional.ofNullable(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Date(0))
+        Option(resultSet.getDate(columnName, DateTimeUtils.CALENDAR)).getOrElse(new Date(0))
       case DataTypeEnum.TIME =>
-        Optional.ofNullable(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).orElseGet(() => new Time(0))
+        Option(resultSet.getTime(columnName, DateTimeUtils.CALENDAR)).getOrElse(new Time(0))
       case DataTypeEnum.TIMESTAMP =>
-        Optional
-          .ofNullable(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR))
-          .orElseGet(() => new Timestamp(0))
+        Option(resultSet.getTimestamp(columnName, DateTimeUtils.CALENDAR)).getOrElse(new Timestamp(0))
       case DataTypeEnum.BYTES =>
-        Optional
-          .ofNullable(resultSet.getBytes(columnName))
-          .map { value =>
-            value.map(x => java.lang.Byte.valueOf(x))
-          }
-          .orElseGet(() => Array())
+        Option(resultSet.getBytes(columnName))
+          .map(value => value.map(x => java.lang.Byte.valueOf(x)))
+          .getOrElse(Array.empty)
+          .asInstanceOf[Array[java.lang.Byte]]
       case _ =>
         throw new UnsupportedOperationException(
-          s"JDBC Source Connector not support ${typeName} data type in ${columnName} column for ${dataBaseProductName} implement."
+          s"JDBC Source Connector not support $typeName data type in $columnName column for $dataBaseProductName implement."
         )
     }
   }
