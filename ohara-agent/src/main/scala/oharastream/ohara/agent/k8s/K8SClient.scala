@@ -445,6 +445,7 @@ object K8SClient {
 
         override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
           def doRemove(volumeFullName: String) = {
+            println(s"Remove volume name is $name")
             httpExecutor
               .delete[ErrorResponse](
                 s"$serverURL/namespaces/$namespace/persistentvolumeclaims/$volumeFullName?gracePeriodSeconds=0"

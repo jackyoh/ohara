@@ -267,7 +267,7 @@ abstract class ServiceCollie extends Releasable {
     * @param executionContext thread pool
     * @return async call with unit. Otherwise, a exception is in the call
     */
-  final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
+  def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
     containerClient
       .volumes(key.toPlain)
       .map(

@@ -18,6 +18,7 @@ package oharastream.ohara.agent.k8s
 
 import oharastream.ohara.agent._
 import oharastream.ohara.client.configurator.NodeApi.Node
+import oharastream.ohara.common.setting.ObjectKey
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,6 +45,15 @@ private[ohara] class K8SServiceCollieImpl(dataCollie: DataCollie, val containerC
         else
           throw new IllegalStateException(s"${node.name} node doesn't running container. cause: ${statusInfo.message}")
       })
+
+  override def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] = {
+    println("====================================")
+    println(s"Remove volume key is ${key.toPlain}")
+    println("====================================")
+    containerClient
+      .removeVolumes(key.toPlain)
+      .map(_ => ())
+  }
 
   override def close(): Unit = {
     // do nothing
