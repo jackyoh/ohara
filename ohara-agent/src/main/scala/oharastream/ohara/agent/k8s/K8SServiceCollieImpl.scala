@@ -46,11 +46,6 @@ private[ohara] class K8SServiceCollieImpl(dataCollie: DataCollie, val containerC
           throw new IllegalStateException(s"${node.name} node doesn't running container. cause: ${statusInfo.message}")
       })
 
-  override def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
-    containerClient
-      .removeVolumes(key.toPlain)
-      .map(_ => ())
-
   override def close(): Unit = {
     // do nothing
   }
