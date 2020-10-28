@@ -19,6 +19,7 @@ package oharastream.ohara.it.collie
 import java.util.concurrent.TimeUnit
 
 import oharastream.ohara.agent.DataCollie
+import oharastream.ohara.agent.container.ContainerClient
 import oharastream.ohara.agent.docker.DockerClient
 import oharastream.ohara.client.configurator.NodeApi.Node
 import oharastream.ohara.common.util.{CommonUtils, Releasable}
@@ -68,14 +69,9 @@ class TestContainerClient extends IntegrationTest {
   @MethodSource(value = Array("parameters"))
   def testVolume(platform: ContainerPlatform): Unit =
     close(platform.setupContainerClient()) { containerClient =>
-      def checkVolumeExists(names: Seq[String]): Unit = {
-        names.foreach { volumeName =>
-          await(() => !result(containerClient.volumes()).exists(_.name == volumeName))
-        }
-      }
       val path  = s"/tmp/${CommonUtils.randomString(10)}"
       val names = Seq(CommonUtils.randomString(), CommonUtils.randomString())
-      checkVolumeExists(names)
+      checkVolumeNotExists(containerClient, names)
       try {
         names.foreach(
           name =>
@@ -94,9 +90,42 @@ class TestContainerClient extends IntegrationTest {
         }
       } finally {
         names.foreach(name => Releasable.close(() => result(containerClient.removeVolumes(name))))
-        checkVolumeExists(names)
+        checkVolumeNotExists(containerClient, names)
       }
     }(containerClient => result(containerClient.forceRemove(name)))
+
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testVolumeMultiNode(platform: ContainerPlatform): Unit =
+    close(platform.setupContainerClient()) { containerClient =>
+      val path = s"/tmp/${CommonUtils.randomString(10)}"
+      val name = CommonUtils.randomString()
+      checkVolumeNotExists(containerClient, Seq(name))
+      try {
+        platform.nodeNames.foreach { nodeName =>
+          result(
+            containerClient.volumeCreator
+              .name(name)
+              .nodeName(nodeName)
+              .path(path)
+              .create()
+          )
+        }
+        result(containerClient.volumes(name)).foreach { volume =>
+          volume.name shouldBe name
+          volume.path shouldBe path
+          platform.nodeNames.contains(volume.nodeName) shouldBe true
+        }
+      } finally {
+        Releasable.close(() => result(containerClient.removeVolumes(name)))
+        checkVolumeNotExists(containerClient, Seq(name))
+      }
+    }(containerClient => result(containerClient.forceRemove(name)))
+
+  private[this] def checkVolumeNotExists(containerClient: ContainerClient, names: Seq[String]): Unit =
+    names.foreach { volumeName =>
+      await(() => !result(containerClient.volumes()).exists(_.name == volumeName))
+    }
 
   @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
   @MethodSource(value = Array("parameters"))

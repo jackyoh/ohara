@@ -444,22 +444,25 @@ object K8SClient {
           }
 
         override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
-          def doRemove() =
+          def doRemove(volumeFullName: String) = {
+            println(s"Remove volume name is $name")
             httpExecutor
               .delete[ErrorResponse](
-                s"$serverURL/namespaces/$namespace/persistentvolumeclaims/$name?gracePeriodSeconds=0"
+                s"$serverURL/namespaces/$namespace/persistentvolumeclaims/$volumeFullName?gracePeriodSeconds=0"
               )
               .flatMap { _ =>
                 httpExecutor
                   .delete[ErrorResponse](
-                    s"$serverURL/persistentvolumes/$name?gracePeriodSeconds=0"
+                    s"$serverURL/persistentvolumes/$volumeFullName?gracePeriodSeconds=0"
                   )
               }
-
+          }
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
           volumes(name)
-            .flatMap(vs => Future.sequence(vs.map(v => remoteFolderHandler.delete(v.nodeName, v.path))))
-            .flatMap(_ => doRemove())
+            .flatMap(
+              vs => Future.sequence { vs.map(v => remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.fullName)) }
+            )
+            .flatMap(volumeNames => Future.sequence(volumeNames.map(name => doRemove(name))))
             .map(_ => ())
         }
 
