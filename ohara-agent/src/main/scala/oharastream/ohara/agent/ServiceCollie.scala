@@ -267,7 +267,7 @@ abstract class ServiceCollie extends Releasable {
     * @param executionContext thread pool
     * @return async call with unit. Otherwise, a exception is in the call
     */
-  def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
+  final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
     containerClient
       .volumes(key.toPlain)
       .map(
@@ -279,7 +279,7 @@ abstract class ServiceCollie extends Releasable {
             }
         )
       )
-      .flatMap(Future.traverse(_)(v => containerClient.removeVolumes(v.name)))
+      .flatMap(Future.traverse(_)(v => containerClient.removeVolumes(v.fullName)))
       .map(_ => ())
 }
 
