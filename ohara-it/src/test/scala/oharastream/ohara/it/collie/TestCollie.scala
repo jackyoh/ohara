@@ -71,6 +71,11 @@ class TestCollie extends IntegrationTest {
   def testMultiClusters(platform: ContainerPlatform): Unit =
     close(platform.setup())(resourceRef => testZookeeperBrokerWorker(2, resourceRef))(_ => ())
 
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testMultiNodeVolume(platform: ContainerPlatform): Unit =
+    close(platform.setup())(resourceRef => testMultiNodeVolume(resourceRef))(_ => ())
+
   /**
     * @param clusterCount how many cluster should be created at same time
     */
@@ -96,6 +101,37 @@ class TestCollie extends IntegrationTest {
           services.flatMap(_.clusterKeys) should contain(clusterInfo.key)
         }
       }
+  }
+
+  private[this] def testMultiNodeVolume(resourceRef: ResourceRef): Unit = {
+    val path = s"/tmp/${CommonUtils.randomString(10)}"
+    val name = s"volume${CommonUtils.randomString(5)}"
+    checkVolumeNotExists(resourceRef, Seq(name))
+    val volume = result(
+      resourceRef.volumeApi.request
+        .key(resourceRef.generateObjectKey)
+        .name(name)
+        .nodeNames(resourceRef.nodeNames)
+        .path(path)
+        .create()
+    )
+    try {
+      result(resourceRef.volumeApi.start(volume.key))
+      result(resourceRef.volumeApi.list()).filter(_.name == name).foreach { volume =>
+        volume.name shouldBe name
+        volume.path shouldBe path
+        resourceRef.nodeNames.size shouldBe volume.nodeNames.size
+      }
+    } finally {
+      result(resourceRef.volumeApi.stop(volume.key))
+      checkVolumeNotExists(resourceRef, Seq(name))
+    }
+  }
+
+  private[this] def checkVolumeNotExists(resourceRef: ResourceRef, names: Seq[String]): Unit = {
+    names.foreach { volumeName =>
+      await(() => !result(resourceRef.volumeApi.list()).exists(_.name == volumeName))
+    }
   }
 
   private[this] def testZookeeper(resourceRef: ResourceRef): ZookeeperClusterInfo = {
