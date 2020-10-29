@@ -466,7 +466,10 @@ object DockerClient {
           }
         })
 
-    override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] =
+    override def removeVolumes(name: String)(implicit executionContext: ExecutionContext): Future[Unit] = {
+      println("==============================")
+      println(s"Remove volume name is $name")
+      println("==============================")
       volumes(name)
         .flatMap(
           Future.traverse(_)(
@@ -477,6 +480,7 @@ object DockerClient {
           )
         )
         .map(_ => ())
+    }
 
     override def resources()(implicit executionContext: ExecutionContext): Future[Map[String, Seq[Resource]]] =
       agents()
