@@ -35,6 +35,7 @@ import oharastream.ohara.client.configurator.{
   ShabondiApi,
   StreamApi,
   TopicApi,
+  VolumeApi,
   WorkerApi,
   ZookeeperApi
 }
@@ -92,6 +93,7 @@ object ContainerPlatform {
     def brokerApi: BrokerApi.Access = BrokerApi.access.hostname(configuratorHostname).port(configuratorPort)
     def workerApi: WorkerApi.Access = WorkerApi.access.hostname(configuratorHostname).port(configuratorPort)
     def streamApi: StreamApi.Access = StreamApi.access.hostname(configuratorHostname).port(configuratorPort)
+    def volumeApi: VolumeApi.Access = VolumeApi.access.hostname(configuratorHostname).port(configuratorPort)
 
     def containerApi: ContainerApi.Access =
       ContainerApi.access.hostname(configuratorHostname).port(configuratorPort)
