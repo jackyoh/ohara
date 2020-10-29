@@ -475,12 +475,8 @@ object DockerClient {
           Future.traverse(_)(
             volume =>
               agent(volume.nodeName)
-              //.map(_.execute(s"docker volume rm ${volume.name}"))
-              //.flatMap(_ => remoteFolderHandler.delete(volume.nodeName, volume.path))
-                .flatMap(_ => {
-                  println(s"Volume NodeName: ${volume.nodeName}    VolumePath: ${volume.path}")
-                  Future { volume.nodeName }
-                })
+                .map(_.execute(s"docker volume rm ${volume.name}"))
+                .flatMap(_ => remoteFolderHandler.delete(volume.nodeName, volume.path))
           )
         )
         .map(_ => ())
