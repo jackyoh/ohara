@@ -123,7 +123,8 @@ class TestCollie extends IntegrationTest {
         resourceRef.nodeNames.size shouldBe volume.nodeNames.size
       }
     } finally {
-      result(resourceRef.volumeApi.stop(volume.key))
+      result(resourceRef.volumeApi.stop(volume.key)) // Delete docker or k8s volume and folder data
+      result(resourceRef.volumeApi.delete(volume.key)) // Delete api data for the ohara volume
       checkVolumeNotExists(resourceRef, Seq(name))
     }
   }
