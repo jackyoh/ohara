@@ -18,10 +18,12 @@ package oharastream.ohara.connector.console
 
 import java.util.concurrent.TimeUnit
 
-import oharastream.ohara.common.data.Row
+import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
 import oharastream.ohara.common.rule.OharaTest
 import oharastream.ohara.common.setting.{ConnectorKey, TopicKey}
 import oharastream.ohara.common.util.CommonUtils
+import oharastream.ohara.kafka.TimestampType
+import oharastream.ohara.kafka.connector.RowSinkRecord
 import oharastream.ohara.kafka.connector.json.ConnectorDefUtils
 import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.Test
@@ -92,6 +94,44 @@ class TestConsoleSinkTask extends OharaTest {
     val lastLogCopy3 = task.lastLog
     lastLogCopy3 should not be lastLogCopy2
     lastLogCopy3 should not be -1
+  }
+
+  @Test
+  def testConvertToValue(): Unit = {
+    val topicKey         = TopicKey.of(CommonUtils.randomString(5), CommonUtils.randomString(5))
+    val olderColumnName1 = "c1"
+    val newColumnName1   = "column1"
+    val olderColumnName2 = "c2"
+    val newColumnName2   = "column2"
+    val resultValue1     = "value1"
+    val resultValue2     = 100
+    val columns = Seq(
+      Column.builder.name(olderColumnName1).newName(newColumnName1).dataType(DataType.STRING).build(),
+      Column.builder.name(olderColumnName2).newName(newColumnName2).dataType(DataType.INT).build()
+    )
+    val sinkRecord = RowSinkRecord
+      .builder()
+      .topicKey(topicKey)
+      .row(Row.of(Cell.of(olderColumnName1, resultValue1), Cell.of(olderColumnName2, resultValue2)))
+      .partition(0)
+      .offset(0)
+      .timestamp(CommonUtils.current())
+      .timestampType(TimestampType.CREATE_TIME)
+      .build()
+    val task   = new ConsoleSinkTask()
+    val result = task.convertToValue(sinkRecord, columns)
+    result.cell(0).name() shouldBe newColumnName1
+    result.cell(0).value() shouldBe resultValue1
+    result.cell(1).name() shouldBe newColumnName2
+    result.cell(1).value() shouldBe resultValue2
+  }
+
+  @Test
+  def testDataType(): Unit = {
+    val task = new ConsoleSinkTask()
+    task.checkDataType(DataType.STRING, "TEST")
+    an[IllegalArgumentException] should be thrownBy task.checkDataType(DataType.STRING, 100)
+    an[IllegalArgumentException] should be thrownBy task.checkDataType(DataType.INT, "test")
   }
 
   private[this] def putRecord(task: ConsoleSinkTask): Unit =
