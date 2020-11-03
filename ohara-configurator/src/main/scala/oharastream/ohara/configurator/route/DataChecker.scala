@@ -666,7 +666,14 @@ object DataChecker {
             case Some(volume) =>
               serviceCollie
                 .volumes()
-                .map(_.filter(_.key == volume.key))
+                .map { volumes =>
+                  volumes.filter { x =>
+                    println("========================")
+                    println(s"x.key: ${x.key}  volume.key: ${volume.key}")
+                    println("========================")
+                    x.key == volume.key
+                  }
+                }
                 .map(
                   existentVolumes =>
                     Some(
