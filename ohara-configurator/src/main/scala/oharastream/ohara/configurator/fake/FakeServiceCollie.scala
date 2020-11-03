@@ -70,7 +70,6 @@ private[configurator] class FakeServiceCollie(
       (nodeName: String, name: String, path: String, _: ExecutionContext) => {
         val volume = ContainerVolume(
           name = name,
-          fullName = name,
           driver = "fake",
           path = path,
           nodeName = nodeName
