@@ -153,7 +153,6 @@ trait ContainerClient extends Releasable {
     volumes().map(
       volumes =>
         volumes.filter { volume =>
-          println(s"VOLUME NAME: ${volume.name}, NAME: $name")
           volume.name.startsWith(name)
         }
     )
