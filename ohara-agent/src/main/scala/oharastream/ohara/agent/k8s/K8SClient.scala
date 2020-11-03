@@ -387,7 +387,7 @@ object K8SClient {
                 .post[PersistentVolume, PersistentVolume, ErrorResponse](
                   s"$serverURL/persistentvolumes",
                   PersistentVolume(
-                    PVMetadata(volumeName),
+                    PVMetadata(volumeName, Option(Map(LABEL_KEY -> LABEL_VALUE))),
                     PVSpec(
                       capacity = PVCapacity("500Gi"),
                       accessModes = Seq("ReadWriteOnce"),
@@ -411,7 +411,7 @@ object K8SClient {
                     .post[PersistentVolumeClaim, PersistentVolumeClaim, ErrorResponse](
                       s"$serverURL/namespaces/$namespace/persistentvolumeclaims",
                       PersistentVolumeClaim(
-                        PVCMetadata(volumeName),
+                        PVCMetadata(volumeName, Option(Map(LABEL_KEY -> LABEL_VALUE))),
                         PVCSpec(
                           storageClassName = volumeName,
                           accessModes = Seq("ReadWriteOnce"),
@@ -457,16 +457,18 @@ object K8SClient {
             .get[PersistentVolumeInfo, ErrorResponse](s"$serverURL/persistentvolumes")
             .map(_.items)
             .map { items =>
-              items.map { item =>
-                ContainerVolume(
-                  name = item.metadata.name,
-                  driver = item.spec.volumeMode,
-                  path = item.spec.hostPath.path,
-                  nodeName = item.spec.nodeAffinity
-                    .map(_.required.nodeSelectorTerms.head.matchExpressions.head.values.head)
-                    .getOrElse("Unknown")
-                )
-              }
+              items
+                .filter(_.metadata.labels.exists(_.get(LABEL_KEY).exists(_ == LABEL_VALUE)))
+                .map { item =>
+                  ContainerVolume(
+                    name = item.metadata.name,
+                    driver = item.spec.volumeMode,
+                    path = item.spec.hostPath.path,
+                    nodeName = item.spec.nodeAffinity
+                      .map(_.required.nodeSelectorTerms.head.matchExpressions.head.values.head)
+                      .getOrElse("Unknown")
+                  )
+                }
             }
         }
       }
