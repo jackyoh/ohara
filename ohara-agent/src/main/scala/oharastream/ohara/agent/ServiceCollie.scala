@@ -275,7 +275,7 @@ abstract class ServiceCollie extends Releasable {
         _.filter(
           volume =>
             ObjectKey.ofPlain(volume.name).asScala match {
-              case None => false
+              case None            => false
               case Some(volumeKey) => volumeKey == key
             }
         )

@@ -164,7 +164,8 @@ private[configurator] object VolumeRoute {
     implicit dataChecker: DataChecker,
     serviceCollie: ServiceCollie,
     executionContext: ExecutionContext
-  ): HookBeforeDelete =
+  ): HookBeforeDelete = {
+    println("Remove volume route test")
     volumeKey =>
       dataChecker.checkList
         .allZookeepers()
@@ -190,7 +191,7 @@ private[configurator] object VolumeRoute {
             streams.foreach(check(volumeKey, _))
             serviceCollie.removeVolumes(volumeKey)
         }
-
+  }
   def apply(
     implicit store: DataStore,
     dataChecker: DataChecker,

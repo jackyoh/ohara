@@ -458,7 +458,7 @@ object K8SClient {
             .map(_.items)
             .map { items =>
               items
-                //.filter(item => item.metadata.labels.exists(labels => labels.get(LABEL_KEY).contains(LABEL_VALUE)))
+              //.filter(item => item.metadata.labels.exists(labels => labels.get(LABEL_KEY).contains(LABEL_VALUE)))
                 .map { item =>
                   ContainerVolume(
                     name = item.metadata.name,
