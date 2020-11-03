@@ -149,8 +149,15 @@ trait ContainerClient extends Releasable {
     * @param executionContext thread pool
     * @return all ohara volumes across all hosted nodes
     */
-  def volumes(name: String)(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] =
-    volumes().map(_.filter(_.name.startsWith(name)))
+  def volumes(name: String)(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
+    volumes().map(
+      volumes =>
+        volumes.filter { volume =>
+          println(s"VOLUME NAME: ${volume.name}, NAME: $name")
+          volume.name.startsWith(name)
+        }
+    )
+  }
 
   /**
     * remove volumes having same name
