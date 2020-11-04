@@ -235,7 +235,7 @@ abstract class ServiceCollie extends Releasable {
             Some(
               ClusterVolume(
                 group = key.group(),
-                name = key.name().split("-")(1),
+                name = key.name(),
                 path = volume.path,
                 driver = volume.driver,
                 state = None,
@@ -280,7 +280,7 @@ abstract class ServiceCollie extends Releasable {
         _.filter(
           volume =>
             ObjectKey.ofPlain(volume.name).asScala match {
-              case None => false
+              case None            => false
               case Some(volumeKey) => volumeKey == key
             }
         )
