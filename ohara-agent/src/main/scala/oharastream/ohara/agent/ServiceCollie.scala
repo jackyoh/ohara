@@ -229,7 +229,8 @@ abstract class ServiceCollie extends Releasable {
     containerClient
       .volumes()
       .map(_.flatMap { volume =>
-        ObjectKey.ofPlain(volume.name).asScala match {
+        println(s"volumes() VOLUMES NAME IS ${volume.name}")
+        ObjectKey.ofPlain(volume.name.split("-").head).asScala match {
           case None => None
           case Some(key) => {
             Some(
