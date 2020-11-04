@@ -667,16 +667,18 @@ object DataChecker {
               serviceCollie
                 .volumes()
                 .map(_.filter { x =>
-                  println(s"_.key=${x.key}      VOLUME.KEY=${volume.key}")
+                  println(s"_.key=${x}      VOLUME.KEY=${volume}")
                   x.key == volume.key
                 })
-                .map(
-                  existentVolumes =>
-                    Some(
-                      volume -> (if (existentVolumes.isEmpty) DataCondition.STOPPED
-                                 else DataCondition.RUNNING)
-                    )
-                )
+                .map { existentVolumes =>
+                  println("==================")
+                  println(s"EXISTENT VOLUMES: $existentVolumes")
+                  println("===================")
+                  Some(
+                    volume -> (if (existentVolumes.isEmpty) DataCondition.STOPPED
+                               else DataCondition.RUNNING)
+                  )
+                }
           }
 
         //---------------------[Zookeeper]---------------------//
