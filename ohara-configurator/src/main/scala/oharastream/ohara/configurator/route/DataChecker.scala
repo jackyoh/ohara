@@ -666,14 +666,8 @@ object DataChecker {
             case Some(volume) =>
               serviceCollie
                 .volumes()
-                .map(_.filter { x =>
-                  println(s"_.key=${x}      VOLUME.KEY=${volume}")
-                  x.key == volume.key
-                })
+                .map(_.filter(_.key == volume.key))
                 .map { existentVolumes =>
-                  println("==================")
-                  println(s"EXISTENT VOLUMES: $existentVolumes")
-                  println("===================")
                   Some(
                     volume -> (if (existentVolumes.isEmpty) DataCondition.STOPPED
                                else DataCondition.RUNNING)
