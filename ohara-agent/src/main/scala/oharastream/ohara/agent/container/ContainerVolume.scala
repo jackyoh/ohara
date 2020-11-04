@@ -23,4 +23,4 @@ package oharastream.ohara.agent.container
   * @param path the path on the driver.
   * @param nodeName the node hosting this volume
   */
-case class ContainerVolume(name: String, fullName: String, driver: String, path: String, nodeName: String)
+case class ContainerVolume(name: String, driver: String, path: String, nodeName: String)

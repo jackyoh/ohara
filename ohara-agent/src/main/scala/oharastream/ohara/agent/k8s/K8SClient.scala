@@ -48,9 +48,8 @@ object K8SClient {
   /**
     * this is a specific label to ohara docker. It is useful in filtering out what we created.
     */
-  private[this] val LABEL_KEY              = "createdByOhara"
-  private[this] val LABEL_VALUE            = "k8s"
-  private[this] val VOLUME_NAME_PREFIX_KEY = "volumePrefixName"
+  private[this] val LABEL_KEY   = "createdByOhara"
+  private[this] val LABEL_VALUE = "k8s"
   @VisibleForTesting
   private[k8s] val NAMESPACE_DEFAULT_VALUE = "default"
 
@@ -318,46 +317,35 @@ object K8SClient {
               CommonUtils.requireNonEmpty(domainName)
               CommonUtils.requireNonEmpty(labelName)
               implicit val pool: ExecutionContext = executionContext
-              volumes()
-                .map(volumes => volumes.filter(_.nodeName == nodeName))
-                .flatMap { volumes =>
-                  nodeNameIPInfo()
-                    .map { ipInfo =>
-                      val newVolumeMaps: Map[String, String] = volumeMaps.map {
-                        case (key, value) =>
-                          volumes
-                            .find(_.fullName.contains(key))
-                            .map(x => (x.fullName, value))
-                            .getOrElse(throw new IllegalArgumentException("Volume Not found"))
-                      }
-                      PodSpec(
-                        nodeSelector = Some(NodeSelector(nodeName)),
-                        hostname = hostname, //hostname is container name
-                        subdomain = Some(domainName),
-                        hostAliases = Some(ipInfo ++ routes.map { case (host, ip) => HostAliases(ip, Seq(host)) }),
-                        containers = Seq(
-                          Container(
-                            name = labelName,
-                            image = imageName,
-                            volumeMounts =
-                              Option(newVolumeMaps.map { case (key, value) => VolumeMount(key, value) }.toSet.toSeq),
-                            env = Option(envs.map { case (key, value)      => EnvVar(key, Some(value)) }.toSet.toSeq),
-                            ports = Option(ports.map { case (key, value)   => ContainerPort(key, value) }.toSet.toSeq),
-                            imagePullPolicy = Some(imagePullPolicy),
-                            command = command.map(Seq(_)),
-                            args = if (arguments.isEmpty) None else Some(arguments)
-                          )
-                        ),
-                        restartPolicy = Some(restartPolicy),
-                        nodeName = None,
-                        volumes = Option(
-                          newVolumeMaps
-                            .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
-                            .toSet
-                            .toSeq
-                        )
+              nodeNameIPInfo()
+                .map { ipInfo =>
+                  PodSpec(
+                    nodeSelector = Some(NodeSelector(nodeName)),
+                    hostname = hostname, //hostname is container name
+                    subdomain = Some(domainName),
+                    hostAliases = Some(ipInfo ++ routes.map { case (host, ip) => HostAliases(ip, Seq(host)) }),
+                    containers = Seq(
+                      Container(
+                        name = labelName,
+                        image = imageName,
+                        volumeMounts =
+                          Option(volumeMaps.map { case (key, value)  => VolumeMount(key, value) }.toSet.toSeq),
+                        env = Option(envs.map { case (key, value)    => EnvVar(key, Some(value)) }.toSet.toSeq),
+                        ports = Option(ports.map { case (key, value) => ContainerPort(key, value) }.toSet.toSeq),
+                        imagePullPolicy = Some(imagePullPolicy),
+                        command = command.map(Seq(_)),
+                        args = if (arguments.isEmpty) None else Some(arguments)
                       )
-                    }
+                    ),
+                    restartPolicy = Some(restartPolicy),
+                    nodeName = None,
+                    volumes = Option(
+                      volumeMaps
+                        .map { case (key, _) => K8SVolume(key, Some(MountPersistentVolumeClaim(key))) }
+                        .toSet
+                        .toSeq
+                    )
+                  )
                 }
                 .flatMap(
                   podSpec =>
@@ -394,19 +382,18 @@ object K8SClient {
         override def volumeCreator: VolumeCreator =
           (nodeName: String, volumeName: String, path: String, executionContext: ExecutionContext) => {
             implicit val pool: ExecutionContext = executionContext
-            val volumeNameAndHash               = s"$volumeName-${CommonUtils.randomString(5)}"
-            val labels                          = Option(Map(VOLUME_NAME_PREFIX_KEY -> volumeName))
+            val labels                          = Option(Map(LABEL_KEY -> LABEL_VALUE))
             def doCreate() =
               httpExecutor
                 .post[PersistentVolume, PersistentVolume, ErrorResponse](
                   s"$serverURL/persistentvolumes",
                   PersistentVolume(
-                    PVMetadata(volumeNameAndHash, labels),
+                    PVMetadata(volumeName, labels),
                     PVSpec(
                       capacity = PVCapacity("500Gi"),
                       accessModes = Seq("ReadWriteOnce"),
                       persistentVolumeReclaimPolicy = "Retain",
-                      storageClassName = volumeNameAndHash,
+                      storageClassName = volumeName,
                       hostPath = PVHostPath(path, "DirectoryOrCreate"),
                       nodeAffinity = PVNodeAffinity(
                         PVRequired(
@@ -425,9 +412,9 @@ object K8SClient {
                     .post[PersistentVolumeClaim, PersistentVolumeClaim, ErrorResponse](
                       s"$serverURL/namespaces/$namespace/persistentvolumeclaims",
                       PersistentVolumeClaim(
-                        PVCMetadata(volumeNameAndHash, labels),
+                        PVCMetadata(volumeName, labels),
                         PVCSpec(
-                          storageClassName = volumeNameAndHash,
+                          storageClassName = volumeName,
                           accessModes = Seq("ReadWriteOnce"),
                           resources = PVCResources(PVCRequests("500Gi"))
                         )
@@ -460,7 +447,7 @@ object K8SClient {
           if (remoteFolderHandler == null) throw new IllegalArgumentException("you have to define remoteFolderHandler")
           volumes(name)
             .flatMap(
-              vs => Future.sequence { vs.map(v => remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.fullName)) }
+              vs => Future.sequence { vs.map(v => remoteFolderHandler.delete(v.nodeName, v.path).map(_ => v.name)) }
             )
             .flatMap(volumeNames => Future.sequence(volumeNames.map(name => doRemove(name))))
             .map(_ => ())
@@ -473,10 +460,7 @@ object K8SClient {
             .map { items =>
               items.map { item =>
                 ContainerVolume(
-                  name = item.metadata.labels
-                    .map(map => map(VOLUME_NAME_PREFIX_KEY))
-                    .getOrElse(throw new IllegalArgumentException(s"${item.metadata.name} volume label is not found")),
-                  fullName = item.metadata.name,
+                  name = item.metadata.name,
                   driver = item.spec.volumeMode,
                   path = item.spec.hostPath.path,
                   nodeName = item.spec.nodeAffinity
