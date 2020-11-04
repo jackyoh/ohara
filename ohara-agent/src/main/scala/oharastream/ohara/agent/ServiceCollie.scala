@@ -232,7 +232,6 @@ abstract class ServiceCollie extends Releasable {
         ObjectKey.ofPlain(volume.name).asScala match {
           case None => None
           case Some(key) => {
-            println(s"SERVICE COLLIE volume name: ${key.name}")
             Some(
               ClusterVolume(
                 group = key.group(),
@@ -275,7 +274,6 @@ abstract class ServiceCollie extends Releasable {
     * @return async call with unit. Otherwise, a exception is in the call
     */
   final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] = {
-    println(s"REMOVE VOLUME KEY IS ${key.name}")
     containerClient
       .volumes(key.toPlain)
       .map(
