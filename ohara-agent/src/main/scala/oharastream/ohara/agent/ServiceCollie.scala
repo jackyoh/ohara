@@ -235,7 +235,7 @@ abstract class ServiceCollie extends Releasable {
             Some(
               ClusterVolume(
                 group = key.group(),
-                name = key.name(),
+                name = key.name().split("-")(1),
                 path = volume.path,
                 driver = volume.driver,
                 state = None,
