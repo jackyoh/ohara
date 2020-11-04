@@ -666,7 +666,12 @@ object DataChecker {
             case Some(volume) =>
               serviceCollie
                 .volumes()
-                .map(_.filter(_.key.name().startsWith(volume.key.name())))
+                .map(
+                  _.filter { v =>
+                    println(s"v.key: ${v.key.name()}    VOLUME.key.name: ${volume.key.name()}")
+                    v.key.name().startsWith(volume.key.name())
+                  }
+                )
                 .map { existentVolumes =>
                   Some(
                     volume -> (if (existentVolumes.isEmpty) DataCondition.STOPPED
