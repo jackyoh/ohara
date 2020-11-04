@@ -231,11 +231,12 @@ abstract class ServiceCollie extends Releasable {
       .map(_.flatMap { volume =>
         ObjectKey.ofPlain(volume.name).asScala match {
           case None => None
-          case Some(key) =>
+          case Some(key) => {
+            println(s"SERVICE COLLIE volume name: ${key.name}")
             Some(
               ClusterVolume(
                 group = key.group(),
-                name = key.name(),
+                name = key.name().split("-").head,
                 path = volume.path,
                 driver = volume.driver,
                 state = None,
@@ -243,6 +244,7 @@ abstract class ServiceCollie extends Releasable {
                 nodeNames = Set(volume.nodeName)
               )
             )
+          }
         }
       })
       .map(_.groupBy(_.key).map {
