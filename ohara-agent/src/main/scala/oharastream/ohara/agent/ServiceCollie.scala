@@ -31,7 +31,7 @@ import oharastream.ohara.client.configurator.VolumeApi.VolumeState
 import oharastream.ohara.common.annotations.Optional
 import oharastream.ohara.common.pattern.Builder
 import oharastream.ohara.common.setting.{ObjectKey, WithDefinitions}
-import oharastream.ohara.common.util.Releasable
+import oharastream.ohara.common.util.{CommonUtils, Releasable}
 import oharastream.ohara.kafka.RowPartitioner
 import oharastream.ohara.kafka.connector.{RowSinkConnector, RowSourceConnector}
 import oharastream.ohara.stream.Stream
@@ -213,7 +213,7 @@ abstract class ServiceCollie extends Releasable {
               containerClient.volumeCreator
                 .nodeName(nodeName)
                 .path(path)
-                .name(key.toPlain)
+                .name(s"${key.toPlain}-${CommonUtils.randomString(5)}")
                 .create()
           )
           .map(_ => ())
@@ -235,7 +235,7 @@ abstract class ServiceCollie extends Releasable {
             Some(
               ClusterVolume(
                 group = key.group(),
-                name = key.name(),
+                name = key.name().split("-").head,
                 path = volume.path,
                 driver = volume.driver,
                 state = None,
