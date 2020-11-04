@@ -272,14 +272,15 @@ abstract class ServiceCollie extends Releasable {
     * @param executionContext thread pool
     * @return async call with unit. Otherwise, a exception is in the call
     */
-  final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
+  final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] = {
+    println(s"REMOVE VOLUME KEY IS ${key.name}")
     containerClient
       .volumes(key.toPlain)
       .map(
         _.filter(
           volume =>
             ObjectKey.ofPlain(volume.name).asScala match {
-              case None            => false
+              case None => false
               case Some(volumeKey) => volumeKey == key
             }
         )
@@ -288,6 +289,7 @@ abstract class ServiceCollie extends Releasable {
       .map(_.toSet)
       .flatMap(Future.traverse(_)(containerClient.removeVolumes(_)))
       .map(_ => ())
+  }
 }
 
 object ServiceCollie {
