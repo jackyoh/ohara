@@ -205,7 +205,8 @@ abstract class ServiceCollie extends Releasable {
     implicit executionContext: ExecutionContext
   ): Future[Unit] = {
     containerClient
-      .volumes(key.toPlain)
+      .volumes()
+      .map(_.filter(_.name.startsWith(key.toPlain)))
       .flatMap { cvs =>
         Future
           .traverse(nodeNames.diff(cvs.map(_.nodeName).toSet))(
@@ -213,7 +214,7 @@ abstract class ServiceCollie extends Releasable {
               containerClient.volumeCreator
                 .nodeName(nodeName)
                 .path(path)
-                .name(s"${key.toPlain}-${CommonUtils.randomString(5)}")
+                .name(volumeName(key.toPlain))
                 .create()
           )
           .map(_ => ())
@@ -274,7 +275,8 @@ abstract class ServiceCollie extends Releasable {
     */
   final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
     containerClient
-      .volumes(key.toPlain)
+      .volumes()
+      .map(_.filter(_.name.startsWith(key.toPlain)))
       .map(
         _.filter { volume =>
           ObjectKey.ofPlain(volume.name).asScala match {
@@ -287,6 +289,8 @@ abstract class ServiceCollie extends Releasable {
       .map(_.toSet)
       .flatMap(Future.traverse(_)(containerClient.removeVolumes(_)))
       .map(_ => ())
+
+  private[this] def volumeName(keyName: String): String = s"$keyName-${CommonUtils.randomString(5)}"
 }
 
 object ServiceCollie {
