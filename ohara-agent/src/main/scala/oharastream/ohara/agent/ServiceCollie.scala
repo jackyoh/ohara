@@ -231,7 +231,7 @@ abstract class ServiceCollie extends Releasable {
       .map(_.flatMap { volume =>
         ObjectKey.ofPlain(volume.name).asScala match {
           case None => None
-          case Some(key) => {
+          case Some(key) =>
             Some(
               ClusterVolume(
                 group = key.group(),
@@ -243,7 +243,6 @@ abstract class ServiceCollie extends Releasable {
                 nodeNames = Set(volume.nodeName)
               )
             )
-          }
         }
       })
       .map(_.groupBy(_.key).map {
@@ -273,7 +272,7 @@ abstract class ServiceCollie extends Releasable {
     * @param executionContext thread pool
     * @return async call with unit. Otherwise, a exception is in the call
     */
-  final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] = {
+  final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
     containerClient
       .volumes(key.toPlain)
       .map(
@@ -288,7 +287,6 @@ abstract class ServiceCollie extends Releasable {
       .map(_.toSet)
       .flatMap(Future.traverse(_)(containerClient.removeVolumes(_)))
       .map(_ => ())
-  }
 }
 
 object ServiceCollie {
