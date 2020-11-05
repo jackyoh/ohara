@@ -277,13 +277,12 @@ abstract class ServiceCollie extends Releasable {
     containerClient
       .volumes(key.toPlain)
       .map(
-        _.filter(
-          volume =>
-            ObjectKey.ofPlain(volume.name).asScala match {
-              case None            => false
-              case Some(volumeKey) => volumeKey == key
-            }
-        )
+        _.filter { volume =>
+          ObjectKey.ofPlain(volume.name).asScala match {
+            case None            => false
+            case Some(volumeKey) => volumeKey.name().startsWith(key.name())
+          }
+        }
       )
       .map(volumes => volumes.map(volume => volume.name))
       .map(_.toSet)
