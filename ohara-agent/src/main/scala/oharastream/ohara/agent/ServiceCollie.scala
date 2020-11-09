@@ -21,7 +21,7 @@ import java.util.Objects
 import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 
 import com.typesafe.scalalogging.Logger
-import oharastream.ohara.agent.container.{ContainerClient, ContainerName}
+import oharastream.ohara.agent.container.{ContainerClient, ContainerName, ContainerVolume}
 import oharastream.ohara.agent.docker.ServiceCollieImpl
 import oharastream.ohara.agent.k8s.{K8SClient, K8SServiceCollieImpl}
 import oharastream.ohara.client.configurator.FileInfoApi.ClassInfo
@@ -206,7 +206,7 @@ abstract class ServiceCollie extends Releasable {
   ): Future[Unit] = {
     containerClient
       .volumes()
-      .map(_.filter(_.name.startsWith(key.toPlain)))
+      .map(filterVolumes(key, _))
       .flatMap { cvs =>
         Future
           .traverse(nodeNames.diff(cvs.map(_.nodeName).toSet))(
@@ -214,7 +214,7 @@ abstract class ServiceCollie extends Releasable {
               containerClient.volumeCreator
                 .nodeName(nodeName)
                 .path(path)
-                .name(volumeName(key.toPlain))
+                .name(volumeName(key))
                 .create()
           )
           .map(_ => ())
@@ -276,7 +276,7 @@ abstract class ServiceCollie extends Releasable {
   final def removeVolumes(key: ObjectKey)(implicit executionContext: ExecutionContext): Future[Unit] =
     containerClient
       .volumes()
-      .map(_.filter(_.name.startsWith(key.toPlain)))
+      .map(filterVolumes(key, _))
       .map(
         _.filter { volume =>
           ObjectKey.ofPlain(volume.name).asScala match {
@@ -290,7 +290,10 @@ abstract class ServiceCollie extends Releasable {
       .flatMap(Future.traverse(_)(containerClient.removeVolumes(_)))
       .map(_ => ())
 
-  private[this] def volumeName(keyName: String): String = s"$keyName-${CommonUtils.randomString(5)}"
+  private[this] def volumeName(key: ObjectKey): String = s"${key.toPlain}-${CommonUtils.randomString(5)}"
+
+  private[this] def filterVolumes(key: ObjectKey, volumes: Seq[ContainerVolume]): Seq[ContainerVolume] =
+    volumes.filter(_.name.startsWith(key.toPlain))
 }
 
 object ServiceCollie {
