@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import oharastream.ohara.common.setting.SettingDef
+import oharastream.ohara.common.setting.SettingDef.CheckRule
+import oharastream.ohara.kafka.connector.json.ConnectorDefUtils
 
 import scala.concurrent.duration.Duration
 
@@ -50,6 +52,14 @@ package object console {
     .key(CONSOLE_ROW_DIVIDER)
     .documentation(CONSOLE_ROW_DIVIDER_DOC)
     .optional(CONSOLE_ROW_DIVIDER_DEFAULT)
+    .orderInGroup(COUNTER.getAndIncrement())
+    .build()
+  val CONSOLE_CHECK_RULE_DEFINITION: SettingDef = SettingDef
+    .builder()
+    .displayName(ConnectorDefUtils.CHECK_RULE_DEFINITION.displayName())
+    .key(ConnectorDefUtils.CHECK_RULE_DEFINITION.key())
+    .documentation(ConnectorDefUtils.CHECK_RULE_DEFINITION.documentation())
+    .optional(CheckRule.ENFORCING.toString)
     .orderInGroup(COUNTER.getAndIncrement())
     .build()
 }

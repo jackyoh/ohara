@@ -126,14 +126,6 @@ class TestConsoleSinkTask extends OharaTest {
     result.cell(1).value() shouldBe resultValue2
   }
 
-  @Test
-  def testDataType(): Unit = {
-    val task = new ConsoleSinkTask()
-    task.checkDataType(DataType.STRING, "TEST")
-    an[IllegalArgumentException] should be thrownBy task.checkDataType(DataType.STRING, 100)
-    an[IllegalArgumentException] should be thrownBy task.checkDataType(DataType.INT, "test")
-  }
-
   private[this] def putRecord(task: ConsoleSinkTask): Unit =
     task.put(
       java.util.List.of(

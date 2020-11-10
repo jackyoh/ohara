@@ -23,7 +23,7 @@ import oharastream.ohara.common.annotations.VisibleForTesting
 import oharastream.ohara.common.util.CommonUtils
 import oharastream.ohara.kafka.connector.{RowSinkRecord, RowSinkTask, TaskSetting}
 import com.typesafe.scalalogging.Logger
-import oharastream.ohara.common.data.{Cell, Column, DataType, Row}
+import oharastream.ohara.common.data.{Cell, Column, Row}
 
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
@@ -71,42 +71,8 @@ class ConsoleSinkTask extends RowSinkTask {
   private[console] def convertToValue(record: RowSinkRecord, columns: Seq[Column]): Row = {
     Row.of(
       columns.sortBy(_.order()).map { c =>
-        val value = record.row().cell(c.name()).value()
-        checkDataType(c.dataType(), value)
-        Cell.of(c.newName(), value)
+        Cell.of(c.newName(), record.row().cell(c.name()).value())
       }: _*
     )
-  }
-
-  private[console] def checkDataType(dataType: DataType, value: Any): Unit = {
-    dataType match {
-      case DataType.BOOLEAN =>
-        if (!value.isInstanceOf[java.lang.Boolean])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Boolean type")
-      case DataType.BYTE =>
-        if (!value.isInstanceOf[java.lang.Byte])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Byte type")
-      case DataType.BYTES =>
-        if (!value.isInstanceOf[Array[java.lang.Byte]]) throw new IllegalArgumentException(s"column is not Bytes type")
-      case DataType.SHORT =>
-        if (!value.isInstanceOf[java.lang.Short])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Short type")
-      case DataType.INT =>
-        if (!value.isInstanceOf[java.lang.Integer])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Integer type")
-      case DataType.LONG =>
-        if (!value.isInstanceOf[java.lang.Long])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Long type")
-      case DataType.FLOAT =>
-        if (!value.isInstanceOf[java.lang.Float])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Float type")
-      case DataType.DOUBLE =>
-        if (!value.isInstanceOf[java.lang.Double])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.Double type")
-      case DataType.STRING =>
-        if (!value.isInstanceOf[java.lang.String])
-          throw new IllegalArgumentException(s"$value value type is not java.lang.String type")
-      case _ => throw new IllegalArgumentException("Data type setting error")
-    }
   }
 }
