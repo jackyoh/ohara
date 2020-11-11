@@ -213,7 +213,7 @@ abstract class ServiceCollie extends Releasable {
               containerClient.volumeCreator
                 .nodeName(nodeName)
                 .path(path)
-                .name(volumeName(key))
+                .name(hashVolumeName(key))
                 .create()
           )
           .map(_ => ())
@@ -257,7 +257,7 @@ abstract class ServiceCollie extends Releasable {
             else None
           ClusterVolume(
             group = key.group(),
-            name = key.name(),
+            name = reverseVolumeName(key),
             path = paths.head,
             driver = drivers.head,
             state = if (error.isEmpty) Some(VolumeState.RUNNING) else None,
@@ -288,7 +288,9 @@ abstract class ServiceCollie extends Releasable {
       .flatMap(Future.traverse(_)(containerClient.removeVolumes(_)))
       .map(_ => ())
 
-  private[this] def volumeName(key: ObjectKey): String = s"${key.toPlain}-${CommonUtils.randomString(5)}"
+  private[this] def hashVolumeName(key: ObjectKey): String = s"${key.toPlain}-${CommonUtils.randomString(5)}"
+
+  private[this] def reverseVolumeName(key: ObjectKey): String = key.name().split("-").head
 }
 
 object ServiceCollie {
