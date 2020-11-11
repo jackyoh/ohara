@@ -119,7 +119,7 @@ class TestConsoleSinkTask extends OharaTest {
       .timestampType(TimestampType.CREATE_TIME)
       .build()
     val task   = new ConsoleSinkTask()
-    val result = task.convertToValue(sinkRecord, columns)
+    val result = task.replaceName(sinkRecord, columns)
     result.cell(0).name() shouldBe newColumnName1
     result.cell(0).value() shouldBe resultValue1
     result.cell(1).name() shouldBe newColumnName2

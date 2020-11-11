@@ -102,6 +102,7 @@ class TestConsoleSinkConnector extends WithBrokerWorker {
     await(() => result(connectorApi.get(sink.key)).state.contains(State.RUNNING))
     val records = pollData(topic.key, Duration(60, TimeUnit.SECONDS), rowDataTotalSize)
     records.size shouldBe rowDataTotalSize // Confirm the topic have data
+    await(() => result(connectorApi.get(sink.key)).error.nonEmpty)
     await(() => result(connectorApi.get(sink.key)).error.get.contains("expected type: INT, actual:java.lang.String"))
   }
 

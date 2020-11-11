@@ -17,6 +17,7 @@
 package oharastream.ohara.connector.console
 
 import oharastream.ohara.common.rule.OharaTest
+import oharastream.ohara.common.setting.SettingDef.CheckRule
 import org.junit.jupiter.api.Test
 import org.scalatest.matchers.should.Matchers._
 
@@ -25,4 +26,8 @@ class TestConsoleSettingDef extends OharaTest {
   def testFrequenceDefinition(): Unit =
     CONSOLE_FREQUENCE_DEFINITION.defaultDuration() shouldBe java.time.Duration
       .ofMillis(CONSOLE_FREQUENCE_DEFAULT.toMillis)
+
+  @Test
+  def testConsoleCheckRuleDefinition(): Unit =
+    CONSOLE_CHECK_RULE_DEFINITION.defaultString() shouldBe CheckRule.ENFORCING.toString
 }

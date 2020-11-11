@@ -59,7 +59,7 @@ class ConsoleSinkTask extends RowSinkTask {
         LOG.info(
           records.asScala
             .map {
-              if (columns.nonEmpty) convertToValue(_, columns)
+              if (columns.nonEmpty) replaceName(_, columns)
               else _.row()
             }
             .mkString(divider)
@@ -68,7 +68,7 @@ class ConsoleSinkTask extends RowSinkTask {
     }
   }
 
-  private[console] def convertToValue(record: RowSinkRecord, columns: Seq[Column]): Row = {
+  private[console] def replaceName(record: RowSinkRecord, columns: Seq[Column]): Row = {
     Row.of(
       columns.sortBy(_.order()).map { c =>
         Cell.of(c.newName(), record.row().cell(c.name()).value())

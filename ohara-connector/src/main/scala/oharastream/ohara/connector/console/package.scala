@@ -54,6 +54,9 @@ package object console {
     .optional(CONSOLE_ROW_DIVIDER_DEFAULT)
     .orderInGroup(COUNTER.getAndIncrement())
     .build()
+
+  // Console sink connector show the data log from the topic.
+  // This definition check the column data type and column size for the columns.
   val CONSOLE_CHECK_RULE_DEFINITION: SettingDef = SettingDef
     .builder()
     .displayName(ConnectorDefUtils.CHECK_RULE_DEFINITION.displayName())
