@@ -255,6 +255,9 @@ abstract class ServiceCollie extends Releasable {
             else if (paths.size != 1)
               Some(s"the path is not consistent. ${volumes.map(v => s"${v.key} has path:${v.path}")}")
             else None
+          println("============================")
+          println(s"key.toPlain: ${key.toPlain}")
+          println("============================")
           ClusterVolume(
             group = key.group(),
             name = reverseVolumeName(key),
