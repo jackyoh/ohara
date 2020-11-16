@@ -388,7 +388,7 @@ object K8SClient {
                 .post[PersistentVolume, PersistentVolume, ErrorResponse](
                   s"$serverURL/persistentvolumes",
                   PersistentVolume(
-                    PVMetadata(volumeName, labels),
+                    PVMetadata(volumeName),
                     PVSpec(
                       capacity = PVCapacity("500Gi"),
                       accessModes = Seq("ReadWriteOnce"),
@@ -412,7 +412,7 @@ object K8SClient {
                     .post[PersistentVolumeClaim, PersistentVolumeClaim, ErrorResponse](
                       s"$serverURL/namespaces/$namespace/persistentvolumeclaims",
                       PersistentVolumeClaim(
-                        PVCMetadata(volumeName, labels),
+                        PVCMetadata(volumeName),
                         PVCSpec(
                           storageClassName = volumeName,
                           accessModes = Seq("ReadWriteOnce"),
@@ -458,7 +458,7 @@ object K8SClient {
             .map(_.items)
             .map { items =>
               items
-                .filter(_.metadata.labels.exists(_.get(LABEL_KEY).exists(_ == LABEL_VALUE)))
+              //.filter(_.metadata.labels.exists(_.get(LABEL_KEY).exists(_ == LABEL_VALUE)))
                 .map { item =>
                   ContainerVolume(
                     name = item.metadata.name,
