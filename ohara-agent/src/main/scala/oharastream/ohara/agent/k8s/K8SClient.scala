@@ -382,7 +382,7 @@ object K8SClient {
         override def volumeCreator: VolumeCreator =
           (nodeName: String, volumeName: String, path: String, executionContext: ExecutionContext) => {
             implicit val pool: ExecutionContext = executionContext
-            val labels                          = Option(Map(LABEL_KEY -> LABEL_VALUE))
+            //val labels                          = Option(Map(LABEL_KEY -> LABEL_VALUE))
             def doCreate() =
               httpExecutor
                 .post[PersistentVolume, PersistentVolume, ErrorResponse](
