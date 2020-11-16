@@ -457,6 +457,9 @@ object K8SClient {
             .get[PersistentVolumeInfo, ErrorResponse](s"$serverURL/persistentvolumes")
             .map(_.items)
             .map { items =>
+              println("=====================")
+              println(s"Item is $items")
+              println("=====================")
               items
               //.filter(_.metadata.labels.exists(_.get(LABEL_KEY).exists(_ == LABEL_VALUE)))
                 .map { item =>
