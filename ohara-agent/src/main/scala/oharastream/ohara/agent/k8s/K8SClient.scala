@@ -453,26 +453,16 @@ object K8SClient {
         }
 
         override def volumes()(implicit executionContext: ExecutionContext): Future[Seq[ContainerVolume]] = {
-          httpExecutor
-            .get[PersistentVolumeInfo, ErrorResponse](s"$serverURL/persistentvolumes")
-            .map(_.items)
-            .map { items =>
-              println("=====================")
-              println(s"Item is $items")
-              println("=====================")
-              items
-              //.filter(_.metadata.labels.exists(_.get(LABEL_KEY).exists(_ == LABEL_VALUE)))
-                .map { item =>
-                  ContainerVolume(
-                    name = item.metadata.name,
-                    driver = item.spec.volumeMode,
-                    path = item.spec.hostPath.path,
-                    nodeName = item.spec.nodeAffinity
-                      .map(_.required.nodeSelectorTerms.head.matchExpressions.head.values.head)
-                      .getOrElse("Unknown")
-                  )
-                }
-            }
+          Future {
+            Seq(
+              ContainerVolume(
+                name = "volume1",
+                driver = "driver",
+                path = "/tmp/test",
+                nodeName = "k8s-master"
+              )
+            )
+          }
         }
       }
     }
