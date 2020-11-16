@@ -96,31 +96,39 @@ class TestContainerClient extends IntegrationTest {
 
   @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
   @MethodSource(value = Array("parameters"))
-  def testVolumeMultiNode(platform: ContainerPlatform): Unit =
+  def testVolumeMultiNode(platform: ContainerPlatform): Unit = {
+    val nodeVolumes = platform.nodeNames.map { nodeName =>
+      nodeName -> s"volume-${CommonUtils.randomString(5)}"
+    }
+    val volumeNames = nodeVolumes.map(_._2).toSeq
     close(platform.setupContainerClient()) { containerClient =>
       val path = s"/tmp/${CommonUtils.randomString(10)}"
-      val name = CommonUtils.randomString()
-      checkVolumeNotExists(containerClient, Seq(name))
+      checkVolumeNotExists(containerClient, volumeNames)
       try {
-        platform.nodeNames.foreach { nodeName =>
-          result(
-            containerClient.volumeCreator
-              .name(name)
-              .nodeName(nodeName)
-              .path(path)
-              .create()
-          )
+        nodeVolumes.foreach {
+          case (nodeName, volumeName) =>
+            result(
+              containerClient.volumeCreator
+                .name(volumeName)
+                .nodeName(nodeName)
+                .path(path)
+                .create()
+            )
         }
-        result(containerClient.volumes(name)).foreach { volume =>
-          volume.name shouldBe name
-          volume.path shouldBe path
-          platform.nodeNames.contains(volume.nodeName) shouldBe true
+        nodeVolumes.foreach {
+          case (nodeName, volumeName) =>
+            result(containerClient.volumes(volumeName)).foreach { volume =>
+              volume.name shouldBe volumeName
+              volume.path shouldBe path
+              volume.nodeName shouldBe nodeName
+            }
         }
       } finally {
-        Releasable.close(() => result(containerClient.removeVolumes(name)))
-        checkVolumeNotExists(containerClient, Seq(name))
+        volumeNames.foreach(name => Releasable.close(() => result(containerClient.removeVolumes(name))))
+        checkVolumeNotExists(containerClient, volumeNames)
       }
-    }(containerClient => result(containerClient.forceRemove(name)))
+    }(containerClient => volumeNames.foreach(volumeName => result(containerClient.forceRemove(volumeName))))
+  }
 
   private[this] def checkVolumeNotExists(containerClient: ContainerClient, names: Seq[String]): Unit =
     names.foreach { volumeName =>

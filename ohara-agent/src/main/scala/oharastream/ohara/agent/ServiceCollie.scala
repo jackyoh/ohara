@@ -229,7 +229,7 @@ abstract class ServiceCollie extends Releasable {
     containerClient
       .volumes()
       .map(_.flatMap { volume =>
-        ObjectKey.ofPlain(volume.name).asScala match {
+        ObjectKey.ofPlain(clusterVolumeName(volume.name)).asScala match {
           case None => None
           case Some(key) =>
             Some(
@@ -257,7 +257,7 @@ abstract class ServiceCollie extends Releasable {
             else None
           ClusterVolume(
             group = key.group(),
-            name = key.toPlain,
+            name = key.name(),
             path = paths.head,
             driver = drivers.head,
             state = if (error.isEmpty) Some(VolumeState.RUNNING) else None,
@@ -289,6 +289,10 @@ abstract class ServiceCollie extends Releasable {
       .map(_ => ())
 
   private[this] def hashVolumeName(key: ObjectKey): String = s"${key.toPlain}-${CommonUtils.randomString(5)}"
+  private[this] def clusterVolumeName(name: String): String = {
+    val splits = name.split("-")
+    s"${splits(0)}-${splits(1)}"
+  }
 }
 
 object ServiceCollie {
