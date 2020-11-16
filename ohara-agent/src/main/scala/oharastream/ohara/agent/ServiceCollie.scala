@@ -257,7 +257,7 @@ abstract class ServiceCollie extends Releasable {
             else None
           ClusterVolume(
             group = key.group(),
-            name = reverseVolumeName(key),
+            name = key.toPlain,
             path = paths.head,
             driver = drivers.head,
             state = if (error.isEmpty) Some(VolumeState.RUNNING) else None,
@@ -289,8 +289,6 @@ abstract class ServiceCollie extends Releasable {
       .map(_ => ())
 
   private[this] def hashVolumeName(key: ObjectKey): String = s"${key.toPlain}-${CommonUtils.randomString(5)}"
-
-  private[this] def reverseVolumeName(key: ObjectKey): String = key.name().split("-").head
 }
 
 object ServiceCollie {
