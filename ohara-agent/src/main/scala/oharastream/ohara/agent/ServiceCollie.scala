@@ -291,7 +291,7 @@ abstract class ServiceCollie extends Releasable {
   private[this] def hashVolumeName(key: ObjectKey): String = s"${key.toPlain}-${CommonUtils.randomString(5)}"
   private[this] def clusterVolumeName(name: String): String = {
     val splits = name.split("-")
-    s"${splits(0)}-${splits(1)}"
+    s"${splits(0)}-${splits(1)}" // The name variable value is ${group}-${name}-${hash} convert to ${group}-${name}
   }
 }
 
