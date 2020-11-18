@@ -209,12 +209,16 @@ abstract class ServiceCollie extends Releasable {
       .flatMap { cvs =>
         Future
           .traverse(nodeNames.diff(cvs.map(_.nodeName).toSet))(
-            nodeName =>
+            nodeName => {
+              println("=================================")
+              println(s"ORIGIN KEY: ${key.name}  HASH VOLUME KEY: ${hashVolumeName(key)}")
+              println("=================================")
               containerClient.volumeCreator
                 .nodeName(nodeName)
                 .path(path)
                 .name(hashVolumeName(key))
                 .create()
+            }
           )
           .map(_ => ())
       }
