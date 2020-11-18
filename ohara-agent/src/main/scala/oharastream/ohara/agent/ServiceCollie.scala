@@ -206,13 +206,11 @@ abstract class ServiceCollie extends Releasable {
   ): Future[Unit] = {
     containerClient
       .volumes()
+      .map(volumes => volumes.filter(_.name.startsWith(key.toPlain)))
       .flatMap { cvs =>
         Future
           .traverse(nodeNames.diff(cvs.map(_.nodeName).toSet))(
             nodeName => {
-              println("=================================")
-              println(s"ORIGIN KEY: ${key.name}  HASH VOLUME KEY: ${hashVolumeName(key)}")
-              println("=================================")
               containerClient.volumeCreator
                 .nodeName(nodeName)
                 .path(path)
