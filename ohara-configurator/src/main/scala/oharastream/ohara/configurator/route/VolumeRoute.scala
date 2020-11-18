@@ -99,7 +99,8 @@ private[configurator] object VolumeRoute {
     serviceCollie: ServiceCollie,
     executionContext: ExecutionContext
   ): HookOfAction[Volume] =
-    (volume: Volume, _, _) =>
+    (volume: Volume, _, _) => {
+      println(s"VOLUME.KEY: ${volume.key}")
       dataChecker.checkList
         .volume(volume.key)
         .check()
@@ -107,11 +108,17 @@ private[configurator] object VolumeRoute {
         .flatMap {
           case (volume, condition) =>
             condition match {
-              case DataCondition.RUNNING => Future.unit
-              case DataCondition.STOPPED =>
+              case DataCondition.RUNNING => {
+                println("DATA CONDITION UNIT")
+                Future.unit
+              }
+              case DataCondition.STOPPED => {
+                println(s"DATA CONDITION STOPPED   VOLUME.KEY=${volume.key}")
                 serviceCollie.createLocalVolumes(volume.key, volume.path, volume.nodeNames)
+              }
             }
         }
+    }
 
   /**
     * throw exception if the volume is used by service

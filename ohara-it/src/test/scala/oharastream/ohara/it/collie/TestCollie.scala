@@ -71,6 +71,11 @@ class TestCollie extends IntegrationTest {
   def testMultiNodeVolume(platform: ContainerPlatform): Unit =
     close(platform.setup())(resourceRef => testMultiNodeVolume(resourceRef))(_ => ())
 
+  @ParameterizedTest(name = "{displayName} with {argumentsWithNames}")
+  @MethodSource(value = Array("parameters"))
+  def testMultiNodeVolume2(platform: ContainerPlatform): Unit =
+    close(platform.setup())(resourceRef => testMultiNodeVolume2(resourceRef))(_ => ())
+
   /**
     * @param clusterCount how many cluster should be created at same time
     */
@@ -122,6 +127,23 @@ class TestCollie extends IntegrationTest {
       result(resourceRef.volumeApi.delete(volume.key)) // Delete api data for the ohara volume
       checkVolumeNotExists(resourceRef, Seq(name))
     }
+  }
+
+  private[this] def testMultiNodeVolume2(resourceRef: ResourceRef): Unit = {
+    val path  = s"/tmp/${CommonUtils.randomString(10)}"
+    val names = Seq(s"volume1${CommonUtils.randomString(5)}", s"volume2${CommonUtils.randomString(5)}")
+    names.foreach { name =>
+      val volume = result(
+        resourceRef.volumeApi.request
+          .key(resourceRef.generateObjectKey)
+          .name(name)
+          .nodeNames(resourceRef.nodeNames)
+          .path(path)
+          .create()
+      )
+      result(resourceRef.volumeApi.start(volume.key))
+    }
+    println(s"VOLUME SIZE ${result(resourceRef.volumeApi.list()).size}")
   }
 
   private[this] def checkVolumeNotExists(resourceRef: ResourceRef, names: Seq[String]): Unit = {
