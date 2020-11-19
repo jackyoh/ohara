@@ -16,7 +16,6 @@
 
 package oharastream.ohara.agent.k8s
 
-import oharastream.ohara.agent.container.ContainerVolume
 import oharastream.ohara.agent.{ClusterStatus, Collie, DataCollie}
 import oharastream.ohara.client.configurator.ClusterState
 import oharastream.ohara.client.configurator.ContainerApi.ContainerInfo
@@ -77,23 +76,25 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     arguments: Seq[String],
     volumeMaps: Map[Volume, String]
   ): Future[Unit] =
-    containerClient.containerCreator
-      .imageName(containerInfo.imageName)
-      .portMappings(
-        containerInfo.portMappings.map(portMapping => portMapping.hostPort -> portMapping.containerPort).toMap
-      )
-      .nodeName(containerInfo.nodeName)
-      /**
-        * the hostname of k8s/docker container has strict limit. Fortunately, we are aware of this issue and the hostname
-        * passed to this method is legal to k8s/docker. Hence, assigning the hostname is very safe to you :)
-        */
-      .hostname(containerInfo.hostname)
-      .envs(containerInfo.environments)
-      .name(containerInfo.name)
-      .threadPool(executionContext)
-      .arguments(arguments)
-      .volumeMaps(volumeMaps.map(e => e._1.key.toPlain -> e._2))
-      .create()
+    reallyVolume(volumeMaps, containerInfo.nodeName)(executionContext).flatMap { newVolumeMap =>
+      containerClient.containerCreator
+        .imageName(containerInfo.imageName)
+        .portMappings(
+          containerInfo.portMappings.map(portMapping => portMapping.hostPort -> portMapping.containerPort).toMap
+        )
+        .nodeName(containerInfo.nodeName)
+        /**
+          * the hostname of k8s/docker container has strict limit. Fortunately, we are aware of this issue and the hostname
+          * passed to this method is legal to k8s/docker. Hence, assigning the hostname is very safe to you :)
+          */
+        .hostname(containerInfo.hostname)
+        .envs(containerInfo.environments)
+        .name(containerInfo.name)
+        .threadPool(executionContext)
+        .arguments(arguments)
+        .volumeMaps(newVolumeMap.map(e => e._1.key.toPlain -> e._2))
+        .create()
+    }(executionContext)
 
   override protected def postCreate(
     clusterStatus: ClusterStatus,
@@ -108,14 +109,11 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     containerClient
       .volumes()
       .map { volumes =>
-        volumes.filter(volume => volume.nodeName == nodeName)
-      }
-      .map { volumes =>
         volumeMaps.map[Volume, String] {
           case (key: Volume, value: String) =>
             (
               volumes
-                .find(_.name.startsWith(key.name))
+                .find(volume => volume.nodeName == nodeName && volume.name.startsWith(key.name))
                 .map { volume =>
                   Volume(
                     group = key.group,
