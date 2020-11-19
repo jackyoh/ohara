@@ -16,6 +16,7 @@
 
 package oharastream.ohara.agent.k8s
 
+import oharastream.ohara.agent.container.ContainerVolume
 import oharastream.ohara.agent.{ClusterStatus, Collie, DataCollie}
 import oharastream.ohara.client.configurator.ClusterState
 import oharastream.ohara.client.configurator.ContainerApi.ContainerInfo
@@ -100,4 +101,37 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     routes: Map[String, String],
     volumeMaps: Map[Volume, String]
   )(implicit executionContext: ExecutionContext): Future[Unit] = Future.unit
+
+  private[this] def reallyVolume(volumeMaps: Map[Volume, String], nodeName: String)(
+    implicit executionContext: ExecutionContext
+  ): Future[Map[Volume, String]] = {
+    containerClient
+      .volumes()
+      .map { volumes =>
+        volumes.filter(volume => volume.nodeName == nodeName)
+      }
+      .map { volumes =>
+        volumeMaps.map[Volume, String] {
+          case (key: Volume, value: String) =>
+            (
+              volumes
+                .find(_.name.startsWith(key.name))
+                .map { volume =>
+                  Volume(
+                    group = key.group,
+                    name = volume.name,
+                    nodeNames = key.nodeNames,
+                    path = key.path,
+                    state = key.state,
+                    error = key.error,
+                    tags = key.tags,
+                    lastModified = key.lastModified
+                  )
+                }
+                .getOrElse(throw new IllegalArgumentException(s"${key.name} volume is not found!")),
+              value
+            )
+        }
+      }
+  }
 }
