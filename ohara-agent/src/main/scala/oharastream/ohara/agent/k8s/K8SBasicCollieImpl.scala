@@ -76,21 +76,21 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     arguments: Seq[String],
     volumeMaps: Map[Volume, String]
   ): Future[Unit] = {
-    //implicit val pool: ExecutionContext = executionContext
-    println("CREATE CONTAINER TEST...................")
+    implicit val pool: ExecutionContext = executionContext
     containerClient
       .volumes()(executionContext)
       .map { volumes =>
         volumeMaps.map[Volume, String] {
           case (key: Volume, value: String) => {
-            println("aaaaaaaaaaaaaaaaaa")
             (
               volumes
-                .find(volume => volume.nodeName == node.name && volume.name.startsWith(key.name))
+                .find { volume =>
+                  volume.nodeName == node.name && key.name == volume.name.split("-")(1)
+                }
                 .map { volume =>
                   Volume(
                     group = key.group,
-                    name = volume.name,
+                    name = s"${volume.name.split("-")(1)}-${volume.name.split("-")(2)}",
                     nodeNames = key.nodeNames,
                     path = key.path,
                     state = key.state,
@@ -104,7 +104,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
             )
           }
         }
-      }(executionContext)
+      }
       .flatMap { newVolumeMap =>
         containerClient.containerCreator
           .imageName(containerInfo.imageName)
@@ -123,7 +123,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
           .arguments(arguments)
           .volumeMaps(newVolumeMap.map(e => e._1.key.toPlain -> e._2))
           .create()
-      }(executionContext)
+      }
   }
 
   override protected def postCreate(
