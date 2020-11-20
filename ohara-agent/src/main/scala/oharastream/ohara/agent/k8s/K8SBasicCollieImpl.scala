@@ -77,6 +77,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     volumeMaps: Map[Volume, String]
   ): Future[Unit] = {
     //implicit val pool: ExecutionContext = executionContext
+    println("CREATE CONTAINER TEST...................")
     containerClient
       .volumes()(executionContext)
       .map { volumes =>
