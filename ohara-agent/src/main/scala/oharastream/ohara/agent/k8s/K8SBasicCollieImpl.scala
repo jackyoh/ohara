@@ -78,6 +78,12 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
   ): Future[Unit] = {
     implicit val pool: ExecutionContext = executionContext
     reallyVolume(volumeMaps, containerInfo.nodeName).flatMap { newVolumeMap =>
+      println("=========================================")
+      newVolumeMap.map {
+        case (key, value) =>
+          println(s"VOLUME NAME: $key   VALUE: $value")
+      }
+      println("=========================================")
       containerClient.containerCreator
         .imageName(containerInfo.imageName)
         .portMappings(
@@ -107,7 +113,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
   private[this] def reallyVolume(volumeMaps: Map[Volume, String], nodeName: String)(
     implicit executionContext: ExecutionContext
   ): Future[Map[Volume, String]] = {
-    val result = containerClient
+    containerClient
       .volumes()
       .map { volumes =>
         volumeMaps.map[Volume, String] {
@@ -132,12 +138,5 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
             )
         }
       }
-    result.map { x =>
-      x.foreach {
-        case (key, value) =>
-          println(s"VOLUME NAME: ${key.name}   VALUE: $value")
-      }
-    }
-    result
   }
 }
