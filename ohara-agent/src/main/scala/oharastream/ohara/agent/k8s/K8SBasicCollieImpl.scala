@@ -77,7 +77,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     volumeMaps: Map[Volume, String]
   ): Future[Unit] = {
     implicit val pool: ExecutionContext = executionContext
-    reallyVolume(volumeMaps, containerInfo.nodeName).flatMap { newVolumeMap =>
+    reallyVolume(volumeMaps, containerInfo.nodeName).map { newVolumeMap =>
       println("=========================================")
       newVolumeMap.map {
         case (key, value) =>
