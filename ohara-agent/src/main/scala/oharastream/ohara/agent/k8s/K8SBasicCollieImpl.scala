@@ -75,8 +75,9 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     route: Map[String, String],
     arguments: Seq[String],
     volumeMaps: Map[Volume, String]
-  ): Future[Unit] =
-    reallyVolume(volumeMaps, containerInfo.nodeName)(executionContext).flatMap { newVolumeMap =>
+  ): Future[Unit] = {
+    implicit val pool: ExecutionContext = executionContext
+    reallyVolume(volumeMaps, containerInfo.nodeName).flatMap { newVolumeMap =>
       containerClient.containerCreator
         .imageName(containerInfo.imageName)
         .portMappings(
@@ -94,8 +95,8 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
         .arguments(arguments)
         .volumeMaps(newVolumeMap.map(e => e._1.key.toPlain -> e._2))
         .create()
-    }(executionContext)
-
+    }
+  }
   override protected def postCreate(
     clusterStatus: ClusterStatus,
     existentNodes: Map[Node, ContainerInfo],
@@ -113,8 +114,11 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
           case (key: Volume, value: String) =>
             (
               volumes
-                .find(volume => volume.nodeName == nodeName && volume.name.startsWith(key.name))
+                .find(volume => volume.nodeName == nodeName && volume.name.contains(key.name))
                 .map { volume =>
+                  println("==========================")
+                  println(s"VolumeName: ${volume.name}   KEY: ${key.name}")
+                  println("==========================")
                   Volume(
                     group = key.group,
                     name = volume.name,
