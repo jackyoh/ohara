@@ -76,22 +76,16 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     arguments: Seq[String],
     volumeMaps: Map[Volume, String]
   ): Future[Unit] = {
-    implicit val pool: ExecutionContext = executionContext
+    //implicit val pool: ExecutionContext = executionContext
     containerClient
-      .volumes()
+      .volumes()(executionContext)
       .map { volumes =>
         volumeMaps.map[Volume, String] {
           case (key: Volume, value: String) => {
-            println("========================")
-            volumes.foreach { volume =>
-              println(
-                s"node name: ${volume.nodeName} node.name: ${node.name}    volumename: ${volume.name}  key.name: ${key.name}"
-              )
-            }
-            println("========================")
+            println("aaaaaaaaaaaaaaaaaa")
             (
               volumes
-                .find(volume => volume.nodeName == node.name && volume.name.contains(key.name))
+                .find(volume => volume.nodeName == node.name && volume.name.startsWith(key.name))
                 .map { volume =>
                   Volume(
                     group = key.group,
@@ -109,14 +103,8 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
             )
           }
         }
-      }
+      }(executionContext)
       .flatMap { newVolumeMap =>
-        println("================================")
-        newVolumeMap.foreach {
-          case (key, value) =>
-            println(s"KEY: $key    VALUE: $value")
-        }
-        println("================================")
         containerClient.containerCreator
           .imageName(containerInfo.imageName)
           .portMappings(
@@ -132,9 +120,9 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
           .name(containerInfo.name)
           .threadPool(executionContext)
           .arguments(arguments)
-          .volumeMaps(volumeMaps.map(e => e._1.key.toPlain -> e._2))
+          .volumeMaps(newVolumeMap.map(e => e._1.key.toPlain -> e._2))
           .create()
-      }
+      }(executionContext)
   }
 
   override protected def postCreate(
