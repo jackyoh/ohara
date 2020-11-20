@@ -80,7 +80,16 @@ class TestCollie extends IntegrationTest {
     * @param clusterCount how many cluster should be created at same time
     */
   private[this] def testZookeeperBrokerWorker(clusterCount: Int, resourceRef: ResourceRef): Unit = {
-    val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef))
+    val zkVolume = result(
+      resourceRef.volumeApi.request
+        .key(resourceRef.generateObjectKey)
+        .name(s"volume${CommonUtils.randomString(5)}")
+        .nodeNames(resourceRef.nodeNames)
+        .path(s"/tmp/${CommonUtils.randomString(10)}")
+        .create()
+    )
+    checkVolumeNotExists(resourceRef, Seq(zkVolume.name))
+    val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef, zkVolume.key))
     try {
       val brokerClusterInfos = zookeeperClusterInfos.map(cluster => testBroker(cluster, resourceRef))
       try {
@@ -88,7 +97,11 @@ class TestCollie extends IntegrationTest {
         try testNodeServices(zookeeperClusterInfos ++ brokerClusterInfos ++ workerClusterInfos, resourceRef)
         finally workerClusterInfos.foreach(cluster => testStopWorker(cluster, resourceRef))
       } finally brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
-    } finally zookeeperClusterInfos.foreach(cluster => testStopZookeeper(cluster, resourceRef))
+    } finally {
+      zookeeperClusterInfos.foreach(cluster => testStopZookeeper(cluster, resourceRef))
+      result(resourceRef.volumeApi.delete(zkVolume.key))
+      checkVolumeNotExists(resourceRef, Seq(zkVolume.name))
+    }
   }
 
   private[this] def testNodeServices(clusterInfos: Seq[ClusterInfo], resourceRef: ResourceRef): Unit = {
@@ -167,7 +180,7 @@ class TestCollie extends IntegrationTest {
     }
   }
 
-  private[this] def testZookeeper(resourceRef: ResourceRef): ZookeeperClusterInfo = {
+  private[this] def testZookeeper(resourceRef: ResourceRef, volumeKey: ObjectKey): ZookeeperClusterInfo = {
     val zookeeperClusterInfo = result(
       resourceRef.zookeeperApi.request
         .key(resourceRef.generateObjectKey)
@@ -176,6 +189,7 @@ class TestCollie extends IntegrationTest {
         .electionPort(CommonUtils.availablePort())
         .peerPort(CommonUtils.availablePort())
         .nodeName(resourceRef.nodeNames.head)
+        .dataDir(volumeKey)
         .create()
     )
     result(resourceRef.zookeeperApi.start(zookeeperClusterInfo.key))
