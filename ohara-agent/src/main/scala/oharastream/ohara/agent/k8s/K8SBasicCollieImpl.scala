@@ -107,7 +107,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
   private[this] def reallyVolume(volumeMaps: Map[Volume, String], nodeName: String)(
     implicit executionContext: ExecutionContext
   ): Future[Map[Volume, String]] = {
-    containerClient
+    val result = containerClient
       .volumes()
       .map { volumes =>
         volumeMaps.map[Volume, String] {
@@ -116,9 +116,6 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
               volumes
                 .find(volume => volume.nodeName == nodeName && volume.name.contains(key.name))
                 .map { volume =>
-                  println("==========================")
-                  println(s"VolumeName: ${volume.name}   KEY: ${key.name}")
-                  println("==========================")
                   Volume(
                     group = key.group,
                     name = volume.name,
@@ -135,5 +132,12 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
             )
         }
       }
+    result.map { x =>
+      x.foreach {
+        case (key, value) =>
+          println(s"VOLUME NAME: ${key.name}   VALUE: $value")
+      }
+    }
+    result
   }
 }
