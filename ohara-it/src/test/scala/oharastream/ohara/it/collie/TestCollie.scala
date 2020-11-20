@@ -88,15 +88,28 @@ class TestCollie extends IntegrationTest {
         .path(s"/tmp/${CommonUtils.randomString(10)}")
         .create()
     )
+    val bkVolume = result(
+      resourceRef.volumeApi.request
+        .key(resourceRef.generateObjectKey)
+        .name(s"volume${CommonUtils.randomString(5)}")
+        .nodeNames(resourceRef.nodeNames)
+        .path(s"/tmp/${CommonUtils.randomString(10)}")
+        .create()
+    )
     checkVolumeNotExists(resourceRef, Seq(zkVolume.name))
+    checkVolumeNotExists(resourceRef, Seq(bkVolume.name))
     val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef, zkVolume.key))
     try {
-      val brokerClusterInfos = zookeeperClusterInfos.map(cluster => testBroker(cluster, resourceRef))
+      val brokerClusterInfos = zookeeperClusterInfos.map(cluster => testBroker(cluster, resourceRef, bkVolume.key))
       try {
         val workerClusterInfos = brokerClusterInfos.map(cluster => testWorker(cluster, resourceRef))
         try testNodeServices(zookeeperClusterInfos ++ brokerClusterInfos ++ workerClusterInfos, resourceRef)
         finally workerClusterInfos.foreach(cluster => testStopWorker(cluster, resourceRef))
-      } finally brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
+      } finally {
+        brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
+        result(resourceRef.volumeApi.delete(bkVolume.key))
+        checkVolumeNotExists(resourceRef, Seq(bkVolume.name))
+      }
     } finally {
       zookeeperClusterInfos.foreach(cluster => testStopZookeeper(cluster, resourceRef))
       result(resourceRef.volumeApi.delete(zkVolume.key))
@@ -218,7 +231,8 @@ class TestCollie extends IntegrationTest {
 
   private[this] def testBroker(
     zookeeperClusterInfo: ZookeeperClusterInfo,
-    resourceRef: ResourceRef
+    resourceRef: ResourceRef,
+    volumeKey: ObjectKey
   ): BrokerClusterInfo = {
     log.info("[BROKER] start to run broker cluster")
     val clusterKey = resourceRef.generateObjectKey
@@ -243,6 +257,7 @@ class TestCollie extends IntegrationTest {
           .jmxPort(jmxPort)
           .zookeeperClusterKey(zookeeperClusterInfo.key)
           .nodeName(nodeName)
+          .logDirs(Set(volumeKey))
           .create()
       )
     )
