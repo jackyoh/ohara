@@ -75,24 +75,59 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
     route: Map[String, String],
     arguments: Seq[String],
     volumeMaps: Map[Volume, String]
-  ): Future[Unit] =
-    containerClient.containerCreator
-      .imageName(containerInfo.imageName)
-      .portMappings(
-        containerInfo.portMappings.map(portMapping => portMapping.hostPort -> portMapping.containerPort).toMap
-      )
-      .nodeName(containerInfo.nodeName)
-      /**
-        * the hostname of k8s/docker container has strict limit. Fortunately, we are aware of this issue and the hostname
-        * passed to this method is legal to k8s/docker. Hence, assigning the hostname is very safe to you :)
-        */
-      .hostname(containerInfo.hostname)
-      .envs(containerInfo.environments)
-      .name(containerInfo.name)
-      .threadPool(executionContext)
-      .arguments(arguments)
-      .volumeMaps(volumeMaps.map(e => e._1.key.toPlain -> e._2))
-      .create()
+  ): Future[Unit] = {
+    implicit val pool: ExecutionContext = executionContext
+    containerClient
+      .volumes()
+      .map { volumes =>
+        volumeMaps.map[Volume, String] {
+          case (key: Volume, value: String) =>
+            (
+              volumes
+                .find(volume => volume.nodeName == node.name && volume.name.contains(key.name))
+                .map { volume =>
+                  Volume(
+                    group = key.group,
+                    name = volume.name,
+                    nodeNames = key.nodeNames,
+                    path = key.path,
+                    state = key.state,
+                    error = key.error,
+                    tags = key.tags,
+                    lastModified = key.lastModified
+                  )
+                }
+                .getOrElse(throw new IllegalArgumentException(s"${key.name} volume is not found!")),
+              value
+            )
+        }
+      }
+      .flatMap { newVolumeMap =>
+        println("================================")
+        newVolumeMap.foreach {
+          case (key, value) =>
+            println(s"KEY: $key    VALUE: $value")
+        }
+        println("================================")
+        containerClient.containerCreator
+          .imageName(containerInfo.imageName)
+          .portMappings(
+            containerInfo.portMappings.map(portMapping => portMapping.hostPort -> portMapping.containerPort).toMap
+          )
+          .nodeName(containerInfo.nodeName)
+          /**
+            * the hostname of k8s/docker container has strict limit. Fortunately, we are aware of this issue and the hostname
+            * passed to this method is legal to k8s/docker. Hence, assigning the hostname is very safe to you :)
+            */
+          .hostname(containerInfo.hostname)
+          .envs(containerInfo.environments)
+          .name(containerInfo.name)
+          .threadPool(executionContext)
+          .arguments(arguments)
+          .volumeMaps(volumeMaps.map(e => e._1.key.toPlain -> e._2))
+          .create()
+      }
+  }
 
   override protected def postCreate(
     clusterStatus: ClusterStatus,
