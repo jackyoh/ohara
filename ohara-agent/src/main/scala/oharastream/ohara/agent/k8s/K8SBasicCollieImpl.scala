@@ -81,7 +81,14 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
       .volumes()
       .map { volumes =>
         volumeMaps.map[Volume, String] {
-          case (key: Volume, value: String) =>
+          case (key: Volume, value: String) => {
+            println("========================")
+            volumes.foreach { volume =>
+              println(
+                s"node name: ${volume.nodeName} node.name: ${node.name}    volumename: ${volume.name}  key.name: ${key.name}"
+              )
+            }
+            println("========================")
             (
               volumes
                 .find(volume => volume.nodeName == node.name && volume.name.contains(key.name))
@@ -100,6 +107,7 @@ private[this] abstract class K8SBasicCollieImpl(val dataCollie: DataCollie, val 
                 .getOrElse(throw new IllegalArgumentException(s"${key.name} volume is not found!")),
               value
             )
+          }
         }
       }
       .flatMap { newVolumeMap =>
