@@ -80,10 +80,15 @@ class TestCollie extends IntegrationTest {
     * @param clusterCount how many cluster should be created at same time
     */
   private[this] def testZookeeperBrokerWorker(clusterCount: Int, resourceRef: ResourceRef): Unit = {
+    val zkVolumeName = s"volume${CommonUtils.randomString(5)}"
+    val bkVolumeName = s"volume${CommonUtils.randomString(5)}"
+    checkVolumeNotExists(resourceRef, Seq(zkVolumeName))
+    checkVolumeNotExists(resourceRef, Seq(bkVolumeName))
+
     val zkVolume = result(
       resourceRef.volumeApi.request
         .key(resourceRef.generateObjectKey)
-        .name(s"volume${CommonUtils.randomString(5)}")
+        .name(zkVolumeName)
         .nodeNames(resourceRef.nodeNames)
         .path(s"/tmp/${CommonUtils.randomString(10)}")
         .create()
@@ -91,13 +96,14 @@ class TestCollie extends IntegrationTest {
     val bkVolume = result(
       resourceRef.volumeApi.request
         .key(resourceRef.generateObjectKey)
-        .name(s"volume${CommonUtils.randomString(5)}")
+        .name(bkVolumeName)
         .nodeNames(resourceRef.nodeNames)
         .path(s"/tmp/${CommonUtils.randomString(10)}")
         .create()
     )
-    checkVolumeNotExists(resourceRef, Seq(zkVolume.name))
-    checkVolumeNotExists(resourceRef, Seq(bkVolume.name))
+    result(resourceRef.volumeApi.start(zkVolume.key))
+    result(resourceRef.volumeApi.start(bkVolume.key))
+    TimeUnit.SECONDS.sleep(5)
     val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef, zkVolume.key))
     try {
       val brokerClusterInfos = zookeeperClusterInfos.map(cluster => testBroker(cluster, resourceRef, bkVolume.key))
@@ -107,11 +113,13 @@ class TestCollie extends IntegrationTest {
         finally workerClusterInfos.foreach(cluster => testStopWorker(cluster, resourceRef))
       } finally {
         brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
+        result(resourceRef.volumeApi.stop(bkVolume.key))
         result(resourceRef.volumeApi.delete(bkVolume.key))
         checkVolumeNotExists(resourceRef, Seq(bkVolume.name))
       }
     } finally {
       zookeeperClusterInfos.foreach(cluster => testStopZookeeper(cluster, resourceRef))
+      result(resourceRef.volumeApi.stop(zkVolume.key))
       result(resourceRef.volumeApi.delete(zkVolume.key))
       checkVolumeNotExists(resourceRef, Seq(zkVolume.name))
     }
