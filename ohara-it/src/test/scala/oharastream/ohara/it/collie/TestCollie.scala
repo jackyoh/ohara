@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.client.configurator.BrokerApi.BrokerClusterInfo
 import oharastream.ohara.client.configurator.ClusterInfo
+import oharastream.ohara.client.configurator.VolumeApi.VolumeState
 import oharastream.ohara.client.configurator.WorkerApi.WorkerClusterInfo
 import oharastream.ohara.client.configurator.ZookeeperApi.ZookeeperClusterInfo
 import oharastream.ohara.client.kafka.ConnectorAdmin
@@ -80,15 +81,54 @@ class TestCollie extends IntegrationTest {
     * @param clusterCount how many cluster should be created at same time
     */
   private[this] def testZookeeperBrokerWorker(clusterCount: Int, resourceRef: ResourceRef): Unit = {
-    val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef))
+    val zkVolumeName = s"volume${CommonUtils.randomString(5)}"
+    val bkVolumeName = s"aaaaa${CommonUtils.randomString(5)}"
+    checkVolumeNotExists(resourceRef, Seq(zkVolumeName))
+    checkVolumeNotExists(resourceRef, Seq(bkVolumeName))
+    val zkVolume = result(
+      resourceRef.volumeApi.request
+        .key(resourceRef.generateObjectKey)
+        .name(zkVolumeName)
+        .nodeNames(resourceRef.nodeNames)
+        .path(s"/tmp/${CommonUtils.randomString(10)}")
+        .create()
+    )
+    val bkVolume = result(
+      resourceRef.volumeApi.request
+        .key(resourceRef.generateObjectKey)
+        .name(bkVolumeName)
+        .nodeNames(resourceRef.nodeNames)
+        .path(s"/tmp/${CommonUtils.randomString(10)}")
+        .create()
+    )
+    val volumes = Seq(bkVolume, zkVolume)
     try {
-      val brokerClusterInfos = zookeeperClusterInfos.map(cluster => testBroker(cluster, resourceRef))
+      volumes.foreach { volume =>
+        result(resourceRef.volumeApi.start(volume.key))
+      }
+      TimeUnit.SECONDS.sleep(10)
+      println("=============================================")
+      result(resourceRef.volumeApi.list()).foreach { volume =>
+        await(() => volume.state.contains(VolumeState.RUNNING))
+        println(volume.state)
+      }
+      println("=============================================")
+
+      val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef, zkVolume.key))
       try {
-        val workerClusterInfos = brokerClusterInfos.map(cluster => testWorker(cluster, resourceRef))
-        try testNodeServices(zookeeperClusterInfos ++ brokerClusterInfos ++ workerClusterInfos, resourceRef)
-        finally workerClusterInfos.foreach(cluster => testStopWorker(cluster, resourceRef))
-      } finally brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
-    } finally zookeeperClusterInfos.foreach(cluster => testStopZookeeper(cluster, resourceRef))
+        val brokerClusterInfos = zookeeperClusterInfos.map(cluster => testBroker(cluster, resourceRef, bkVolume.key))
+        try {
+          val workerClusterInfos = brokerClusterInfos.map(cluster => testWorker(cluster, resourceRef))
+          try testNodeServices(zookeeperClusterInfos ++ brokerClusterInfos ++ workerClusterInfos, resourceRef)
+          finally workerClusterInfos.foreach(cluster => testStopWorker(cluster, resourceRef))
+        } finally brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
+      } finally zookeeperClusterInfos.foreach(cluster => testStopZookeeper(cluster, resourceRef))
+    } finally {
+      volumes.foreach { volume =>
+        result(resourceRef.volumeApi.stop(volume.key))
+        result(resourceRef.volumeApi.delete(volume.key))
+      }
+    }
   }
 
   private[this] def testNodeServices(clusterInfos: Seq[ClusterInfo], resourceRef: ResourceRef): Unit = {
@@ -138,7 +178,7 @@ class TestCollie extends IntegrationTest {
         resourceRef.volumeApi.request
           .key(resourceRef.generateObjectKey)
           .name(name)
-          .nodeNames(Set(resourceRef.nodeNames.head))
+          .nodeNames(resourceRef.nodeNames)
           .path(path)
           .create()
       )
@@ -153,10 +193,10 @@ class TestCollie extends IntegrationTest {
       }
       result(resourceRef.volumeApi.list()).size shouldBe names.size
     } finally {
-      volumes.foreach { volume =>
+      /*volumes.foreach { volume =>
         result(resourceRef.volumeApi.stop(volume.key))
         result(resourceRef.volumeApi.delete(volume.key))
-      }
+      }*/
       checkVolumeNotExists(resourceRef, names)
     }
   }
@@ -167,7 +207,7 @@ class TestCollie extends IntegrationTest {
     }
   }
 
-  private[this] def testZookeeper(resourceRef: ResourceRef): ZookeeperClusterInfo = {
+  private[this] def testZookeeper(resourceRef: ResourceRef, volumeKey: ObjectKey): ZookeeperClusterInfo = {
     val zookeeperClusterInfo = result(
       resourceRef.zookeeperApi.request
         .key(resourceRef.generateObjectKey)
@@ -176,6 +216,7 @@ class TestCollie extends IntegrationTest {
         .electionPort(CommonUtils.availablePort())
         .peerPort(CommonUtils.availablePort())
         .nodeName(resourceRef.nodeNames.head)
+        .dataDir(volumeKey)
         .create()
     )
     result(resourceRef.zookeeperApi.start(zookeeperClusterInfo.key))
@@ -204,7 +245,8 @@ class TestCollie extends IntegrationTest {
 
   private[this] def testBroker(
     zookeeperClusterInfo: ZookeeperClusterInfo,
-    resourceRef: ResourceRef
+    resourceRef: ResourceRef,
+    volumeKey: ObjectKey
   ): BrokerClusterInfo = {
     log.info("[BROKER] start to run broker cluster")
     val clusterKey = resourceRef.generateObjectKey
@@ -229,6 +271,7 @@ class TestCollie extends IntegrationTest {
           .jmxPort(jmxPort)
           .zookeeperClusterKey(zookeeperClusterInfo.key)
           .nodeName(nodeName)
+          .logDirs(Set(volumeKey))
           .create()
       )
     )

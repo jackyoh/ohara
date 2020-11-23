@@ -206,7 +206,12 @@ abstract class ServiceCollie extends Releasable {
   ): Future[Unit] = {
     containerClient
       .volumes()
-      .map(volumes => volumes.filter(volume => prefixNameEqualsKey(volume.name, key.toPlain)))
+      .map { volumes =>
+        volumes.filter { volume =>
+          println(s"VOLUME INFO: ${volume.name}   KEY: ${key.toPlain}")
+          prefixNameEqualsKey(volume.name, key.toPlain)
+        }
+      }
       .flatMap { cvs =>
         Future
           .traverse(nodeNames.diff(cvs.map(_.nodeName).toSet))(
