@@ -378,6 +378,13 @@ trait Collie {
     error = None
   )
 
+  /**
+    * Convert to actually volume name for the volume map from the containerClient
+    * @param node
+    * @param volumeMaps
+    * @param executionContext
+    * @return
+    */
   protected def actuallyVolumeMap(node: Node, volumeMaps: Map[Volume, String])(
     implicit executionContext: ExecutionContext
   ): Future[Map[Volume, String]] =
