@@ -18,7 +18,6 @@ package oharastream.ohara.configurator.route
 
 import akka.http.scaladsl.server
 import oharastream.ohara.agent.ServiceCollie
-import oharastream.ohara.client.configurator.ClusterInfo
 import oharastream.ohara.client.configurator.VolumeApi._
 import oharastream.ohara.common.setting.ObjectKey
 import oharastream.ohara.common.util.CommonUtils
@@ -113,17 +112,6 @@ private[configurator] object VolumeRoute {
             }
         }
 
-  /**
-    * throw exception if the volume is used by service
-    * @param volumeKey volume key
-    */
-  private[this] def check(
-    volumeKey: ObjectKey,
-    clusterInfo: ClusterInfo
-  ): Unit =
-    if (clusterInfo.volumeMaps.keys.exists(_ == volumeKey))
-      throw new IllegalArgumentException(s"volume: $volumeKey is used by ${clusterInfo.kind}: ${clusterInfo.key}")
-
   private[this] def hookOfStop(
     implicit dataChecker: DataChecker,
     serviceCollie: ServiceCollie,
@@ -148,14 +136,14 @@ private[configurator] object VolumeRoute {
             )
         )
         .flatMap {
-          case (condition, runningZookeepers, runningBrokers, runningWorkers, runningStreams) =>
+          case (condition, _, _, _, _) =>
             condition match {
               case DataCondition.STOPPED => Future.unit
               case DataCondition.RUNNING =>
-                runningZookeepers.foreach(check(volume.key, _))
+                /*runningZookeepers.foreach(check(volume.key, _))
                 runningBrokers.foreach(check(volume.key, _))
                 runningWorkers.foreach(check(volume.key, _))
-                runningStreams.foreach(check(volume.key, _))
+                runningStreams.foreach(check(volume.key, _))*/
                 serviceCollie.removeVolumes(volume.key)
             }
         }
@@ -183,11 +171,11 @@ private[configurator] object VolumeRoute {
             )
         )
         .flatMap {
-          case (zookeepers, brokers, workers, streams) =>
-            zookeepers.foreach(check(volumeKey, _))
+          case (_, _, _, _) =>
+            /*zookeepers.foreach(check(volumeKey, _))
             brokers.foreach(check(volumeKey, _))
             workers.foreach(check(volumeKey, _))
-            streams.foreach(check(volumeKey, _))
+            streams.foreach(check(volumeKey, _))*/
             serviceCollie.removeVolumes(volumeKey)
         }
 
