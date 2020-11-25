@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.Logger
 import oharastream.ohara.client.configurator.BrokerApi.BrokerClusterInfo
-import oharastream.ohara.client.configurator.ClusterInfo
+import oharastream.ohara.client.configurator.{ClusterInfo, ClusterState}
 import oharastream.ohara.client.configurator.VolumeApi.{Volume, VolumeState}
 import oharastream.ohara.client.configurator.WorkerApi.WorkerClusterInfo
 import oharastream.ohara.client.configurator.ZookeeperApi.ZookeeperClusterInfo
@@ -81,26 +81,16 @@ class TestCollie extends IntegrationTest {
     * @param clusterCount how many cluster should be created at same time
     */
   private[this] def testZookeeperBrokerWorker(clusterCount: Int, resourceRef: ResourceRef): Unit = {
-    val zookeeperClusterInfos = (0 until clusterCount).map { _ =>
-      val zkVolume = result(
-        resourceRef.volumeApi.request
-          .key(resourceRef.generateObjectKey)
-          .name(s"zkvolume${CommonUtils.randomString(5)}")
-          .nodeNames(Set(resourceRef.nodeNames.head))
-          .path(s"/tmp/${CommonUtils.randomString(10)}")
-          .create()
-      )
-      result(resourceRef.volumeApi.start(zkVolume.key))
-      await(() => result(resourceRef.volumeApi.get(zkVolume.key)).state.contains(VolumeState.RUNNING))
-      testZookeeper(resourceRef, zkVolume)
-    }
+    val zookeeperClusterInfos = (0 until clusterCount).map(_ => testZookeeper(resourceRef))
     try {
       val brokerClusterInfos = zookeeperClusterInfos.map { cluster =>
+        val volumeName = s"bkvolume${CommonUtils.randomString(5)}"
+        checkVolumeNotExists(resourceRef, Seq(volumeName))
         val bkVolumes = Set(
           result(
             resourceRef.volumeApi.request
               .key(resourceRef.generateObjectKey)
-              .name(s"bkvolume${CommonUtils.randomString(5)}")
+              .name(volumeName)
               .nodeNames(Set(resourceRef.nodeNames.head))
               .path(s"/tmp/${CommonUtils.randomString(10)}")
               .create()
@@ -118,8 +108,7 @@ class TestCollie extends IntegrationTest {
         finally workerClusterInfos.foreach(cluster => testStopWorker(cluster, resourceRef))
       } finally brokerClusterInfos.foreach(cluster => testStopBroker(cluster, resourceRef))
     } finally zookeeperClusterInfos.foreach { cluster =>
-      println(cluster)
-    //testStopZookeeper(cluster, resourceRef)
+      testStopZookeeper(cluster, resourceRef)
     }
   }
 
@@ -199,7 +188,7 @@ class TestCollie extends IntegrationTest {
     }
   }
 
-  private[this] def testZookeeper(resourceRef: ResourceRef, volume: Volume): ZookeeperClusterInfo = {
+  private[this] def testZookeeper(resourceRef: ResourceRef): ZookeeperClusterInfo = {
     val zookeeperClusterInfo = result(
       resourceRef.zookeeperApi.request
         .key(resourceRef.generateObjectKey)
@@ -208,7 +197,6 @@ class TestCollie extends IntegrationTest {
         .electionPort(CommonUtils.availablePort())
         .peerPort(CommonUtils.availablePort())
         .nodeName(resourceRef.nodeNames.head)
-        .dataDir(volume.key)
         .create()
     )
     result(resourceRef.zookeeperApi.start(zookeeperClusterInfo.key))
@@ -220,7 +208,7 @@ class TestCollie extends IntegrationTest {
     zookeeperClusterInfo
   }
 
-  /*private[this] def testStopZookeeper(zookeeperClusterInfo: ZookeeperClusterInfo, resourceRef: ResourceRef): Unit = {
+  private[this] def testStopZookeeper(zookeeperClusterInfo: ZookeeperClusterInfo, resourceRef: ResourceRef): Unit = {
     result(resourceRef.zookeeperApi.stop(zookeeperClusterInfo.key))
     await(() => {
       // In configurator mode: clusters() will return the "stopped list" in normal case
@@ -233,7 +221,7 @@ class TestCollie extends IntegrationTest {
     })
     // the cluster is stopped actually, delete the data
     result(resourceRef.zookeeperApi.delete(zookeeperClusterInfo.key))
-  }*/
+  }
 
   private[this] def testBroker(
     zookeeperClusterInfo: ZookeeperClusterInfo,
@@ -254,7 +242,6 @@ class TestCollie extends IntegrationTest {
       brokerCluster.jmxPort shouldBe jmxPort
       brokerCluster
     }
-
     val brokerClusterInfo = assert(
       result(
         resourceRef.brokerApi.request
@@ -309,18 +296,25 @@ class TestCollie extends IntegrationTest {
   }
 
   private[this] def testStopBroker(brokerClusterInfo: BrokerClusterInfo, resourceRef: ResourceRef): Unit = {
-    result(resourceRef.brokerApi.stop(brokerClusterInfo.key))
-    await(() => {
-      // In configurator mode: clusters() will return the "stopped list" in normal case
-      // In collie mode: clusters() will return the "cluster list except stop one" in normal case
-      // we should consider these two cases by case...
-      val clusters = result(resourceRef.brokerApi.list())
-      !clusters
-        .map(_.key)
-        .contains(brokerClusterInfo.key) || clusters.find(_.key == brokerClusterInfo.key).get.state.isEmpty
-    })
-    // the cluster is stopped actually, delete the data
-    result(resourceRef.brokerApi.delete(brokerClusterInfo.key))
+    try {
+      result(resourceRef.brokerApi.stop(brokerClusterInfo.key))
+      await(() => {
+        // In configurator mode: clusters() will return the "stopped list" in normal case
+        // In collie mode: clusters() will return the "cluster list except stop one" in normal case
+        // we should consider these two cases by case...
+        val clusters = result(resourceRef.brokerApi.list())
+        !clusters
+          .map(_.key)
+          .contains(brokerClusterInfo.key) || clusters.find(_.key == brokerClusterInfo.key).get.state.isEmpty
+      })
+      // the cluster is stopped actually, delete the data
+      result(resourceRef.brokerApi.delete(brokerClusterInfo.key))
+    } finally {
+      brokerClusterInfo.volumeMaps.keys.foreach { objectKey =>
+        result(resourceRef.volumeApi.stop(objectKey))   // Stop broker volume
+        result(resourceRef.volumeApi.delete(objectKey)) // Delete broker volume
+      }
+    }
   }
 
   private[this] def testAddNodeToRunningBrokerCluster(
@@ -340,16 +334,27 @@ class TestCollie extends IntegrationTest {
         // we can't add a nonexistent node
         // we always get IllegalArgumentException if we sent request by restful api
         // However, if we use collie impl, an NoSuchElementException will be thrown...
-        an[Throwable] should be thrownBy result(
+
+        // TODO After setting the volume, check the illegal node is not working.
+        /*an[Throwable] should be thrownBy result(
           resourceRef.brokerApi.addNode(previousCluster.key, CommonUtils.randomString())
-        )
+        )*/
         val newNode = freeNodes.head
         log.info(s"[BROKER] add new node:$newNode to cluster:${previousCluster.key}")
+
+        previousCluster.volumeMaps.keys.foreach { key =>
+          await { () =>
+            result(resourceRef.volumeApi.addNode(key, newNode))
+            result(resourceRef.volumeApi.get(key)).state.contains(VolumeState.RUNNING) &&
+            result(resourceRef.volumeApi.get(key)).nodeNames.contains(newNode)
+          }
+        }
         val newCluster = result(
           resourceRef.brokerApi
             .addNode(previousCluster.key, newNode)
             .flatMap(_ => resourceRef.brokerApi.get(previousCluster.key))
         )
+        await(() => newCluster.state.contains(ClusterState.RUNNING))
         log.info(s"[BROKER] add new node:$newNode to cluster:${previousCluster.key}...done")
         newCluster.key shouldBe previousCluster.key
         newCluster.imageName shouldBe previousCluster.imageName
