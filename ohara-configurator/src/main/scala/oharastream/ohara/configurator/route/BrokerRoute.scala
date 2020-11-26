@@ -99,7 +99,7 @@ object BrokerRoute {
       // node names check is covered in super route
         .zookeeperCluster(brokerClusterInfo.zookeeperClusterKey, DataCondition.RUNNING)
         .allBrokers()
-        .volumes(brokerClusterInfo.volumeMaps.keySet, DataCondition.RUNNING)
+        //.volumes(brokerClusterInfo.volumeMaps.keySet, DataCondition.RUNNING)
         .check()
         .map(_.runningBrokers)
         .flatMap { runningBrokerClusters =>
