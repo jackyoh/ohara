@@ -69,7 +69,8 @@ object BrokerRoute {
               .key(key)
               .creation
           )
-        case Some(previous) =>
+        case Some(previous) => {
+          println(s"RUNNING ADD THE SINGLE NODE ${previous.key}")
           dataChecker.checkList.brokerCluster(key, DataCondition.STOPPED).check().flatMap { x =>
             // 1) fill the previous settings (if exists)
             // 2) overwrite previous settings by updated settings
@@ -85,6 +86,7 @@ object BrokerRoute {
                 .creation
             )
           }
+        }
       }
 
   private[this] def hookOfStart(
