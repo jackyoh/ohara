@@ -213,7 +213,8 @@ object NodeRoute {
   ): HookOfUpdating[Updating, Node] =
     (key: ObjectKey, updating: Updating, previousOption: Option[Node]) =>
       previousOption match {
-        case None =>
+        case None => {
+          println("NODE UPDATING NONE")
           // Node does not use definition so we check the field manually
           if (updating.user.isEmpty)
             throw DeserializationException(s"user field is required", fieldNames = List("user"))
@@ -228,13 +229,16 @@ object NodeRoute {
               tags = updating.tags.getOrElse(Map.empty)
             )
           )
-        case Some(previous) =>
+        }
+        case Some(previous) => {
+          println(s"PREVIOUS NODE.............")
           objectChecker.checkList
             .allZookeepers()
             .allBrokers()
             .allWorkers()
             .allStreams()
             .allShabondis()
+            .allVolumes()
             .check()
             .map(
               report =>
@@ -269,6 +273,7 @@ object NodeRoute {
                   )
                 )
             }
+        }
       }
 
   private[this] def hookBeforeDelete(
