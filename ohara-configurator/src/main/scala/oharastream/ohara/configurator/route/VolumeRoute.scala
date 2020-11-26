@@ -54,7 +54,7 @@ private[configurator] object VolumeRoute {
           Creation(
             group = key.group(),
             name = key.name(),
-            nodeNames = updating.nodeNames.get,
+            nodeNames = Set("k8s-master", "k8s-slave00"),
             path = updating.path.get,
             tags = updating.tags.getOrElse(Map.empty)
           )
@@ -62,7 +62,7 @@ private[configurator] object VolumeRoute {
           Creation(
             group = key.group(),
             name = key.name(),
-            nodeNames = updating.nodeNames.getOrElse(previous.nodeNames),
+            nodeNames = Set("k8s-master", "k8s-slave00"),
             path = updating.path.getOrElse(previous.path),
             tags = updating.tags.getOrElse(previous.tags)
           )
