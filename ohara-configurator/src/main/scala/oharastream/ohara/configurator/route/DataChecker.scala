@@ -462,20 +462,24 @@ object DataChecker {
 
         private[this] def checkBrokers()(
           implicit executionContext: ExecutionContext
-        ): Future[Map[BrokerClusterInfo, DataCondition]] =
-          if (requireAllBrokers)
+        ): Future[Map[BrokerClusterInfo, DataCondition]] = {
+          println("CHECK BROKERS")
+          if (requireAllBrokers) {
+            println("STORE TO BROKER")
             store
               .values[BrokerClusterInfo]()
               .map(_.map(_.key))
               .flatMap(
                 keys => checkClusters[ClusterStatus, BrokerClusterInfo](serviceCollie.brokerCollie, keys.toSet)
               )
-          else
+          } else {
+            println("CHECK CLUSTERS")
             checkClusters[ClusterStatus, BrokerClusterInfo](
               serviceCollie.brokerCollie,
               requiredBrokers.keys.toSet
             )
-
+          }
+        }
         //---------------------[Connector]---------------------//
         private[this] var requireAllConnectors = false
         override def allConnectors(): CheckList = {

@@ -70,10 +70,12 @@ object BrokerRoute {
               .creation
           )
         case Some(previous) =>
-          dataChecker.checkList.brokerCluster(key, DataCondition.STOPPED).check().flatMap { _ =>
+          dataChecker.checkList.brokerCluster(key, DataCondition.STOPPED).check().flatMap { x =>
             // 1) fill the previous settings (if exists)
             // 2) overwrite previous settings by updated settings
             // 3) fill the ignored settings by creation
+            println("TEST CREATE SINGLE NODE FOR THE BROKER")
+            println(s"${x.brokerClusterInfos}")
             creationToClusterInfo(
               BrokerApi.access.request
                 .settings(previous.settings)
