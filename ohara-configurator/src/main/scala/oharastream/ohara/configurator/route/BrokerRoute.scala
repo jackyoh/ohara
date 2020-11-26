@@ -61,7 +61,8 @@ object BrokerRoute {
   ): HookOfUpdating[Updating, BrokerClusterInfo] =
     (key: ObjectKey, updating: Updating, previousOption: Option[BrokerClusterInfo]) =>
       previousOption match {
-        case None =>
+        case None => {
+          println("HOOK OF UPDATING NONE.")
           creationToClusterInfo(
             BrokerApi.access.request
               .settings(updating.raw)
@@ -69,6 +70,7 @@ object BrokerRoute {
               .key(key)
               .creation
           )
+        }
         case Some(previous) => {
           println(s"RUNNING ADD THE SINGLE NODE ${previous.key}")
           dataChecker.checkList.brokerCluster(key, DataCondition.STOPPED).check().flatMap { x =>
