@@ -334,11 +334,9 @@ class TestCollie extends IntegrationTest {
         // we can't add a nonexistent node
         // we always get IllegalArgumentException if we sent request by restful api
         // However, if we use collie impl, an NoSuchElementException will be thrown...
-
-        // TODO After setting the volume, check the illegal node is not working.
-        /*an[Throwable] should be thrownBy result(
+        an[Throwable] should be thrownBy result(
           resourceRef.brokerApi.addNode(previousCluster.key, CommonUtils.randomString())
-        )*/
+        )
         val newNode = freeNodes.head
         log.info(s"[BROKER] add new node:$newNode to cluster:${previousCluster.key}")
 
